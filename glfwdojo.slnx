@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="glfwdojo/glfwdojo.vcxproj" Id="73d5ddef-478c-499c-b737-17b97a7abc1a" />
+</Solution>

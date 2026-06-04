@@ -1,14 +1,7 @@
-# define GLAD_GL_IMPLEMENTATION
-#include <glad/glad.h>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-
-#include <cstdlib>
-#include <stdlib.h>
-#include <stddef.h>
-#include <string>
-
 #include "Shader.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 static void cleanup()
 {
@@ -94,15 +87,18 @@ int main(void)
 
 	Shader ourShader("shader.vert", "shader.frag");
 
-	// set vertices positions
+	// set vertices positions / colors / texture coords
 	float vertices[] = {
-		-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f
+		0.5f, 0.5f, 0.0f,		1.0f, 0.0f, 0.0f,	1.0f, 1.0f, // top right
+		0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,	1.0f, 0.0f, // bottom right
+		-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f, 	0.0f, 0.0f, // bottom left 
+		-0.5f, 0.5f, 0.0f,		1.0f, 1.0f, 0.0f,	0.0f, 1.0f // top left
+
 	};
 
 	unsigned int indices[] = {
-		0, 1, 2
+		0, 1, 3,
+		1, 2, 3
 	};
 
 	unsigned int VBO, VAO, IBO;
@@ -118,39 +114,119 @@ int main(void)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	int stride = 6 * sizeof(float);
+	int stride = 8 * sizeof(float);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+	// texture coord attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+	// load and create a texture
+	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+	unsigned int texture1, texture2;
+	// texture1
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	// set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // when texture area is smaller than the image, use mipmap linear filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // when texture area is larger than the image, use linear filter
+	// load image, create texture and generate mipmaps
+	int width, height, nrChannels;
+	unsigned char* data = stbi_load("resources\\textures\\container.jpg", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
 
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	// texture2
+	glGenTextures(1, &texture2);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	// set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // when texture area is smaller than the image, use mipmap linear filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // when texture area is larger than the image, use linear filter
+	// load image, create texture and generate mipmaps
+	data = stbi_load("resources\\textures\\awesomeface.png", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
 
-	glfwSetKeyCallback(window, key_callback);
+	// tell opengl for each sampler to which texture unit it belongs to 
+	ourShader.use(); // なぜここでシェーダーをアクティブにする必要があるのか？ -> シェーダーをアクティブにしないと、シェーダー内のuniform変数にアクセスできないため。
+	ourShader.setInt("texture1", 0); // either set it manually like so (using glUniform1i), or set it via the shader class
+	ourShader.setInt("texture2", 1); // or set it via the shader class)
+
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback); // set a callback function to be called when the framebuffer is resized.
+
+	glfwSetKeyCallback(window, key_callback); // set a callback function to be called when a key is pressed, repeated or released.
 
 
 	while (!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT); // paint background color seted by function glClearColor()
 
+		// 実際にはループの前にテクスチャをバインドしておいてもいいが、今回は毎フレームバインドすることにする。
+		// 理由は、複数のテクスチャを使用する場合、どのテクスチャがどのテクスチャユニットにバインドされているかを明確にするため。
+		// また、実務ではフレーム後おtにテクスチャが切り替えられることとが多いため。
+		glActiveTexture(GL_TEXTURE0); // active a texture unit before binding a texture
+		glBindTexture(GL_TEXTURE_2D, texture1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, texture2);
+
 		ourShader.use();
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+
+		glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		transform = glm::translate(transform, glm::vec3(0.5f, -0.5, 0.0f));
+		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(1.0f, 0.0f, 1.0f));
+		unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+		//glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+		ourShader.setMat4("transform", transform);
+
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		
+		transform = glm::mat4(1.0f);
+		transform = glm::translate(transform, glm::vec3(-0.5f, 0.5f, 0.0f));
+		float scaleAmount = abs(static_cast<float>(sin(glfwGetTime())));
+		transform = glm::scale(transform, glm::vec3(scaleAmount, scaleAmount, 0.0f));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		
 		glfwSwapBuffers(window); // change a buffer moniterd now and a buffer being painted in back.
-
 		glfwPollEvents(); //  chack event queue. if there are any stack, process stock events. else, skip
 		//glfwWaitEvents(); // if detect any events, process next loop. ex) move a mouse, press the close wedget and so on
 	}
 
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &IBO);
 
 }

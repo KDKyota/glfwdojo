@@ -24,6 +24,7 @@ private:
 	std::shared_ptr<Camera> camera_;
 	int scrWidth_, scrHeight_;
 	float elapsedTime_ = 0.0f;
+	int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
 
 	static constexpr float animationTime_ = 5.0f;
 	std::vector<glm::vec3> cubePositions_;

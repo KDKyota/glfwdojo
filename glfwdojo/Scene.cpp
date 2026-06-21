@@ -130,6 +130,7 @@ unsigned int Scene::loadTexture(const char* path, bool hasAlpha) {
 	return textureID;
 }
 
+// whileループでの描画処理
 void Scene::Draw(float deltaTime)
 {
 	elapsedTime_ += deltaTime;
@@ -150,9 +151,9 @@ void Scene::Draw(float deltaTime)
 	//projection = glm::perspective(glm::radians(45.0f), (float)800/(float)600, 0.1f, 100.0f);
 	// pass them to the shader
 	//unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-	unsigned int viewLoc = glGetUniformLocation(shader_->ID, "view");
+	viewLoc_ = glGetUniformLocation(shader_->ID, "view"); // Learnopenglでは毎回これを初期化してたけどいらなくね？
 	//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(viewLoc_, 1, GL_FALSE, glm::value_ptr(view));
 	shader_->setMat4("projection", projection);
 	
 
@@ -175,4 +176,6 @@ void Scene::Draw(float deltaTime)
 Scene::~Scene() {
 	glDeleteVertexArrays(1, &VAO_);
 	glDeleteBuffers(1, &VBO_);
+	glDeleteTextures(1, &texture1_);
+	glDeleteTextures(1, &texture2_);
 }

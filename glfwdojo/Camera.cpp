@@ -1,7 +1,7 @@
 #include "Camera.h"
 
 Camera::Camera() 
-	: Position(glm::vec3(0.0f, 0.0f, 0.0f)),
+	: Position(glm::vec3(0.0f, 0.0f, 3.0f)),
 	Up(glm::vec3(0.0f, 1.0f, 0.0f)),
 	Yaw(CameraDefaults::YAW),
 	Pitch(CameraDefaults::PITCH),
@@ -18,6 +18,11 @@ glm::mat4 Camera::GetViewMatrix() const
 {
 	return glm::lookAt(Position, Position + Front, Up);
 };
+
+glm::vec3 Camera::GetViewPosition() const
+{
+	return Position;
+}
 
 const float& Camera::GetZoomValue() const
 {
@@ -51,9 +56,17 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 	{
 		Position -= velocity * Right;
 	}
-	else
+	else if (direction == Camera_Movement::RIGHT)
 	{
 		Position += velocity * Right;
+	}
+	else if (direction == Camera_Movement::UP)
+	{
+		Position += velocity * Up;
+	}
+	else if (direction == Camera_Movement::DOWN)
+	{
+		Position -= velocity * Up;
 	}
 };
 

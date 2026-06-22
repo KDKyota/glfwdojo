@@ -19,11 +19,12 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 		throw std::runtime_error("Failed to create GLFW window");
 
 	glfwMakeContextCurrent(handle_.get());
+	glfwSwapInterval(1); // fpsをフレームレートに合わせて固定
 	
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 		throw std::runtime_error("Failed to initialize GLAD");
 
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	glViewport(0, 0, width, height);
 

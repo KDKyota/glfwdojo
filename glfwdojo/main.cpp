@@ -13,7 +13,7 @@ int main(void)
 	auto window = std::make_unique<Window>(800, 600, "title");
 	auto scene = std::make_unique<Scene>(camera, window->GetWidth(), window->GetHeight());
 
-	struct { float delta = 0.0f, last = 0.0f; } frametime; // ループごとの経過時間を確認する構造体
+	struct { float delta = 0.0f, last = 0.0f, targetFrameTime = 1.0f / 60.0f; } frametime; // ループごとの経過時間を確認する構造体
 
 	while (!window->ShouldClose())
 	{

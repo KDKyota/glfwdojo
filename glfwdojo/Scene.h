@@ -1,11 +1,10 @@
 #pragma once
-#include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <GLFW/glfw3.h>
 #include <memory>
 #include <vector>
 #include "Shader.h"
 #include "Camera.h"
+#include "Lighting.h"
+#include "GeometryData.h"
 
 class Scene
 {
@@ -18,10 +17,12 @@ private:
 	void initMesh();
 	void initTextures();
 	unsigned int loadTexture(const char* path, bool hasAlpha);
-	unsigned int VAO_, VBO_;
-	unsigned int texture1_, texture2_;
+	unsigned int VAO_, lightVAO_, VBO_;
+	//unsigned int texture1_, texture2_;
 	std::unique_ptr<Shader> shader_;
+	std::unique_ptr<Shader> lightShader_;
 	std::shared_ptr<Camera> camera_;
+	std::unique_ptr<gl::Light> light_;
 	int scrWidth_, scrHeight_;
 	float elapsedTime_ = 0.0f;
 	int viewLoc_ = -1; // viewのローケーション番号(初期値-1)

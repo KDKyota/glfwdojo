@@ -9,6 +9,8 @@ enum class Camera_Movement {
 	BACKWARD,
 	LEFT,
 	RIGHT,
+	UP, 
+	DOWN
 };
 
 // default camera values
@@ -47,6 +49,8 @@ public:
 
 	// return the view matrix calculated using Eular Angles and the LookAt Matrix
 	glm::mat4 GetViewMatrix() const;
+
+	glm::vec3 GetViewPosition() const;
 
 	const float& GetZoomValue() const;
 

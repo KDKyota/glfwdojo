@@ -16,6 +16,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{e65b3da9-ca4a-4199-a63a-5f61c13502c3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\lighting">
+      <UniqueIdentifier>{cb0341fd-49a6-4f83-a475-f5088221acb6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -50,6 +53,12 @@
     <None Include="shader.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="light_cube.frag">
+      <Filter>Shaders\lighting</Filter>
+    </None>
+    <None Include="light_cube.vert">
+      <Filter>Shaders\lighting</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">
@@ -71,6 +80,15 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Scene.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Lighting.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="GeometryData.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Transform.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

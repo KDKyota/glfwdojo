@@ -111,13 +111,13 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\OpenGL\glad\include;C:\OpenGL\glfw-3.4.bin.WIN64\include;C:\OpenGL\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glad\include;C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glfw-3.4.bin.WIN64\include;C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glm</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\OpenGL\glfw-3.4.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -130,19 +130,19 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;C:\glad\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glad\include;C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glfw-3.4.bin.WIN64\include;C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\kyota\Desktop\opengl-dojo\glfwdojo\glfwdojo\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\OpenGL\glad\src\glad.c" />
     <ClCompile Include="Callbacks.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="glad\src\glad.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -159,6 +159,7 @@
     <ClInclude Include="Callbacks.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="GeometryData.h" />
+    <ClInclude Include="glad\include\glad\glad.h" />
     <ClInclude Include="Lighting.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="Scene.h" />

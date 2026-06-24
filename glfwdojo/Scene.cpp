@@ -108,6 +108,13 @@ void Scene::Draw(float deltaTime)
 
 	const float t = static_cast<float>(fmod(elapsedTime_, animationTime_));
 
+	light_->color.x = sin(glfwGetTime() * 2.0f);
+	light_->color.y = sin(glfwGetTime() * 0.7f);
+	light_->color.z = sin(glfwGetTime() * 1.3f);
+
+	light_->diffuse = light_->color   * glm::vec3(0.5f);
+	glm::vec3 ambientColor = light_->diffuse * glm::vec3(0.2f);
+
 	// オブジェクト描画
 	shader_->use();
 	glm::mat4 model = glm::mat4(1.0f);
@@ -117,12 +124,16 @@ void Scene::Draw(float deltaTime)
 	shader_->setVec3("viewPos", camera_->GetViewPosition());
 	shader_->setMat4("view", view);
 	shader_->setMat4("projection", projection);
-	shader_->setVec3("lightPos", light_->position);
-	shader_->setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-	shader_->setVec3("lightColor", light_->color);
-	shader_->setFloat("ambientStrength", light_->ambientStrength);
-	shader_->setFloat("specularStrength", light_->specularStrength);
-	shader_->setInt("shininess", light_->shiness);
+
+	shader_->setVec3("light.position", light_->position);
+	shader_->setVec3("light.ambient", ambientColor);
+	shader_->setVec3("light.diffuse", light_->diffuse);
+	shader_->setVec3("light.specular", light_->specular);
+
+	shader_->setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+	shader_->setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+	shader_->setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+	shader_->setFloat("material.shininess", 32.0f);
 	
 	static glm::mat3 NormalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
 	shader_->setMat3("normalMatrix", NormalMatrix);
@@ -132,6 +143,7 @@ void Scene::Draw(float deltaTime)
 
 	// 光源
 	lightShader_->use();
+	lightShader_->setVec3("lightColor", light_->color);
 	lightShader_->setMat4("view", view);
 	lightShader_->setMat4("projection", projection);
 	glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), light_->position);

@@ -16,7 +16,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	//cubePositions_ = std::move(cubePositions);
 
 	initMesh();
-	//initTextures();
+	initTextures();
 }
 
 void Scene::initMesh() {
@@ -41,18 +41,18 @@ void Scene::initMesh() {
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
 	glEnableVertexAttribArray(1);
 
-	//glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
-	//glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+	glEnableVertexAttribArray(2);
 }
 
 
 void Scene::initTextures() {
-	//stbi_set_flip_vertically_on_load(true);
-	//texture1_ = loadTexture("resources\\textures\\container.jpg", false);
+	stbi_set_flip_vertically_on_load(true);
+	texture1_ = loadTexture("resources\\textures\\container2.png", false);
 	//texture2_ = loadTexture("resources\\textures\\awesomeface.png", true);
 
 	shader_->use();
-	//shader_->setInt("texture1", 0);
+	shader_->setInt("material.diffuse", 0);
 	//shader_->setInt("texture2", 1);
 }
 
@@ -61,7 +61,6 @@ unsigned int Scene::loadTexture(const char* path, bool hasAlpha) {
 
 	unsigned int textureID; // return value
 
-	// texture2
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 	// set the texture wrapping parameters
@@ -75,7 +74,7 @@ unsigned int Scene::loadTexture(const char* path, bool hasAlpha) {
 	unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
 	if (data)
 	{
-		GLenum format = hasAlpha ? GL_RGBA : GL_RGB; // 透過色あり(GL_RGBA)/なし(GL_RGB)
+		GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB; // PNG実チャンネル数で判定
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
@@ -93,8 +92,8 @@ void Scene::Draw(float deltaTime)
 {
 	elapsedTime_ += deltaTime;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glActiveTexture(GL_TEXTURE0); // active a texture unit before binding a texture
-	//glBindTexture(GL_TEXTURE_2D, texture1_);
+	glActiveTexture(GL_TEXTURE0); // active a texture unit before binding a texture
+	glBindTexture(GL_TEXTURE_2D, texture1_);
 	//glActiveTexture(GL_TEXTURE1);
 	//glBindTexture(GL_TEXTURE_2D, texture2_);
 	//glBindVertexArray(VAO_);
@@ -108,12 +107,12 @@ void Scene::Draw(float deltaTime)
 
 	const float t = static_cast<float>(fmod(elapsedTime_, animationTime_));
 
-	light_->color.x = sin(glfwGetTime() * 2.0f);
-	light_->color.y = sin(glfwGetTime() * 0.7f);
-	light_->color.z = sin(glfwGetTime() * 1.3f);
+	//light_->color.x = sin(glfwGetTime() * 2.0f);
+	//light_->color.y = sin(glfwGetTime() * 0.7f);
+	//light_->color.z = sin(glfwGetTime() * 1.3f);
 
-	light_->diffuse = light_->color   * glm::vec3(0.5f);
-	glm::vec3 ambientColor = light_->diffuse * glm::vec3(0.2f);
+	//light_->diffuse = light_->color   * glm::vec3(0.5f);
+	//glm::vec3 ambientColor = light_->diffuse * glm::vec3(0.2f);
 
 	// オブジェクト描画
 	shader_->use();
@@ -126,12 +125,11 @@ void Scene::Draw(float deltaTime)
 	shader_->setMat4("projection", projection);
 
 	shader_->setVec3("light.position", light_->position);
-	shader_->setVec3("light.ambient", ambientColor);
+	shader_->setVec3("light.ambient", light_->ambient);
 	shader_->setVec3("light.diffuse", light_->diffuse);
 	shader_->setVec3("light.specular", light_->specular);
 
 	shader_->setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
-	shader_->setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
 	shader_->setVec3("material.specular", 0.5f, 0.5f, 0.5f);
 	shader_->setFloat("material.shininess", 32.0f);
 	
@@ -158,6 +156,6 @@ Scene::~Scene() {
 	glDeleteVertexArrays(1, &VAO_);
 	glDeleteVertexArrays(1, &lightVAO_);
 	glDeleteBuffers(1, &VBO_);
-	//glDeleteTextures(1, &texture1_);
+	glDeleteTextures(1, &texture1_);
 	//glDeleteTextures(1, &texture2_);
 }

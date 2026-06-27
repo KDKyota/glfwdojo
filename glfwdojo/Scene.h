@@ -18,7 +18,7 @@ private:
 	void initTextures();
 	unsigned int loadTexture(const char* path, bool hasAlpha);
 	unsigned int VAO_, lightVAO_, VBO_;
-	//unsigned int texture1_, texture2_;
+	unsigned int texture1_;
 	std::unique_ptr<Shader> shader_;
 	std::unique_ptr<Shader> lightShader_;
 	std::shared_ptr<Camera> camera_;

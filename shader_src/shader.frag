@@ -15,9 +15,18 @@ struct Material {
 
 struct Light {
 	vec3 position;
+	vec3 direction;
 	vec3 ambient;
 	vec3 diffuse;
 	vec3 specular;
+
+	// Attenuation(減衰)の値
+	float constant;
+	float linear;
+	float quadratic;
+	// スポットライトの角度
+	float cutOff;
+	float outerCutOff;
 };
 
 uniform Material material;
@@ -28,10 +37,6 @@ uniform vec3 viewPos; // カメラの位置
 
 //uniform vec3 objectColor;
 uniform vec3 lightColor;
-
-//uniform float ambientStrength;
-//uniform float specularStrength;
-//uniform int shininess;
 
 void main()
 {
@@ -49,6 +54,20 @@ void main()
 	vec3 reflectDir = reflect(-lightDir, norm);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 	vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+
+	// スポットライト(soft edge)
+	float theta = dot(lightDir, normalize(-light.direction));
+	float epsilon = light.cutOff - light.outerCutOff;
+	float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+
+	diffuse *= intensity;
+	specular *= intensity;
+
+	float distance = length(light.position - FragPos);
+	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
+
+	diffuse *= attenuation;
+	specular *= attenuation;
 
 	FragColor = vec4((ambient + diffuse + specular) , 1.0);
 }

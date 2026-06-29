@@ -52,6 +52,8 @@ public:
 
 	glm::vec3 GetViewPosition() const;
 
+	glm::vec3 GetViewFront() const;
+
 	const float& GetZoomValue() const;
 
 	// process input recievedc from any keyborad-like input system.

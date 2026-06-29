@@ -16,7 +16,9 @@ add_executable(glfwdojo
     src/Window.cpp
     third_party/stb_image_impl.cpp
     src/Material.cpp
- "src/Texture.h" "src/Texture.cpp" "src/TextureCache.cpp" "src/TextureCache.h")
+    src/Texture.cpp 
+    src/TextureCache.cpp 
+)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 
@@ -52,3 +54,5 @@ add_custom_command(TARGET glfwdojo POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
         $<TARGET_FILE_DIR:glfwdojo>/resources
 )
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

@@ -24,7 +24,7 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 		throw std::runtime_error("Failed to initialize GLAD");
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
 	glViewport(0, 0, width, height);
 

@@ -24,6 +24,11 @@ glm::vec3 Camera::GetViewPosition() const
 	return Position;
 }
 
+glm::vec3 Camera::GetViewFront() const
+{
+	return Front;
+}
+
 const float& Camera::GetZoomValue() const
 {
 	return Zoom;

@@ -1,5 +1,4 @@
 ﻿#include "Scene.h"
-#include "stb_image.h"
 #include <cstddef>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight) 
@@ -8,8 +7,8 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	scrWidth_(scrWidth), 
 	scrHeight_(scrHeight)
 {
-	shader_ = std::make_unique<Shader>("shader.vert", "shader.frag");
-	lightShader_ = std::make_unique<Shader>("light_cube.vert", "light_cube.frag");
+	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
+	lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
 	light_ = std::make_unique<gl::Light>();
 
 	//cubePositions_ = std::move(cubePositions);
@@ -46,8 +45,7 @@ void Scene::initMesh() {
 
 
 void Scene::initTextures() {
-	stbi_set_flip_vertically_on_load(true);
-	texture1_ = loadTexture("resources\\textures\\container2.png", false);
+	texture1_ = std::make_shared<Texture>("resources\\textures\\container2.png", false);
 	//texture2_ = loadTexture("resources\\textures\\awesomeface.png", true);
 
 	shader_->use();
@@ -56,43 +54,13 @@ void Scene::initTextures() {
 }
 
 
-unsigned int Scene::loadTexture(const char* path, bool hasAlpha) {
-
-	unsigned int textureID; // return value
-
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	// set the texture wrapping parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// set texture filtering parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // when texture area is smaller than the image, use mipmap linear filter
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // when texture area is larger than the image, use linear filter
-
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
-	if (data)
-	{
-		GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB; // PNG実チャンネル数で判定
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data);
-
-	return textureID;
-}
 
 // whileループでの描画処理
 void Scene::Draw(float deltaTime)
 {
 	elapsedTime_ += deltaTime;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glActiveTexture(GL_TEXTURE0); // active a texture unit before binding a texture
-	glBindTexture(GL_TEXTURE_2D, texture1_);
+	texture1_->bind(0);
 	//glActiveTexture(GL_TEXTURE1);
 	//glBindTexture(GL_TEXTURE_2D, texture2_);
 	//glBindVertexArray(VAO_);
@@ -155,6 +123,4 @@ Scene::~Scene() {
 	glDeleteVertexArrays(1, &VAO_);
 	glDeleteVertexArrays(1, &lightVAO_);
 	glDeleteBuffers(1, &VBO_);
-	glDeleteTextures(1, &texture1_);
-	//glDeleteTextures(1, &texture2_);
 }

@@ -39,7 +39,11 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
     glfwSetKeyCallback(handle_.get(), key_callback);
 }
 
-Window::~Window() { glfwTerminate(); } // glfwTerminal()を呼ぶだけ
+Window::~Window() 
+{ 
+	handle_.reset();
+	glfwTerminate(); 
+}
 
 bool Window::ShouldClose() const
 {

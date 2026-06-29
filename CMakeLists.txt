@@ -15,7 +15,8 @@ add_executable(glfwdojo
     src/Shader.cpp
     src/Window.cpp
     third_party/stb_image_impl.cpp
- "src/Texture.h" "src/Texture.cpp")
+    src/Material.cpp
+ "src/Texture.h" "src/Texture.cpp" "src/TextureCache.cpp" "src/TextureCache.h")
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 

@@ -45,22 +45,20 @@ void Scene::initMesh() {
 
 
 void Scene::initTextures() {
-	texture1_ = std::make_shared<Texture>("resources\\textures\\container2.png", false);
-	//texture2_ = loadTexture("resources\\textures\\awesomeface.png", true);
+	material_.diffuse = cache_.get("resources\\textures\\container2.png", false);
+	material_.specular = cache_.get("resources\\textures\\container2_specular.png", true);
 
 	shader_->use();
-	shader_->setInt("material.diffuse", 0);
-	//shader_->setInt("texture2", 1);
+	material_.setUniforms(*shader_);
 }
-
-
 
 // whileループでの描画処理
 void Scene::Draw(float deltaTime)
 {
 	elapsedTime_ += deltaTime;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	texture1_->bind(0);
+	material_.bind();
+	//texture1_->bind(0);
 	//glActiveTexture(GL_TEXTURE1);
 	//glBindTexture(GL_TEXTURE_2D, texture2_);
 	//glBindVertexArray(VAO_);

@@ -9,7 +9,6 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 {
 	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
 	lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
-	light_ = std::make_unique<gl::Light>();
 
 	//cubePositions_ = std::move(cubePositions);
 
@@ -89,25 +88,15 @@ void Scene::Draw(float deltaTime)
 	shader_->setMat4("view", view);
 	shader_->setMat4("projection", projection);
 
-	shader_->setVec3("light.direction", camera_->GetViewFront());
-	shader_->setVec3("light.position", camera_->GetViewPosition());
-	shader_->setVec3("light.ambient", light_->ambient);
-	shader_->setVec3("light.diffuse", light_->diffuse);
-	shader_->setVec3("light.specular", light_->specular);
-	shader_->setFloat("light.constant", light_->constant);
-	shader_->setFloat("light.linear", light_->linear);
-	shader_->setFloat("light.quadratic", light_->quadratic);
-	shader_->setFloat("light.cutOff", light_->cutOff);
-	shader_->setFloat("light.outerCutOff", light_->outerCutOff);
+	directionalLight_.applyToShader(*shader_, "dirLight");
+	for (const auto& pointLight : pointLights)
+	{
+		pointLight.applyToShader(*shader_, "pointLights[" + std::to_string(&pointLight - pointLights.data()) + "]");
+	}
+	spotlight_.applyToShader(*shader_, "spotLight", *camera_);
 
-	//shader_->setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
-	//shader_->setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-	//shader_->setFloat("material.shininess", 32.0f);
 	material_.bind();
 	
-	// 法線の行列はCPUで計算したほうが高速
-	static glm::mat3 NormalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
-	shader_->setMat3("normalMatrix", NormalMatrix);
 
 	glBindVertexArray(VAO_);
 	//glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -120,19 +109,31 @@ void Scene::Draw(float deltaTime)
 		model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 		shader_->setMat4("model", model);
 
+		// 法線の行列はCPUで計算したほうが高速
+		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
+		shader_->setMat3("normalMatrix", normalMatrix);
+
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 	}
 
 	// 光源
-	//lightShader_->use();
+	lightShader_->use();
 	//lightShader_->setVec3("lightColor", light_->color);
-	//lightShader_->setMat4("view", view);
-	//lightShader_->setMat4("projection", projection);
+	lightShader_->setMat4("view", view);
+	lightShader_->setMat4("projection", projection);
 	//glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), light_->position);
 	//lightModel = glm::scale(lightModel, glm::vec3(0.2f)); // 小さく
 	//lightShader_->setMat4("model", lightModel);
 
-	//glBindVertexArray(lightVAO_);
+	glBindVertexArray(lightVAO_);
+	lightShader_->setVec3("lightColor", pointlight_.diffuse);
+	for (const auto& pointLight : pointLights)
+	{
+		glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
+		lightModel = glm::scale(lightModel, glm::vec3(0.2f)); // 小さく
+		lightShader_->setMat4("model", lightModel);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+	}
 	//glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 

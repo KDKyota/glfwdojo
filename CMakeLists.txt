@@ -18,6 +18,7 @@ add_executable(glfwdojo
     src/Material.cpp
     src/Texture.cpp 
     src/TextureCache.cpp 
+	src/Lighting.cpp
 )
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)

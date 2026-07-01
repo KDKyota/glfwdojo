@@ -4,6 +4,7 @@
 class Texture {
 private:
 	unsigned int id_; // OpenGLテスクチャのID
+	std::string type_;
 	//bool owner_; // このインスタンスがIDを所有しているか
 	/*
 	* owner_は所有権をコピーした時に自分がその所有権を持つのかということを明示しておくためのもの

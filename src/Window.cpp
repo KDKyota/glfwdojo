@@ -13,6 +13,10 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor(); // 今回は利用しない
+	// フルスクリーンのためのモニターの解像度を取得
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor); // 今回は利用しない
+
 	// スマートポインタの変数handle_にglfwCreateWindowの返り値を右辺値として代入するイメージ
 	handle_.reset(glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr));
 	if (!handle_)

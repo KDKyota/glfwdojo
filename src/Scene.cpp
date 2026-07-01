@@ -1,4 +1,4 @@
-﻿#include "Scene.h"
+#include "Scene.h"
 #include <cstddef>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight) 
@@ -9,11 +9,12 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 {
 	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
 	lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
+	model_ = std::make_unique<Model>("resources\\objects\\backpack\\backpack.obj", cache_);
 
 	//cubePositions_ = std::move(cubePositions);
 
 	initMesh();
-	initTextures();
+	//initTextures();
 }
 
 void Scene::initMesh() {
@@ -44,46 +45,25 @@ void Scene::initMesh() {
 
 
 void Scene::initTextures() {
-	material_.diffuse = cache_.get("resources\\textures\\container2.png", false);
-	material_.specular = cache_.get("resources\\textures\\container2_specular.png", true);
+	//material_.diffuse = cache_.get("resources\\textures\\container2.png", false);
+	//material_.specular = cache_.get("resources\\textures\\container2_specular.png", true);
 
-	shader_->use();
-	material_.setUniforms(*shader_);
+	//shader_->use();
+	//material_.setUniforms(*shader_);
 }
 
 // whileループでの描画処理
-void Scene::Draw(float deltaTime)
+void Scene::Render(float deltaTime)
 {
 	elapsedTime_ += deltaTime;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	material_.bind();
-	//texture1_->bind(0);
-	//glActiveTexture(GL_TEXTURE1);
-	//glBindTexture(GL_TEXTURE_2D, texture2_);
-	//glBindVertexArray(VAO_);
-
-	//shader_->use();
-
-	//model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 1.0f));
-	//view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-	//projection = glm::perspective(glm::radians(45.0f), (float)800/(float)600, 0.1f, 100.0f);
-	
 
 	const float t = static_cast<float>(fmod(elapsedTime_, animationTime_));
 
-	//light_->color.x = sin(glfwGetTime() * 2.0f);
-	//light_->color.y = sin(glfwGetTime() * 0.7f);
-	//light_->color.z = sin(glfwGetTime() * 1.3f);
-
-	//light_->diffuse = light_->color   * glm::vec3(0.5f);
-	//glm::vec3 ambientColor = light_->diffuse * glm::vec3(0.2f);
-
 	// オブジェクト描画
 	shader_->use();
-	glm::mat4 model = glm::mat4(1.0f);
 	glm::mat4 view = camera_->GetViewMatrix();
 	glm::mat4 projection = glm::perspective(glm::radians(camera_->GetZoomValue()), (float)scrWidth_ / (float)scrHeight_, 0.1f, 100.0f);
-	shader_->setMat4("model", model);
 	shader_->setVec3("viewPos", camera_->GetViewPosition());
 	shader_->setMat4("view", view);
 	shader_->setMat4("projection", projection);
@@ -95,35 +75,34 @@ void Scene::Draw(float deltaTime)
 	}
 	spotlight_.applyToShader(*shader_, "spotLight", *camera_);
 
-	material_.bind();
+	//　リュックサックのモデルを描画
+	glm::mat4 backpackModel = glm::mat4(1.0f);
+	shader_->setMat4("model", backpackModel);
+	glm::mat3 backpackNormalMatrix = glm::transpose(glm::inverse(glm::mat3(backpackModel)));
+	shader_->setMat3("normalMatrix", backpackNormalMatrix);
+	model_->Draw(*shader_);
 	
+	material_.bind();
+	//glBindVertexArray(VAO_);
+	//for(const auto& position : gl::cubePositions)
+	//{
+	//	glm::mat4 model = glm::mat4(1.0f);
+	//	model = glm::translate(model, position);
+	//	float angle = 20.0f * ( & position - gl::cubePositions.data());
+	//	model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+	//	shader_->setMat4("model", model);
 
-	glBindVertexArray(VAO_);
-	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	//	// 法線の行列はCPUで計算したほうが高速
+	//	glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
+	//	shader_->setMat3("normalMatrix", normalMatrix);
 
-	for(const auto& position : gl::cubePositions)
-	{
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, position);
-		float angle = 20.0f * ( & position - gl::cubePositions.data());
-		model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-		shader_->setMat4("model", model);
-
-		// 法線の行列はCPUで計算したほうが高速
-		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
-		shader_->setMat3("normalMatrix", normalMatrix);
-
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-	}
+	//	glDrawArrays(GL_TRIANGLES, 0, 36);
+	//}
 
 	// 光源
 	lightShader_->use();
-	//lightShader_->setVec3("lightColor", light_->color);
 	lightShader_->setMat4("view", view);
 	lightShader_->setMat4("projection", projection);
-	//glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), light_->position);
-	//lightModel = glm::scale(lightModel, glm::vec3(0.2f)); // 小さく
-	//lightShader_->setMat4("model", lightModel);
 
 	glBindVertexArray(lightVAO_);
 	lightShader_->setVec3("lightColor", pointlight_.diffuse);
@@ -134,7 +113,7 @@ void Scene::Draw(float deltaTime)
 		lightShader_->setMat4("model", lightModel);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 	}
-	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 
 Scene::~Scene() {

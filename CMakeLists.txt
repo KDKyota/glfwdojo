@@ -52,6 +52,7 @@ add_custom_command(TARGET glfwdojo POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.vert
         ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.frag
+        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/stencil_single_color.frag
         ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.vert
         ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.frag
         $<TARGET_FILE_DIR:glfwdojo>

@@ -50,6 +50,7 @@ struct SpotLight {
 in vec3 Normal;
 in vec3 FragPos;
 in vec2 TexCoords;
+uniform sampler2D texture1;
 
 uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
@@ -80,7 +81,7 @@ vec3 viewDir = normalize(viewPos - FragPos);
   // 3. spot lighting
   result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
-  FragColor = vec4(result, 1.0);
+  FragColor = texture(texture1, TexCoords);
 }
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)

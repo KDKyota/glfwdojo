@@ -8,47 +8,71 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	scrHeight_(scrHeight)
 {
 	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
-	lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
-	model_ = std::make_unique<Model>("resources\\objects\\backpack\\backpack.obj", cache_);
+	//lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
+	shaderSingleColor_ = std::make_unique<gl::Shader>("shader.vert", "stencil_single_color.frag");
+	//model_ = std::make_unique<Model>("resources\\objects\\backpack\\backpack.obj", cache_);
 
 	//cubePositions_ = std::move(cubePositions);
 
 	initMesh();
-	//initTextures();
+	initTextures();
 }
 
 void Scene::initMesh() {
-
-	glGenVertexArrays(1, &lightVAO_); // LightingのVAO
-	glGenVertexArrays(1, &VAO_); // object用のVAO
-	glGenBuffers(1, &VBO_);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::cubeVertices), gl::cubeVertices.data(), GL_STATIC_DRAW);
-
-	glBindVertexArray(lightVAO_);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_);
 	int stride = sizeof(gl::Vertex);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
-	glEnableVertexAttribArray(0);
 
-	glBindVertexArray(VAO_);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
-	glEnableVertexAttribArray(1);
-
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+	glGenVertexArrays(1, &cubeVAO_); // cube用のVAO
+	glGenBuffers(1, &cubeVBO_);
+	glBindVertexArray(cubeVAO_);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO_);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::cubeVertices), gl::cubeVertices.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
 	glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+    glBindVertexArray(0);
+
+	glGenVertexArrays(1, &planeVAO_); // 床用のVAO
+	glGenBuffers(1, &planeVBO_);
+	glBindVertexArray(planeVAO_);
+	glBindBuffer(GL_ARRAY_BUFFER, planeVBO_);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::planeVertices), gl::planeVertices.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
+	glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+    glBindVertexArray(0);
+
+	//glBindVertexArray(lightVAO_);
+	//glBindBuffer(GL_ARRAY_BUFFER, VBO_);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
+	//glEnableVertexAttribArray(0);
+
+	//glBindVertexArray(VAO_);
+	//glBindBuffer(GL_ARRAY_BUFFER, VBO_);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
+	//glEnableVertexAttribArray(0);
+
+	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
+	//glEnableVertexAttribArray(1);
+
+	//glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+	//glEnableVertexAttribArray(2);
 }
 
 
 void Scene::initTextures() {
 	//material_.diffuse = cache_.get("resources\\textures\\container2.png", false);
 	//material_.specular = cache_.get("resources\\textures\\container2_specular.png", true);
+	cubeTexture_ = cache_.get("resources\\textures\\marble.jpg", true);
+	floorTexture_ = cache_.get("resources\\textures\\metal.png", true);
 
-	//shader_->use();
+	shader_->use();
+	shader_->setInt("texture1", 0);
 	//material_.setUniforms(*shader_);
 }
 
@@ -56,33 +80,82 @@ void Scene::initTextures() {
 void Scene::Render(float deltaTime)
 {
 	elapsedTime_ += deltaTime;
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	const float t = static_cast<float>(fmod(elapsedTime_, animationTime_));
 
 	// オブジェクト描画
-	shader_->use();
+	shaderSingleColor_->use();
+	glm::mat4 model = glm::mat4(1.0f);
 	glm::mat4 view = camera_->GetViewMatrix();
 	glm::mat4 projection = glm::perspective(glm::radians(camera_->GetZoomValue()), (float)scrWidth_ / (float)scrHeight_, 0.1f, 100.0f);
-	shader_->setVec3("viewPos", camera_->GetViewPosition());
+	shaderSingleColor_->setVec3("viewPos", camera_->GetViewPosition());
+	shaderSingleColor_->setMat4("view", view);
+	shaderSingleColor_->setMat4("projection", projection);
+
+	glStencilMask(0x00);	
+	glBindVertexArray(planeVAO_);
+	glBindTexture(GL_TEXTURE_2D, floorTexture_->getID());
+	shader_->use();
+	shader_->setMat4("model", glm::mat4(1.0f));
 	shader_->setMat4("view", view);
 	shader_->setMat4("projection", projection);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
 
-	directionalLight_.applyToShader(*shader_, "dirLight");
-	for (const auto& pointLight : pointLights)
-	{
-		pointLight.applyToShader(*shader_, "pointLights[" + std::to_string(&pointLight - pointLights.data()) + "]");
-	}
-	spotlight_.applyToShader(*shader_, "spotLight", *camera_);
+	glStencilFunc(GL_ALWAYS, 1, 0xFF);
+	glStencilMask(0xFF);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	glBindVertexArray(cubeVAO_);
+	cubeTexture_->bind(0);
+	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+	shader_->setMat4("model", model);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+	shader_->setMat4("model", model);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilMask(0x00);
+	glDisable(GL_DEPTH_TEST);
+	shaderSingleColor_->use();
+	float scale = 1.1f;
+	// cubes
+	glBindVertexArray(cubeVAO_);
+	glBindTexture(GL_TEXTURE_2D, cubeTexture_->getID());
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+	model = glm::scale(model, glm::vec3(scale, scale, scale));
+	shaderSingleColor_->setMat4("model", model);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(scale, scale, scale));
+	shaderSingleColor_->setMat4("model", model);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+	glStencilMask(0xFF);
+	glStencilFunc(GL_ALWAYS, 0, 0xFF);
+	glEnable(GL_DEPTH_TEST);
+	//directionalLight_.applyToShader(*shader_, "dirLight");
+
+	//for (const auto& pointLight : pointLights)
+	//{
+	//	pointLight.applyToShader(*shader_, "pointLights[" + std::to_string(&pointLight - pointLights.data()) + "]");
+	//}
+	//spotlight_.applyToShader(*shader_, "spotLight", *camera_);
 
 	//　リュックサックのモデルを描画
-	glm::mat4 backpackModel = glm::mat4(1.0f);
-	shader_->setMat4("model", backpackModel);
-	glm::mat3 backpackNormalMatrix = glm::transpose(glm::inverse(glm::mat3(backpackModel)));
-	shader_->setMat3("normalMatrix", backpackNormalMatrix);
-	model_->Draw(*shader_);
-	
-	material_.bind();
+	//glm::mat4 backpackModel = glm::mat4(1.0f);
+	//shader_->setMat4("model", backpackModel);
+	//glm::mat3 backpackNormalMatrix = glm::transpose(glm::inverse(glm::mat3(backpackModel)));
+	//shader_->setMat3("normalMatrix", backpackNormalMatrix);
+	//model_->Draw(*shader_);
+	//
+	//material_.bind();
 	//glBindVertexArray(VAO_);
 	//for(const auto& position : gl::cubePositions)
 	//{
@@ -100,24 +173,25 @@ void Scene::Render(float deltaTime)
 	//}
 
 	// 光源
-	lightShader_->use();
-	lightShader_->setMat4("view", view);
-	lightShader_->setMat4("projection", projection);
+	//lightShader_->use();
+	//lightShader_->setMat4("view", view);
+	//lightShader_->setMat4("projection", projection);
 
-	glBindVertexArray(lightVAO_);
-	lightShader_->setVec3("lightColor", pointlight_.diffuse);
-	for (const auto& pointLight : pointLights)
-	{
-		glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
-		lightModel = glm::scale(lightModel, glm::vec3(0.2f)); // 小さく
-		lightShader_->setMat4("model", lightModel);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-	}
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glBindVertexArray(lightVAO_);
+	//lightShader_->setVec3("lightColor", pointlight_.diffuse);
+	//for (const auto& pointLight : pointLights)
+	//{
+	//	glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
+	//	lightModel = glm::scale(lightModel, glm::vec3(0.2f)); // 小さく
+	//	lightShader_->setMat4("model", lightModel);
+	//	glDrawArrays(GL_TRIANGLES, 0, 36);
+	//}
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 
 Scene::~Scene() {
-	glDeleteVertexArrays(1, &VAO_);
-	glDeleteVertexArrays(1, &lightVAO_);
-	glDeleteBuffers(1, &VBO_);
+	glDeleteVertexArrays(1, &cubeVAO_);
+	glDeleteVertexArrays(1, &planeVBO_);
+	glDeleteBuffers(1, &cubeVBO_);
+	glDeleteBuffers(1, &planeVBO_);
 }

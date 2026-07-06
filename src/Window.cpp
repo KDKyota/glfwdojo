@@ -1,4 +1,4 @@
-﻿#include "Window.h"
+#include "Window.h"
 #include "Callbacks.h"
 #include <stdexcept>
 
@@ -33,7 +33,8 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 	glViewport(0, 0, width, height);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_STENCIL_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// コールマック関数を登録
 	// ふつうは第一引数がwindowだが、今回はスマートポインタにhandle_代入しているのでその先頭ポインタという意味でhandle_.get()

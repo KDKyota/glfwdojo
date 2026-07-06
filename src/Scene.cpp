@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include <map>
 #include <cstddef>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight) 
@@ -47,6 +48,20 @@ void Scene::initMesh() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
     glBindVertexArray(0);
 
+
+	glGenVertexArrays(1, &transparentVAO_); // 透過窓のVAO
+	glGenBuffers(1, &transparentVBO_);
+	glBindVertexArray(transparentVAO_);
+	glBindBuffer(GL_ARRAY_BUFFER, transparentVBO_);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::transparentVertices), gl::transparentVertices.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
+	glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+    glBindVertexArray(0);
+
 	//glBindVertexArray(lightVAO_);
 	//glBindBuffer(GL_ARRAY_BUFFER, VBO_);
 	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
@@ -70,6 +85,7 @@ void Scene::initTextures() {
 	//material_.specular = cache_.get("resources\\textures\\container2_specular.png", true);
 	cubeTexture_ = cache_.get("resources\\textures\\marble.jpg", true);
 	floorTexture_ = cache_.get("resources\\textures\\metal.png", true);
+	transparentTexture_ = cache_.get("resources\\textures\\window.png", true);
 
 	shader_->use();
 	shader_->setInt("texture1", 0);
@@ -82,9 +98,22 @@ void Scene::Render(float deltaTime)
 	elapsedTime_ += deltaTime;
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	const float t = static_cast<float>(fmod(elapsedTime_, animationTime_));
+
+	std::vector<gl::TransparentDraw> sorted;
+	for (unsigned int i = 0; i < gl::windows_pos.size(); ++i)
+	{
+		float distance = glm::length(camera_->GetViewPosition() - gl::windows_pos[i]);
+		sorted.push_back({ distance, i });
+	}
+
+	std::sort(sorted.begin(), sorted.end(),
+		[](const gl::TransparentDraw& a, const gl::TransparentDraw& b)
+		{
+			return a.distance > b.distance;
+		});
 
 	// オブジェクト描画
 	shaderSingleColor_->use();
@@ -95,7 +124,7 @@ void Scene::Render(float deltaTime)
 	shaderSingleColor_->setMat4("view", view);
 	shaderSingleColor_->setMat4("projection", projection);
 
-	glStencilMask(0x00);	
+	// floor
 	glBindVertexArray(planeVAO_);
 	glBindTexture(GL_TEXTURE_2D, floorTexture_->getID());
 	shader_->use();
@@ -103,11 +132,8 @@ void Scene::Render(float deltaTime)
 	shader_->setMat4("view", view);
 	shader_->setMat4("projection", projection);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
 
-	glStencilFunc(GL_ALWAYS, 1, 0xFF);
-	glStencilMask(0xFF);
-	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	// cube
 	glBindVertexArray(cubeVAO_);
 	cubeTexture_->bind(0);
 	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
@@ -118,28 +144,18 @@ void Scene::Render(float deltaTime)
 	shader_->setMat4("model", model);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 
-	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-	glStencilMask(0x00);
-	glDisable(GL_DEPTH_TEST);
-	shaderSingleColor_->use();
-	float scale = 1.1f;
-	// cubes
-	glBindVertexArray(cubeVAO_);
-	glBindTexture(GL_TEXTURE_2D, cubeTexture_->getID());
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
-	model = glm::scale(model, glm::vec3(scale, scale, scale));
-	shaderSingleColor_->setMat4("model", model);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-	model = glm::scale(model, glm::vec3(scale, scale, scale));
-	shaderSingleColor_->setMat4("model", model);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glBindVertexArray(0);
-	glStencilMask(0xFF);
-	glStencilFunc(GL_ALWAYS, 0, 0xFF);
-	glEnable(GL_DEPTH_TEST);
+	// transparent windows
+	glBindVertexArray(transparentVAO_);
+	glBindTexture(GL_TEXTURE_2D, transparentTexture_->getID());
+	for (const auto& draw : sorted)
+	{
+		glm::vec3 position = gl::windows_pos[draw.index];
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, position);
+		shader_->setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+	}
+
 	//directionalLight_.applyToShader(*shader_, "dirLight");
 
 	//for (const auto& pointLight : pointLights)

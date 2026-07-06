@@ -16,6 +16,12 @@ namespace gl {
 		float m_Weights[MAX_BONE_INFLUENCE] = { 0.0f }; // ボーンの重み
 	};
 
+	// 透過色入りのテクスチャ用
+	struct TransparentDraw {
+		float distance;
+		unsigned int index;
+	};
+
 	inline const std::vector<glm::vec3> cubePositions = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
 		glm::vec3(2.0f,  5.0f, -15.0f),
@@ -28,6 +34,15 @@ namespace gl {
 		glm::vec3(1.5f,  0.2f, -1.5f),
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
+
+	inline const std::vector<glm::vec3> windows_pos
+    {
+        glm::vec3(-1.5f, 0.0f, -0.48f),
+        glm::vec3( 1.5f, 0.0f, 0.51f),
+        glm::vec3( 0.0f, 0.0f, 0.7f),
+        glm::vec3(-0.3f, 0.0f, -2.3f),
+        glm::vec3( 0.5f, 0.0f, -0.6f)
+    };
 
 	inline const std::array<Vertex, 36> rawVertices =
 	{ {
@@ -78,7 +93,7 @@ namespace gl {
 		{{ 0.5f,  0.5f,  0.5f}, {}, {1.0f, 0.0f}},
 		{{ 0.5f,  0.5f, -0.5f}, {}, {1.0f, 1.0f}},
 		{{-0.5f,  0.5f, -0.5f}, {}, {0.0f, 1.0f}},
-	}  };
+	} };
 
 	inline const std::array<Vertex, 6> rawplaneVertices =
 	{ {
@@ -91,6 +106,18 @@ namespace gl {
 		{{-5.0f, -0.5f, -5.0f},{}, {0.0f, 2.0f}},
 		{{ 5.0f, -0.5f, -5.0f},{}, {2.0f, 2.0f}}
 	} };
+
+	inline const std::array<Vertex, 6> rawtransparentVertices =
+	{ {
+		{{0.0f, 0.5f, 0.0f}, {}, {0.0f, 0.0f}},
+		{{0.0f, -0.5f,  0.0f}, {}, {0.0f, 1.0f}},
+		{{1.0f, -0.5f,  0.0f}, {}, {1.0f, 1.0f}},
+
+		{{0.0f,  0.5f,  0.0f}, {},  {0.0f,  0.0f}},
+		{{1.0f, -0.5f,  0.0f}, {}, {1.0f,  1.0f} },
+		{{1.0f,  0.5f,  0.0f}, {}, {1.0f,  0.0f}}
+	} };
+
 
 	// 3頂点の座標(v0, v1, v2)から法線ベクトルを計算する関数
 	inline glm::vec3 calcNormal(const glm::vec3& v0,
@@ -120,5 +147,6 @@ namespace gl {
 
 	inline const std::array<Vertex, 36> cubeVertices = calculateNormals(rawVertices);
 	inline const std::array<Vertex, 6> planeVertices = calculateNormals(rawplaneVertices);
+	inline const std::array<Vertex, 6> transparentVertices = calculateNormals(rawtransparentVertices);
 
 }

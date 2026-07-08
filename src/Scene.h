@@ -27,11 +27,15 @@ private:
 	TextureCache cache_;
 	std::unique_ptr<gl::Shader> shader_;
 	//std::unique_ptr<gl::Shader> lightShader_;
-	std::unique_ptr<gl::Shader> shaderSingleColor_;
+	//std::unique_ptr<gl::Shader> shaderSingleColor_;
     std::unique_ptr<gl::Shader> screenshader_;
+	//std::unique_ptr<gl::Shader> glasscubeShader_;
 	std::unique_ptr<gl::Shader> skyboxShader_;
 	//std::unique_ptr<Model> model_;
 	std::shared_ptr<Camera> camera_;
+
+	unsigned int ubo_; // uniform buffer object
+	void initUBO();
 
 	//gl::PointLight pointlight_;
 	//gl::DirectionalLight directionalLight_;

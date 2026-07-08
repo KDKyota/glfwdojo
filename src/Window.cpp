@@ -9,8 +9,8 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 
 	glfwSetErrorCallback(error_callback); // エラーのコールバック関数を登録
 	// バージョン指定
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWmonitor* monitor = glfwGetPrimaryMonitor(); // 今回は利用しない

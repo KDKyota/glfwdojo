@@ -10,7 +10,8 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 {
 	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
 	//lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
-	shaderSingleColor_ = std::make_unique<gl::Shader>("shader.vert", "stencil_single_color.frag");
+	//shaderSingleColor_ = std::make_unique<gl::Shader>("shader.vert", "stencil_single_color.frag");
+	//glasscubeShader_ = std::make_unique<gl::Shader>("glasscube.vert", "glasscube.frag");
 	//model_ = std::make_unique<Model>("resources\\objects\\backpack\\backpack.obj", cache_);
 	screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "fragment_quad.frag");
 	skyboxShader_ = std::make_unique<gl::Shader>("skybox.vert", "skybox.frag");
@@ -20,6 +21,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	initMesh();
 	initTextures();
 	initFramebuffer();
+	initUBO();
 }
 
 void Scene::initMesh() {
@@ -152,6 +154,14 @@ void Scene::initFramebuffer() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);// フレームバッファの初期化処理
 }
 
+void Scene::initUBO() {
+    glGenBuffers(1, &ubo_);
+    glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
+    glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), nullptr, GL_STATIC_DRAW);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo_);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
 // whileループでの描画処理
 void Scene::Render(float deltaTime)
 {
@@ -184,10 +194,15 @@ void Scene::Render(float deltaTime)
 	//shaderSingleColor_->setVec3("viewPos", camera_->GetViewPosition());
 	//shaderSingleColor_->setMat4("view", view);
 	//shaderSingleColor_->setMat4("projection", projection);
-
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(view));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	shader_->use();
-	shader_->setMat4("view", view);
-	shader_->setMat4("projection", projection);
+	// UBOによりviewとprojectionを送信するので、以下のコードはコメントアウト
+	//shader_->setMat4("view", view);
+	//shader_->setMat4("projection", projection);
+
 	// cube
 	glBindVertexArray(cubeVAO_);
 	cubeTexture_->bind(0);
@@ -203,7 +218,20 @@ void Scene::Render(float deltaTime)
 	glBindTexture(GL_TEXTURE_2D, floorTexture_->getID());
 	shader_->setMat4("model", glm::mat4(1.0f));
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	// draw skybox
+	glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+	skyboxShader_->use();
+	// skybox cube
+	glBindVertexArray(skyboxVAO_);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture_);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+	glDepthFunc(GL_LESS); // set depth function back to default
+
 	// transparent windows
+	shader_->use();
 	glBindVertexArray(transparentVAO_);
 	glBindTexture(GL_TEXTURE_2D, transparentTexture_->getID());
 	for (const auto& draw : sorted)
@@ -214,20 +242,6 @@ void Scene::Render(float deltaTime)
 		shader_->setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 	}
-
-	// draw skybox as last
-	glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
-	skyboxShader_->use();
-	view = glm::mat4(glm::mat3(camera_->GetViewMatrix())); // remove translation from the view matrix
-	skyboxShader_->setMat4("view", view);
-	skyboxShader_->setMat4("projection", projection);
-	// skybox cube
-	glBindVertexArray(skyboxVAO_);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture_);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glBindVertexArray(0);
-	glDepthFunc(GL_LESS); // set depth function back to default
 
 	// now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -305,4 +319,5 @@ Scene::~Scene() {
     glDeleteTextures(1, &textureColorbuffer_);
     glDeleteTextures(1, &cubemapTexture_);
     glDeleteRenderbuffers(1, &rbo_);
+	glDeleteBuffers(1, &ubo_);
 }

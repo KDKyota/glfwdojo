@@ -44,6 +44,62 @@ namespace gl {
         glm::vec3( 0.5f, 0.0f, -0.6f)
     };
 
+	inline const std::vector<glm::vec3> skyboxVertices {
+        // positions          
+        glm::vec3(-1.0f,  1.0f, -1.0f),
+        glm::vec3(-1.0f, -1.0f, -1.0f),
+        glm::vec3(1.0f, -1.0f, -1.0f),
+        glm::vec3(1.0f, -1.0f, -1.0f),
+        glm::vec3(1.0f,  1.0f, -1.0f),
+        glm::vec3(-1.0f,  1.0f, -1.0f),
+
+        glm::vec3(-1.0f, -1.0f,  1.0f),
+        glm::vec3(-1.0f, -1.0f, -1.0f),
+        glm::vec3(-1.0f,  1.0f, -1.0f),
+        glm::vec3(-1.0f,  1.0f, -1.0f),
+        glm::vec3(-1.0f,  1.0f,  1.0f),
+        glm::vec3(-1.0f, -1.0f,  1.0f),
+
+        glm::vec3(1.0f, -1.0f, -1.0f),
+        glm::vec3(1.0f, -1.0f,  1.0f),
+        glm::vec3(1.0f,  1.0f,  1.0f),
+        glm::vec3(1.0f,  1.0f,  1.0f),
+        glm::vec3(1.0f,  1.0f, -1.0f),
+        glm::vec3(1.0f, -1.0f, -1.0f),
+
+        glm::vec3(-1.0f, -1.0f,  1.0f),
+        glm::vec3(-1.0f,  1.0f,  1.0f),
+        glm::vec3(1.0f,  1.0f,  1.0f),
+        glm::vec3(1.0f,  1.0f,  1.0f),
+        glm::vec3(1.0f, -1.0f,  1.0f),
+        glm::vec3(-1.0f, -1.0f,  1.0f),
+
+        glm::vec3(-1.0f,  1.0f, -1.0f),
+        glm::vec3(1.0f,  1.0f, -1.0f),
+        glm::vec3(1.0f,  1.0f,  1.0f),
+        glm::vec3(1.0f,  1.0f,  1.0f),
+        glm::vec3(-1.0f,  1.0f,  1.0f),
+        glm::vec3(-1.0f,  1.0f, -1.0f),
+
+        glm::vec3(-1.0f, -1.0f, -1.0f),
+        glm::vec3(-1.0f, -1.0f,  1.0f),
+        glm::vec3(1.0f, -1.0f, -1.0f),
+        glm::vec3(1.0f, -1.0f, -1.0f),
+        glm::vec3(-1.0f, -1.0f,  1.0f),
+        glm::vec3(1.0f, -1.0f,  1.0f)
+    };
+
+	inline const float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+
 	inline const std::array<Vertex, 36> rawVertices =
 	{ {
 		// back face (z = -0.5)

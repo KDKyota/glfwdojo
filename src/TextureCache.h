@@ -1,8 +1,8 @@
 #pragma once
 
 #include <unordered_map>
-#include <string>
 #include <memory>
+#include <vector>
 #include "Texture.h"
 
 class TextureCache {
@@ -11,4 +11,6 @@ private:
 
 public: 
 	std::shared_ptr<Texture> get(const std::string& path, bool flip = false);
+
+	unsigned int loadCubemap(const std::vector<std::string>& faces, bool flip = false);
 };

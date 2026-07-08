@@ -15,17 +15,21 @@ public:
 	Scene(std::shared_ptr<Camera> camera, int srcWindow, int scrHeight);
 	~Scene();
 	void Render(float deltaTime);
+	unsigned int framebuffer_, textureColorbuffer_, rbo_;  // メンバ変数として持つ
 
 private:
 	void initMesh();
 	void initTextures();
+	void initFramebuffer();
 	unsigned int loadTexture(const char* path, bool hasAlpha);
-	unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_, transparentVBO_;
+	unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_, transparentVBO_, quadVAO_, quadVBO_, skyboxVAO_, skyboxVBO_;
 	Material material_;
 	TextureCache cache_;
 	std::unique_ptr<gl::Shader> shader_;
 	//std::unique_ptr<gl::Shader> lightShader_;
 	std::unique_ptr<gl::Shader> shaderSingleColor_;
+    std::unique_ptr<gl::Shader> screenshader_;
+	std::unique_ptr<gl::Shader> skyboxShader_;
 	//std::unique_ptr<Model> model_;
 	std::shared_ptr<Camera> camera_;
 
@@ -35,6 +39,7 @@ private:
 	std::shared_ptr<Texture> cubeTexture_;
 	std::shared_ptr<Texture> floorTexture_;
 	std::shared_ptr<Texture> transparentTexture_;
+	unsigned int cubemapTexture_;
 	int scrWidth_, scrHeight_;
 	float elapsedTime_ = 0.0f;
 	int viewLoc_ = -1; // viewのローケーション番号(初期値-1)

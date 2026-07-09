@@ -35,6 +35,11 @@ namespace gl {
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
+	inline const std::vector<glm::vec3> cube_pos = {
+		glm::vec3(-1.0f, 0.0f, -1.0f),
+		glm::vec3(2.0f, 0.0f, 0.0f)
+	};
+
 	inline const std::vector<glm::vec3> windows_pos
     {
         glm::vec3(-1.5f, 0.0f, -0.48f),
@@ -100,79 +105,79 @@ namespace gl {
          1.0f,  1.0f,  1.0f, 1.0f
     };
 
-	inline const std::array<Vertex, 36> rawVertices =
+	// EBO(IBO)用に重複を除いた頂点配列(1面 = 4頂点 x 6面 = 24頂点)
+	inline const std::array<Vertex, 24> rawVertices =
 	{ {
 		// back face (z = -0.5)
 		{{ 0.5f,  0.5f, -0.5f}, {}, {1.0f, 1.0f}},
 		{{ 0.5f, -0.5f, -0.5f}, {}, {1.0f, 0.0f}},
 		{{-0.5f, -0.5f, -0.5f}, {}, {0.0f, 0.0f}},
-		{{-0.5f, -0.5f, -0.5f}, {}, {0.0f, 0.0f}},
 		{{-0.5f,  0.5f, -0.5f}, {}, {0.0f, 1.0f}},
-		{{ 0.5f,  0.5f, -0.5f}, {}, {1.0f, 1.0f}},
 
 		// front face (z = 0.5)
 		{{-0.5f, -0.5f,  0.5f}, {}, {0.0f, 0.0f}},
 		{{ 0.5f, -0.5f,  0.5f}, {}, {1.0f, 0.0f}},
 		{{ 0.5f,  0.5f,  0.5f}, {}, {1.0f, 1.0f}},
-		{{ 0.5f,  0.5f,  0.5f}, {}, {1.0f, 1.0f}},
 		{{-0.5f,  0.5f,  0.5f}, {}, {0.0f, 1.0f}},
-		{{-0.5f, -0.5f,  0.5f}, {}, {0.0f, 0.0f}},
 
 		// left face (x = -0.5)
 		{{-0.5f,  0.5f,  0.5f}, {}, {1.0f, 0.0f}},
 		{{-0.5f,  0.5f, -0.5f}, {}, {1.0f, 1.0f}},
 		{{-0.5f, -0.5f, -0.5f}, {}, {0.0f, 1.0f}},
-		{{-0.5f, -0.5f, -0.5f}, {}, {0.0f, 1.0f}},
 		{{-0.5f, -0.5f,  0.5f}, {}, {0.0f, 0.0f}},
-		{{-0.5f,  0.5f,  0.5f}, {}, {1.0f, 0.0f}},
 
 		// right face (x = 0.5)
 		{{ 0.5f, -0.5f, -0.5f}, {}, {0.0f, 1.0f}},
 		{{ 0.5f,  0.5f, -0.5f}, {}, {1.0f, 1.0f}},
 		{{ 0.5f,  0.5f,  0.5f}, {}, {1.0f, 0.0f}},
-		{{ 0.5f,  0.5f,  0.5f}, {}, {1.0f, 0.0f}},
 		{{ 0.5f, -0.5f,  0.5f}, {}, {0.0f, 0.0f}},
-		{{ 0.5f, -0.5f, -0.5f}, {}, {0.0f, 1.0f}},
 
 		// bottom face (y = -0.5)
 		{{-0.5f, -0.5f, -0.5f}, {}, {0.0f, 1.0f}},
 		{{ 0.5f, -0.5f, -0.5f}, {}, {1.0f, 1.0f}},
 		{{ 0.5f, -0.5f,  0.5f}, {}, {1.0f, 0.0f}},
-		{{ 0.5f, -0.5f,  0.5f}, {}, {1.0f, 0.0f}},
 		{{-0.5f, -0.5f,  0.5f}, {}, {0.0f, 0.0f}},
-		{{-0.5f, -0.5f, -0.5f}, {}, {0.0f, 1.0f}},
 
 		// top face (y = 0.5)
 		{{-0.5f,  0.5f, -0.5f}, {}, {0.0f, 1.0f}},
 		{{-0.5f,  0.5f,  0.5f}, {}, {0.0f, 0.0f}},
 		{{ 0.5f,  0.5f,  0.5f}, {}, {1.0f, 0.0f}},
-		{{ 0.5f,  0.5f,  0.5f}, {}, {1.0f, 0.0f}},
 		{{ 0.5f,  0.5f, -0.5f}, {}, {1.0f, 1.0f}},
-		{{-0.5f,  0.5f, -0.5f}, {}, {0.0f, 1.0f}},
 	} };
 
-	inline const std::array<Vertex, 6> rawplaneVertices =
+	// 1面(4頂点)につき2つの三角形を組むためのインデックス配列(0,1,2, 2,3,0 を6面分)
+	inline const std::array<unsigned int, 36> cubeIndices =
+	{
+		 0,  1,  2,  2,  3,  0, // back
+		 4,  5,  6,  6,  7,  4, // front
+		 8,  9, 10, 10, 11,  8, // left
+		12, 13, 14, 14, 15, 12, // right
+		16, 17, 18, 18, 19, 16, // bottom
+		20, 21, 22, 22, 23, 20, // top
+	};
+
+	// EBO用に重複を除いた頂点配列(4頂点の四角形)
+	inline const std::array<Vertex, 4> rawplaneVertices =
 	{ {
-		// positions // normal vectors // texture Coords 
+		// positions // normal vectors // texture Coords
 		{{ 5.0f, -0.5f,  5.0f},{}, {2.0f, 0.0f}},
 		{{-5.0f, -0.5f,  5.0f},{}, {0.0f, 0.0f}},
 		{{-5.0f, -0.5f, -5.0f},{}, {0.0f, 2.0f}},
-
-		{{ 5.0f, -0.5f,  5.0f},{}, {2.0f, 0.0f}},
-		{{-5.0f, -0.5f, -5.0f},{}, {0.0f, 2.0f}},
-		{{ 5.0f, -0.5f, -5.0f},{}, {2.0f, 2.0f}}
+		{{ 5.0f, -0.5f, -5.0f},{}, {2.0f, 2.0f}},
 	} };
 
-	inline const std::array<Vertex, 6> rawtransparentVertices =
+	inline const std::array<unsigned int, 6> planeIndices = { 0, 1, 2, 2, 3, 0 };
+
+	// EBO用に重複を除いた頂点配列(4頂点の四角形)
+	inline const std::array<Vertex, 4> rawtransparentVertices =
 	{ {
-		{{0.0f, 0.5f, 0.0f}, {}, {0.0f, 0.0f}},
-		{{0.0f, -0.5f,  0.0f}, {}, {0.0f, 1.0f}},
-		{{1.0f, -0.5f,  0.0f}, {}, {1.0f, 1.0f}},
-
-		{{0.0f,  0.5f,  0.0f}, {},  {0.0f,  0.0f}},
-		{{1.0f, -0.5f,  0.0f}, {}, {1.0f,  1.0f} },
-		{{1.0f,  0.5f,  0.0f}, {}, {1.0f,  0.0f}}
+		{{0.0f,  0.5f, 0.0f}, {}, {0.0f, 0.0f}},
+		{{0.0f, -0.5f, 0.0f}, {}, {0.0f, 1.0f}},
+		{{1.0f, -0.5f, 0.0f}, {}, {1.0f, 1.0f}},
+		{{1.0f,  0.5f, 0.0f}, {}, {1.0f, 0.0f}},
 	} };
+
+	inline const std::array<unsigned int, 6> transparentIndices = { 0, 1, 2, 2, 3, 0 };
 
 
 	// 3頂点の座標(v0, v1, v2)から法線ベクトルを計算する関数
@@ -182,11 +187,16 @@ namespace gl {
 	{
 		return glm::normalize(glm::cross(v1 - v0, v2 - v1));
 	}
-	// 法線ベクトルを計算するラムダ関数
-	template <std::size_t N>
-	std::array<Vertex, N> calculateNormals(std::array<Vertex, N> vertices)
+
+	// 頂点配列が「1面 = 4頂点」の並びである前提で、面ごとに法線を計算して4頂点に割り当てる関数
+	// (EBOで頂点を共有するため、三角形単位ではなく面単位でまとめて処理する)
+	template <std::size_t N> // Nは頂点数（インデックス数）
+	std::array<Vertex, N> calculateFaceNormals(std::array<Vertex, N> vertices)
 	{
-		for (std::size_t i = 0; i < N; i += 3)
+		// Nが4の倍数であることをコンパイル時にチェック(falseならエラー)
+		static_assert(N % 4 == 0, "calculateFaceNormals expects 4 vertices per face");
+
+		for (std::size_t i = 0; i < N; i += 4)
 		{
 			glm::vec3 n = calcNormal(
 				vertices[i].position,
@@ -195,14 +205,15 @@ namespace gl {
 
 			vertices[i].normal =
 			vertices[i + 1].normal =
-			vertices[i + 2].normal = n;
+			vertices[i + 2].normal =
+			vertices[i + 3].normal = n;
 		}
 
 		return vertices;
 	}
 
-	inline const std::array<Vertex, 36> cubeVertices = calculateNormals(rawVertices);
-	inline const std::array<Vertex, 6> planeVertices = calculateNormals(rawplaneVertices);
-	inline const std::array<Vertex, 6> transparentVertices = calculateNormals(rawtransparentVertices);
+	inline const std::array<Vertex, 24> cubeVertices = calculateFaceNormals(rawVertices);
+	inline const std::array<Vertex, 4> planeVertices = calculateFaceNormals(rawplaneVertices);
+	inline const std::array<Vertex, 4> transparentVertices = calculateFaceNormals(rawtransparentVertices);
 
 }

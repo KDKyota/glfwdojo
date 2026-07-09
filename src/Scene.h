@@ -23,9 +23,12 @@ private:
 	void initFramebuffer();
 	unsigned int loadTexture(const char* path, bool hasAlpha);
 	unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_, transparentVBO_, quadVAO_, quadVBO_, skyboxVAO_, skyboxVBO_;
+	unsigned int cubeInstanceVBO_;
+	unsigned int cubeEBO_, planeEBO_, transparentEBO_;
 	Material material_;
 	TextureCache cache_;
 	std::unique_ptr<gl::Shader> shader_;
+	std::unique_ptr<gl::Shader> cubeShader_;
 	//std::unique_ptr<gl::Shader> lightShader_;
 	//std::unique_ptr<gl::Shader> shaderSingleColor_;
     std::unique_ptr<gl::Shader> screenshader_;

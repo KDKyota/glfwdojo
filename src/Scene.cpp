@@ -9,6 +9,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	scrHeight_(scrHeight)
 {
 	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
+	cubeShader_ = std::make_unique<gl::Shader>("cube.vert", "shader.frag");
 	//lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
 	//shaderSingleColor_ = std::make_unique<gl::Shader>("shader.vert", "stencil_single_color.frag");
 	//glasscubeShader_ = std::make_unique<gl::Shader>("glasscube.vert", "glasscube.frag");
@@ -29,22 +30,35 @@ void Scene::initMesh() {
 
 	glGenVertexArrays(1, &cubeVAO_); // cube用のVAO
 	glGenBuffers(1, &cubeVBO_);
+	glGenBuffers(1, &cubeInstanceVBO_);
+	glGenBuffers(1, &cubeEBO_);
 	glBindVertexArray(cubeVAO_);
 	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO_);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::cubeVertices), gl::cubeVertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeEBO_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gl::cubeIndices), gl::cubeIndices.data(), GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
 	glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+	glBindBuffer(GL_ARRAY_BUFFER, cubeInstanceVBO_);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::cube_pos) , gl::cube_pos.data(), GL_STATIC_DRAW);
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glVertexAttribDivisor(3, 1); // インスタンスごとに変化する属性
     glBindVertexArray(0);
 
 	glGenVertexArrays(1, &planeVAO_); // 床用のVAO
 	glGenBuffers(1, &planeVBO_);
+	glGenBuffers(1, &planeEBO_);
 	glBindVertexArray(planeVAO_);
 	glBindBuffer(GL_ARRAY_BUFFER, planeVBO_);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::planeVertices), gl::planeVertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeEBO_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gl::planeIndices), gl::planeIndices.data(), GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
     glEnableVertexAttribArray(1);
@@ -55,9 +69,12 @@ void Scene::initMesh() {
 
 	glGenVertexArrays(1, &transparentVAO_); // 透過窓のVAO
 	glGenBuffers(1, &transparentVBO_);
+	glGenBuffers(1, &transparentEBO_);
 	glBindVertexArray(transparentVAO_);
 	glBindBuffer(GL_ARRAY_BUFFER, transparentVBO_);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::transparentVertices), gl::transparentVertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, transparentEBO_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gl::transparentIndices), gl::transparentIndices.data(), GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
     glEnableVertexAttribArray(1);
@@ -194,6 +211,8 @@ void Scene::Render(float deltaTime)
 	//shaderSingleColor_->setVec3("viewPos", camera_->GetViewPosition());
 	//shaderSingleColor_->setMat4("view", view);
 	//shaderSingleColor_->setMat4("projection", projection);
+
+	// ★UBOによりviewとprojectionを送信
 	glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(view));
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
@@ -206,18 +225,16 @@ void Scene::Render(float deltaTime)
 	// cube
 	glBindVertexArray(cubeVAO_);
 	cubeTexture_->bind(0);
-	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
-	shader_->setMat4("model", model);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	cubeShader_->use();
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-	shader_->setMat4("model", model);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	cubeShader_->setMat4("model", model);
+	glDrawElementsInstanced(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0, gl::cube_pos.size());
+
 	// floor
 	glBindVertexArray(planeVAO_);
 	glBindTexture(GL_TEXTURE_2D, floorTexture_->getID());
 	shader_->setMat4("model", glm::mat4(1.0f));
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	// draw skybox
 	glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
@@ -240,7 +257,7 @@ void Scene::Render(float deltaTime)
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, position);
 		shader_->setMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	}
 
 	// now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
@@ -311,10 +328,14 @@ Scene::~Scene() {
     glDeleteVertexArrays(1, &quadVAO_);
     glDeleteVertexArrays(1, &skyboxVAO_);
     glDeleteBuffers(1, &cubeVBO_);
+	glDeleteBuffers(1, &cubeInstanceVBO_);
     glDeleteBuffers(1, &planeVBO_);
     glDeleteBuffers(1, &transparentVBO_);
     glDeleteBuffers(1, &quadVBO_);
     glDeleteBuffers(1, &skyboxVBO_);
+	glDeleteBuffers(1, &cubeEBO_);
+    glDeleteBuffers(1, &planeEBO_);
+    glDeleteBuffers(1, &transparentEBO_);
     glDeleteFramebuffers(1, &framebuffer_);
     glDeleteTextures(1, &textureColorbuffer_);
     glDeleteTextures(1, &cubemapTexture_);

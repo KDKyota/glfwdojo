@@ -156,7 +156,7 @@ namespace gl {
 		20, 21, 22, 22, 23, 20, // top
 	};
 
-	// EBO用に重複を除いた頂点配列(4頂点の四角形)
+	// EBO用に重複を除いた頂点配列(床)
 	inline const std::array<Vertex, 4> rawplaneVertices =
 	{ {
 		// positions // normal vectors // texture Coords

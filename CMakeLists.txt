@@ -60,6 +60,7 @@ add_custom_command(TARGET glfwdojo POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.vert
         ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.frag
         ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.vert
+        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
         $<TARGET_FILE_DIR:glfwdojo>
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/resources

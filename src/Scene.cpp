@@ -16,6 +16,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	//model_ = std::make_unique<Model>("resources\\objects\\backpack\\backpack.obj", cache_);
 	screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "fragment_quad.frag");
 	skyboxShader_ = std::make_unique<gl::Shader>("skybox.vert", "skybox.frag");
+	transparentwindowShader_ = std::make_unique<gl::Shader>("window.vert", "shader.frag");
 
 	//cubePositions_ = std::move(cubePositions);
 
@@ -47,8 +48,8 @@ void Scene::initMesh() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(gl::cube_pos) , gl::cube_pos.data(), GL_STATIC_DRAW);
 	glEnableVertexAttribArray(3);
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glVertexAttribDivisor(3, 1); // インスタンスごとに変化する属性
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
 	glGenVertexArrays(1, &planeVAO_); // 床用のVAO
@@ -69,6 +70,7 @@ void Scene::initMesh() {
 
 	glGenVertexArrays(1, &transparentVAO_); // 透過窓のVAO
 	glGenBuffers(1, &transparentVBO_);
+	glGenBuffers(1, &transparentInstanceVBO_);
 	glGenBuffers(1, &transparentEBO_);
 	glBindVertexArray(transparentVAO_);
 	glBindBuffer(GL_ARRAY_BUFFER, transparentVBO_);
@@ -81,6 +83,13 @@ void Scene::initMesh() {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
 	glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+	glBindBuffer(GL_ARRAY_BUFFER, transparentInstanceVBO_);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * gl::windows_pos.size(), nullptr, GL_DYNAMIC_DRAW);
+
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+	glVertexAttribDivisor(3, 1); // インスタンスごとに変化する属性
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
 	// skybox
@@ -217,7 +226,7 @@ void Scene::Render(float deltaTime)
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(view));
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	shader_->use();
+	transparentwindowShader_->use();
 	// UBOによりviewとprojectionを送信するので、以下のコードはコメントアウト
 	//shader_->setMat4("view", view);
 	//shader_->setMat4("projection", projection);
@@ -248,17 +257,26 @@ void Scene::Render(float deltaTime)
 	glDepthFunc(GL_LESS); // set depth function back to default
 
 	// transparent windows
-	shader_->use();
-	glBindVertexArray(transparentVAO_);
-	glBindTexture(GL_TEXTURE_2D, transparentTexture_->getID());
+	transparentwindowShader_->use();
+	//glBindVertexArray(transparentVAO_);
+	//glBindTexture(GL_TEXTURE_2D, transparentTexture_->getID());
+
+	transparent_positions_.clear();
 	for (const auto& draw : sorted)
 	{
 		glm::vec3 position = gl::windows_pos[draw.index];
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, position);
-		shader_->setMat4("model", model);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, position);
+		transparent_positions_.push_back(position);
+		//shader_->setMat4("model", model);
+		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	}
+	glBindBuffer(GL_ARRAY_BUFFER, transparentInstanceVBO_);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * transparent_positions_.size(), transparent_positions_.data());
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(transparentVAO_);
+	glBindTexture(GL_TEXTURE_2D, transparentTexture_->getID());
+	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, transparent_positions_.size());
 
 	// now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -331,6 +349,7 @@ Scene::~Scene() {
 	glDeleteBuffers(1, &cubeInstanceVBO_);
     glDeleteBuffers(1, &planeVBO_);
     glDeleteBuffers(1, &transparentVBO_);
+	glDeleteBuffers(1, &transparentInstanceVBO_);
     glDeleteBuffers(1, &quadVBO_);
     glDeleteBuffers(1, &skyboxVBO_);
 	glDeleteBuffers(1, &cubeEBO_);

@@ -24,11 +24,13 @@ private:
 	unsigned int loadTexture(const char* path, bool hasAlpha);
 	unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_, transparentVBO_, quadVAO_, quadVBO_, skyboxVAO_, skyboxVBO_;
 	unsigned int cubeInstanceVBO_;
+	unsigned int transparentInstanceVBO_;
 	unsigned int cubeEBO_, planeEBO_, transparentEBO_;
 	Material material_;
 	TextureCache cache_;
 	std::unique_ptr<gl::Shader> shader_;
 	std::unique_ptr<gl::Shader> cubeShader_;
+	std::unique_ptr<gl::Shader> transparentwindowShader_;
 	//std::unique_ptr<gl::Shader> lightShader_;
 	//std::unique_ptr<gl::Shader> shaderSingleColor_;
     std::unique_ptr<gl::Shader> screenshader_;
@@ -50,6 +52,7 @@ private:
 	int scrWidth_, scrHeight_;
 	float elapsedTime_ = 0.0f;
 	int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
+	std::vector<glm::vec3> transparent_positions_; // 透過オブジェクトのモデル行列を格納する配列
 
 	static constexpr float animationTime_ = 5.0f;
 	std::vector<glm::vec3> cubePositions_;

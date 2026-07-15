@@ -2,21 +2,21 @@
 
 このドキュメントは、既存の機能を変更したり新しい要素を追加するときの手順と注意点をまとめたものです。
 
-> ビルド手順・ファイル追加時の CMakeLists.txt 設定は [BUILD.md](./BUILD.md) を参照してください。
-
 ---
 
 ## 目次
 
 1. [アーキテクチャ概要](#アーキテクチャ概要)
 2. [UBO（Uniform Buffer Object）](#ubouniform-buffer-object)
-3. [ライトの変更](#ライトの変更)
-4. [ライトキューブの追加](#ライトキューブの追加)
-5. [新しい3Dオブジェクトの追加](#新しい3dオブジェクトの追加)
-6. [インスタンシングの追加](#インスタンシングの追加)
-7. [新しいシェーダーの追加](#新しいシェーダーの追加)
-8. [テクスチャの追加](#テクスチャの追加)
-9. [よくある落とし穴](#よくある落とし穴)
+3. [ガンマ補正](#ガンマ補正)
+4. [ライトの変更](#ライトの変更)
+5. [ライトキューブの追加](#ライトキューブの追加)
+6. [シャドウマッピング：デプスマップ FBO](#シャドウマッピングデプスマップ-fbo)
+7. [新しい3Dオブジェクトの追加](#新しい3dオブジェクトの追加)
+8. [インスタンシングの追加](#インスタンシングの追加)
+9. [新しいシェーダーの追加](#新しいシェーダーの追加)
+10. [テクスチャの追加](#テクスチャの追加)
+11. [よくある落とし穴](#よくある落とし穴)
 
 ---
 
@@ -42,6 +42,8 @@ UBO に view / projection を書き込む
  ↓
 不透明オブジェクト（cube, floor）を描画
  ↓
+ライトキューブを描画（← FBO バインド中に行うこと）
+ ↓
 スカイボックスを描画（GL_LEQUAL で最遠描画）
  ↓
 透明オブジェクトをカメラ距離でソートして描画
@@ -59,9 +61,9 @@ view と projection は UBO（binding = 0）で全シェーダーに共有され
 
 **C++ 側（Scene.cpp の Render()）:**
 ```cpp
-glBindBuffer(GL_UNIFORM_BUFFER, ubo_);
-glBufferSubData(GL_UNIFORM_BUFFER, 0,                  sizeof(glm::mat4), glm::value_ptr(view));
-glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4),  sizeof(glm::mat4), glm::value_ptr(projection));
+glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO_);
+glBufferSubData(GL_UNIFORM_BUFFER, 0,                 sizeof(glm::mat4), glm::value_ptr(view));
+glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
 glBindBuffer(GL_UNIFORM_BUFFER, 0);
 ```
 
@@ -75,6 +77,24 @@ layout (std140, binding = 0) uniform Matrices {
 
 > **注意:** メンバの順序（view → projection）と C++ の書き込み順を必ず一致させること。
 > 新しい .vert ファイルを作るときも同じブロック定義をコピーする。
+> `glBufferSubData` の第3引数は必ず `sizeof(glm::mat4)`（64 bytes）を指定すること。
+> 誤って `sizeof(配列)` を渡すとサイズが狂い、projection が正しく書き込まれない。
+
+---
+
+## ガンマ補正
+
+`Window.cpp` のコンテキスト初期化後に以下を呼ぶだけで有効化できます：
+
+```cpp
+glEnable(GL_FRAMEBUFFER_SRGB);
+```
+
+これにより、フレームバッファへの書き込み時に OpenGL がガンマ補正（linear → sRGB 変換）を自動で行います。
+シェーダー側での手動補正（`pow(color, 1.0/2.2)`）は不要になります。
+
+> **注意:** スカイボックスなど、すでに sRGB 空間の画像を使っている場合は二重補正になることがある。
+> テクスチャロード時に `GL_SRGB` / `GL_SRGB_ALPHA` を指定した場合は自動でリニア変換されるため問題ない。
 
 ---
 
@@ -85,11 +105,8 @@ layout (std140, binding = 0) uniform Matrices {
 `GeometryData.h` の `pointLights` 配列を直接編集します：
 
 ```cpp
-std::array<gl::PointLight, 4> pointLights = {{
-    { glm::vec3(1.0f, 2.0f, 0.0f) },  // ← ここを変更
-    { glm::vec3(2.3f, -3.3f, -4.0f) },
-    { glm::vec3(-4.0f, 2.0f, -12.0f) },
-    { glm::vec3(0.0f, 0.0f, -3.0f) },
+inline const std::array<gl::PointLight, 1> pointLights = {{
+    { glm::vec3(0.0f, 2.0f, 0.0f) },
 }};
 ```
 
@@ -106,24 +123,18 @@ struct PointLight {
 };
 ```
 
-### ライトをシェーダーに送る（コメントアウト中の復元）
+> **ambient が小さすぎると影側の面が真っ黒になる。** 点光源1灯だと光の当たらない面は
+> ambient 値しか明るさがないため、0.05 程度では暗くなりすぎることがある。シーンに合わせて調整する。
 
-`Render()` 内でコメントアウトされているライト送信ブロックを有効にします：
+### ライトをシェーダーに送る
+
+`Render()` 内でシェーダーごとに `use()` した後に呼ぶ。`shader_`, `cubeShader_`, `transparentwindowShader_` それぞれに送る必要がある（同じ .frag を使っていても、シェーダープログラムオブジェクトが別なら uniform の設定も別々に行う）。
 
 ```cpp
-// DirectionalLight
-directionalLight_.applyToShader(*shader_, "dirLight");
-
-// PointLight (4個ループ)
-for (size_t i = 0; i < pointLights.size(); ++i) {
-    pointLights[i].applyToShader(*shader_, "pointLights[" + std::to_string(i) + "]");
+for (const auto& pointLight : gl::pointLights) {
+    pointLight.applyToShader(*shader_, "pointLights[" + std::to_string(&pointLight - gl::pointLights.data()) + "]");
 }
-
-// SpotLight（カメラ追従）
-spotlight_.applyToShader(*shader_, "spotLight", *camera_);
 ```
-
-> **前提:** `shader_` を `use()` した後に呼ぶこと。
 
 ---
 
@@ -131,74 +142,68 @@ spotlight_.applyToShader(*shader_, "spotLight", *camera_);
 
 ライトの位置に小さなキューブを描画してライト位置を可視化する手順です。
 
-### 1. Scene.h にメンバを追加
+### VAO の設定
+
+`lightVAO_` を別途 `glGenVertexArrays` せずに、`cubeVAO_` をそのまま流用できます。
+`cubeVAO_` には position / normal / uv すべての属性が設定済みですが、
+`light_cube.vert` が使うのは `location = 0`（position）だけなので問題ありません。
+
+### Render() での描画（FBO バインド中に行うこと）
 
 ```cpp
-unsigned int lightVAO_;
-unsigned int lightVBO_;   // cubeVBO_ と共有してもよい
-std::unique_ptr<gl::Shader> lightShader_;
-```
-
-### 2. コンストラクタでシェーダーを生成
-
-```cpp
-lightShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
-```
-
-### 3. initMesh() でVAOを設定
-
-キューブと同じ頂点データを使い、position（location=0）だけ有効化します：
-
-```cpp
-glGenVertexArrays(1, &lightVAO_);
-glBindVertexArray(lightVAO_);
-glBindBuffer(GL_ARRAY_BUFFER, cubeVBO_);  // cubeVBO_ を再利用
-glEnableVertexAttribArray(0);
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(gl::Vertex),
-    (void*)offsetof(gl::Vertex, position));
-glBindVertexArray(0);
-```
-
-### 4. Render() で描画（不透明オブジェクト描画の末尾に追加）
-
-```cpp
-lightShader_->use();
-glBindVertexArray(lightVAO_);
-for (const auto& light : pointLights) {
-    glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), light.position);
+// ← glBindFramebuffer(GL_FRAMEBUFFER, 0) より前に置くこと
+lightcubeShader_->use();
+glBindVertexArray(cubeVAO_);
+for (const auto& pointLight : gl::pointLights) {
+    glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
     lightModel = glm::scale(lightModel, glm::vec3(0.2f));
-    lightShader_->setMat4("model", lightModel);
+    lightcubeShader_->setMat4("model", lightModel);
     glDrawElements(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0);
 }
 ```
 
-> `glDrawElements` を使うには EBO が必要です。`lightVAO_` に `cubeEBO_` を紐付けるか、
-> `glDrawArrays(GL_TRIANGLES, 0, 36)` を使う場合は重複頂点版の頂点データが必要です。
+### light_cube.vert について
 
-### 5. light_cube.vert の例
+`light_cube.vert` は UBO（binding=0）から `view` / `projection` を取得しています。
+C++ 側から `setMat4("view", ...)` / `setMat4("projection", ...)` を呼んでも効果はありません（その uniform は存在しない）。
 
-```glsl
-#version 460 core
-layout (location = 0) in vec3 aPos;
+---
 
-layout (std140, binding = 0) uniform Matrices {
-    mat4 view;
-    mat4 projection;
-};
-uniform mat4 model;
+## シャドウマッピング：デプスマップ FBO
 
-void main() {
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
-}
-```
+シャドウマッピングでは、ライト視点からのデプス情報をテクスチャに書き出す専用の FBO が必要です。
 
-### 6. デストラクタに削除を追加
+### デプステクスチャは画像ファイルから作らない
+
+`TextureCache` / `Texture` クラスは画像ファイルのロード用です。デプスマップは GPU 上に空の領域を確保するだけでよいため、`glTexImage2D` の最後の引数（data）に `nullptr` を渡して作成します。
+
+これは既存の `initFramebuffer()` 内で `textureColorbuffer_` を作っているパターンと同じ考え方です：
 
 ```cpp
-glDeleteVertexArrays(1, &lightVAO_);
-// lightVBO_ を独立させた場合のみ:
-// glDeleteBuffers(1, &lightVBO_);
+// 既存のカラーテクスチャ（参考）
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+
+// デプスマップ用テクスチャ
+glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT,
+             0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 ```
+
+| 項目 | カラーテクスチャ | デプステクスチャ |
+|---|---|---|
+| 内部フォーマット | `GL_RGB` / `GL_RGBA` | `GL_DEPTH_COMPONENT` |
+| データ型 | `GL_UNSIGNED_BYTE` | `GL_FLOAT` |
+| FBO アタッチメント | `GL_COLOR_ATTACHMENT0` | `GL_DEPTH_ATTACHMENT` |
+| カラー出力 | あり | `glDrawBuffer(GL_NONE)` で無効化 |
+| カラー読み込み | あり | `glReadBuffer(GL_NONE)` で無効化 |
+
+### デプスマップ FBO の初期化手順
+
+1. `unsigned int depthMapFBO_, depthMap_` を Scene.h に追加
+2. 新メソッド `initDepthMap()` をコンストラクタから呼び出す
+3. FBO 生成 → デプステクスチャ生成 → FBO にアタッチ → `glDrawBuffer(GL_NONE)` / `glReadBuffer(GL_NONE)` → FBO の完全性確認（`glCheckFramebufferStatus`）
+
+> **解像度:** シャドウマップの解像度（`SHADOW_WIDTH` / `SHADOW_HEIGHT`）はウィンドウ解像度と独立して設定できる。
+> 高いほど精細な影になるが VRAM を消費する。1024×1024 程度が学習用途では一般的。
 
 ---
 
@@ -216,6 +221,19 @@ inline const std::array<Vertex, 4> myObjectVertices = calculateFaceNormals(rawMy
 ```
 
 法線は `calculateFaceNormals()` が自動計算します（4頂点/面の構造が前提）。
+
+**平面の頂点巻き順と法線の関係:**
+
+`calcNormal` は `cross(v1 - v0, v2 - v1)` で法線を計算します。
+上向き法線（0, 1, 0）が欲しい床の場合、頂点を LF → RF → RB → LB の順に並べると正しくなります：
+
+```
+LB --- RB       巻き順: 0(LF) → 1(RF) → 2(RB) → 3(LB)
+|      |        EBO:   { 0, 1, 2, 2, 3, 0 }
+LF --- RF       法線:  cross(RF-LF, RB-RF) = (0,1,0) ✓
+```
+
+巻き順が逆（LF → LB → RB → RF）だと法線が下向きになり、上方からのライトが当たらなくなります。
 
 ### 2. Scene.h にVAO/VBO/EBOを追加
 
@@ -358,9 +376,14 @@ void main() {
 }
 ```
 
-### 2. CMakeLists.txt の SHADER_SOURCES に追記
+### 2. CMakeLists.txt にコピー設定を追加
 
-詳細は [BUILD.md の「新しいシェーダーファイルの追加」](./BUILD.md#新しいシェーダーファイルの追加) を参照してください。
+`add_custom_command` のシェーダーコピーリストに追記します：
+
+```cmake
+${CMAKE_SOURCE_DIR}/shader_src/myshader.vert
+${CMAKE_SOURCE_DIR}/shader_src/myshader.frag
+```
 
 ### 3. Scene.h にメンバを追加
 
@@ -410,6 +433,41 @@ cubemapTexture_ = cache_.loadCubemap(faces, false);  // false = 反転なし
 ---
 
 ## よくある落とし穴
+
+### ライトキューブを FBO の外で描画してしまう
+
+`glBindFramebuffer(GL_FRAMEBUFFER, 0)` でデフォルト FB に戻った後にライトキューブを描画すると：
+- `glDisable(GL_DEPTH_TEST)` が有効な状態なので全オブジェクトの手前に描画される
+- カスタム FB を通さないのでポストプロセス（ガンマ補正等）が適用されない
+- 結果として「2D の板ポリ」に見える
+
+**必ず `glBindFramebuffer(GL_FRAMEBUFFER, 0)` より前のブロックで描画すること。**
+
+### `glDrawElements` のインデックス数をハードコードしない
+
+```cpp
+// NG: キューブ（12三角形 = 36インデックス）なのに 24 を指定すると 4 面しか描画されない
+glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+
+// OK: cubeIndices のサイズ（= 36）を直接参照する
+glDrawElements(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0);
+```
+
+### normalMatrix を各シェーダーの描画前に設定する
+
+フラグメントシェーダー内で法線を正しくワールド空間に変換するには、C++ 側から `normalMatrix` を送る必要があります。設定を忘れるとゼロ行列になり、法線がすべて (0,0,0) になってライティングが真っ黒になります。
+
+```cpp
+shader_->setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+// モデル行列が単位行列の場合は glm::mat3(1.0f) でも同じ
+```
+
+複数のシェーダー（`shader_`, `cubeShader_`, `transparentwindowShader_`）それぞれに設定すること。
+
+### 同じ .frag でも uniform はシェーダープログラムごとに設定する
+
+`cubeShader_` と `shader_` が同じ `shader.frag` を使っていても、プログラムオブジェクトは別です。
+`viewPos` や `pointLights[0]` などの uniform は、`use()` した各シェーダーに対して個別に `setVec3` / `setFloat` を呼ぶ必要があります。
 
 ### `std::vector` に `sizeof` を使ってはいけない
 

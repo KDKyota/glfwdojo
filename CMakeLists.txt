@@ -48,23 +48,33 @@ target_link_libraries(glfwdojo PRIVATE
     assimp::assimp
 )
 
-add_custom_command(TARGET glfwdojo POST_BUILD
+set(SHADER_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/stencil_single_color.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/fragment_quad.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/fragment_quad.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
+)
+
+add_custom_target(copy_shaders ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.vert
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.frag
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/stencil_single_color.frag
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.vert
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.frag
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/fragment_quad.frag
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/fragment_quad.vert
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.vert
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.frag
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.vert
-        ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
+        ${SHADER_SOURCES}
         $<TARGET_FILE_DIR:glfwdojo>
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
         $<TARGET_FILE_DIR:glfwdojo>/resources
+    COMMENT "Copying shaders and resources"
 )
+
+add_dependencies(copy_shaders glfwdojo)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

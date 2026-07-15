@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <array>
+#include "Lighting.h"
 
 #define MAX_BONE_INFLUENCE 4
 
@@ -39,6 +40,14 @@ namespace gl {
 		glm::vec3(-1.0f, 0.0f, -1.0f),
 		glm::vec3(2.0f, 0.0f, 0.0f)
 	};
+
+	inline const std::array<gl::PointLight, 1> pointLights = {{
+		//{ glm::vec3( 0.7f,  0.2f,  2.0f) },
+		//{ glm::vec3( 2.3f, -3.3f, -4.0f) },
+		//{ glm::vec3(-4.0f,  2.0f,-12.0f) },
+		//{ glm::vec3( 0.0f,  0.0f, -3.0f) },
+		{glm::vec3(0.0f, 2.0f, 0.0f)}
+	}};
 
 	inline const std::vector<glm::vec3> windows_pos
     {
@@ -106,6 +115,7 @@ namespace gl {
     };
 
 	// EBO(IBO)用に重複を除いた頂点配列(1面 = 4頂点 x 6面 = 24頂点)
+	// cubeのローカル座標
 	inline const std::array<Vertex, 24> rawVertices =
 	{ {
 		// back face (z = -0.5)
@@ -160,10 +170,10 @@ namespace gl {
 	inline const std::array<Vertex, 4> rawplaneVertices =
 	{ {
 		// positions // normal vectors // texture Coords
-		{{ 5.0f, -0.5f,  5.0f},{}, {2.0f, 0.0f}},
-		{{-5.0f, -0.5f,  5.0f},{}, {0.0f, 0.0f}},
-		{{-5.0f, -0.5f, -5.0f},{}, {0.0f, 2.0f}},
-		{{ 5.0f, -0.5f, -5.0f},{}, {2.0f, 2.0f}},
+		{{-25.0f, -0.5f,  25.0f},{}, {0.0f,  0.0f}},
+		{{ 25.0f, -0.5f,  25.0f},{}, {25.0f, 0.0f}},
+		{{ 25.0f, -0.5f, -25.0f},{}, {25.0f, 25.0f}},
+		{{-25.0f, -0.5f, -25.0f},{}, {0.0f,  25.0f}},
 	} };
 
 	inline const std::array<unsigned int, 6> planeIndices = { 0, 1, 2, 2, 3, 0 };

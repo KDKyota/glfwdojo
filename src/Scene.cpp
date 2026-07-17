@@ -149,6 +149,10 @@ void Scene::initTextures() {
 
 	shader_->use();
 	shader_->setInt("texture1", 0);
+	shader_->setInt("shadowMap", 1);
+	cubeShader_->use();
+	cubeShader_->setInt("texture1", 0);
+	cubeShader_->setInt("shadowMap", 1); 
 	screenshader_->use();
 	screenshader_->setInt("screenTexture", 0); 
 	skyboxShader_->use();
@@ -220,7 +224,7 @@ void Scene::Render(float deltaTime)
 		[](const gl::TransparentDraw& a, const gl::TransparentDraw& b) { return a.distance > b.distance; });
 
 	// ライト空間行列の計算
-	glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, shadowNearPlane_, shadowFarPlane_);
+	glm::mat4 lightProjection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, shadowNearPlane_, shadowFarPlane_);
 	glm::mat4 lightView = glm::lookAt(gl::pointLights[0].position, glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
@@ -236,7 +240,7 @@ void Scene::Render(float deltaTime)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// ── Pass 2: メインパス ──
-	glViewport(0, 0, scrWidth_, scrHeight_);
+	glViewport(0, 0, scrWidth_, scrHeight_); // viewport を元に戻す
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -256,6 +260,9 @@ void Scene::Render(float deltaTime)
 	cubeShader_->setVec3("viewPos", camera_->GetViewPosition());
 	cubeShader_->setMat3("normalMatrix", glm::mat3(1.0f));
 	cubeShader_->setFloat("material.shininess", 32.0f);
+	cubeShader_->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, depthmapTexture_);
 	applyPointLights(*cubeShader_);
 	renderCubes(*cubeShader_);
 
@@ -264,6 +271,9 @@ void Scene::Render(float deltaTime)
 	shader_->setVec3("viewPos", camera_->GetViewPosition());
 	shader_->setMat3("normalMatrix", glm::mat3(1.0f));
 	shader_->setFloat("material.shininess", 32.0f);
+	shader_->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, depthmapTexture_);
 	applyPointLights(*shader_);
 	renderFloor(*shader_);
 

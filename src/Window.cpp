@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "Callbacks.h"
 #include <stdexcept>
+#include <iostream>
 
 Window::Window(int width, int height, const std::string& title) : width_(width), height_(height)
 {
@@ -37,6 +38,9 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	std::cout << glGetString(GL_VERSION) << std::endl;
+	std::cout << glGetString(GL_VENDOR) << std::endl;
+	std::cout << glGetString(GL_RENDERER) << std::endl;
 	// コールマック関数を登録
 	// ふつうは第一引数がwindowだが、今回はスマートポインタにhandle_代入しているのでその先頭ポインタという意味でhandle_.get()
 	glfwSetFramebufferSizeCallback(handle_.get(), framebuffer_size_callback);

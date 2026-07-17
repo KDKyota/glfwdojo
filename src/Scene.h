@@ -23,7 +23,7 @@ private:
 	void initFramebuffer();
 	static constexpr unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 	static constexpr float shadowNearPlane_ = 1.0f;
-	static constexpr float shadowFarPlane_  = 7.5f;
+	static constexpr float shadowFarPlane_  = 30.0f;
 	unsigned int loadTexture(const char* path, bool hasAlpha);
 	unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_, transparentVBO_, quadVAO_, quadVBO_, skyboxVAO_, skyboxVBO_;
 	unsigned int lightVAO_, lightVBO_;

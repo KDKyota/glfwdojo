@@ -62,10 +62,10 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
+	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
 )
 
-add_custom_target(copy_shaders ALL
+add_custom_command(TARGET glfwdojo POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${SHADER_SOURCES}
         $<TARGET_FILE_DIR:glfwdojo>
@@ -74,7 +74,5 @@ add_custom_target(copy_shaders ALL
         $<TARGET_FILE_DIR:glfwdojo>/resources
     COMMENT "Copying shaders and resources"
 )
-
-add_dependencies(copy_shaders glfwdojo)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

@@ -38,7 +38,9 @@ namespace gl {
 
 	inline const std::vector<glm::vec3> cube_pos = {
 		glm::vec3(-1.0f, 1.0f, -1.0f),
-		glm::vec3(2.0f, 1.5f, 0.0f)
+		glm::vec3(2.0f,  1.5f,  0.0f),
+		glm::vec3(0.0f,  1.0f, -20.0f), // z=-25 壁の前
+		glm::vec3(0.0f,  1.0f,  20.0f), // z=+25 壁の前
 	};
 
 	inline const std::array<gl::PointLight, 1> pointLights = {{
@@ -225,5 +227,25 @@ namespace gl {
 	inline const std::array<Vertex, 24> cubeVertices = calculateFaceNormals(rawVertices);
 	inline const std::array<Vertex, 4> planeVertices = calculateFaceNormals(rawplaneVertices);
 	inline const std::array<Vertex, 4> transparentVertices = calculateFaceNormals(rawtransparentVertices);
+
+	// 壁の頂点データ（z=-25 と z=+25 の2枚）
+	// Normal, Tangent, Bitangent は解析的に設定（T×B = N が成立）
+	inline const std::array<Vertex, 8> wallVertices = { {
+		// z=-25 の壁 (法線: +z,  T: +x, B: +y)
+		{{ -25.0f, -0.5f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 0.0f, 0.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{  25.0f, -0.5f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 5.0f, 0.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{  25.0f, 10.0f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 5.0f, 1.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{ -25.0f, 10.0f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 0.0f, 1.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		// z=+25 の壁 (法線: -z,  T: -x, B: +y)
+		{{  25.0f, -0.5f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{ -25.0f, -0.5f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 5.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{ -25.0f, 10.0f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 5.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{  25.0f, 10.0f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+	} };
+
+	inline const std::array<unsigned int, 12> wallIndices = {
+		0, 1, 2,  2, 3, 0,   // z=-25 壁
+		4, 5, 6,  6, 7, 4,   // z=+25 壁
+	};
 
 }

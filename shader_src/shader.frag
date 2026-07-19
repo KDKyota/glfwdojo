@@ -50,10 +50,10 @@ struct SpotLight {
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
-in vec4 FragPosLightSpace;
 
 uniform sampler2D texture1;
-uniform sampler2D shadowMap;
+uniform samplerCube shadowMap;
+uniform float farPlane;
 
 uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
@@ -67,7 +67,7 @@ uniform vec3 viewPos; // カメラの位置
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewdir);
-float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir);
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir);
 
 void main()
 {
@@ -80,7 +80,7 @@ void main()
 	//vec3 result = CalcDirLight(dirLight, norm, viewDir);
 	// 2. point lighting
     vec3 lightDir = normalize(pointLights[0].position - FragPos);
-    float shadow = ShadowCalculation(FragPosLightSpace, normal, lightDir);
+    float shadow = ShadowCalculation(FragPos, normal, lightDir);
 	vec3 result = vec3(0.0f);
 	for(int i = 0; i < NR_POINT_LIGHTS; i++)
 	{
@@ -162,32 +162,29 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir   )
     return (ambient + diffuse + specular);
 }
 
-float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
 {
-    // perform perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // bias to reduce shadow acne
-    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
-    // PCF: 3x3 カーネルで周辺テクセルをサンプリングして平均を取る
+    vec3 fragToLight = fragPos - pointLights[0].position;
+    float currentDepth = length(fragToLight);
+    float bias = max(0.15 * (1.0 - dot(normal, lightDir)), 0.05);
+
+    // PCF: 20方向サンプリング
     float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-    for(int x = -3; x <= 3; ++x)
+    float offset = 0.05;
+    vec3 sampleOffsetDirections[20] = vec3[]
+    (
+        vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
+        vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+        vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+        vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+        vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+    );
+    for(int i = 0; i < 20; ++i)
     {
-        for(int y = -3; y <= 3; ++y)
-        {
-            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-        }
+        float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * offset).r;
+        closestDepth *= farPlane;
+        if(currentDepth - bias > closestDepth)
+            shadow += 1.0;
     }
-    shadow /= 49.0;
-
-    // ライトのファープレーン外は影なし
-    if(projCoords.z > 1.0)
-        shadow = 0.0;
-
-    return shadow;
+    return shadow / 20.0;
 }

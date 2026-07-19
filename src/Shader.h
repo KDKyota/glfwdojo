@@ -23,6 +23,61 @@ public:
 	{
 		glDeleteProgram(ID);
 	}
+	// ジオメトリシェーダーあり版コンストラクタ
+	Shader(const char* vertexPath, const char* geometryPath, const char* fragmentPath)
+	{
+		std::string vertexCode, geometryCode, fragmentCode;
+		std::ifstream vShaderFile, gShaderFile, fShaderFile;
+		vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		gShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		try
+		{
+			vShaderFile.open(vertexPath);
+			gShaderFile.open(geometryPath);
+			fShaderFile.open(fragmentPath);
+			std::stringstream vss, gss, fss;
+			vss << vShaderFile.rdbuf();
+			gss << gShaderFile.rdbuf();
+			fss << fShaderFile.rdbuf();
+			vShaderFile.close(); gShaderFile.close(); fShaderFile.close();
+			vertexCode = vss.str(); geometryCode = gss.str(); fragmentCode = fss.str();
+		}
+		catch (std::ifstream::failure& e)
+		{
+			std::cout << "ERROR::SHADER::FILE_SUCCESSFULY_READ: " << e.what() << std::endl;
+		}
+		const char* vCode = vertexCode.c_str();
+		const char* gCode = geometryCode.c_str();
+		const char* fCode = fragmentCode.c_str();
+
+		unsigned int vertex, geometry, fragment;
+		vertex = glCreateShader(GL_VERTEX_SHADER);
+		glShaderSource(vertex, 1, &vCode, NULL);
+		glCompileShader(vertex);
+		checkCompileErrors(vertex, "VERTEX");
+
+		geometry = glCreateShader(GL_GEOMETRY_SHADER);
+		glShaderSource(geometry, 1, &gCode, NULL);
+		glCompileShader(geometry);
+		checkCompileErrors(geometry, "GEOMETRY");
+
+		fragment = glCreateShader(GL_FRAGMENT_SHADER);
+		glShaderSource(fragment, 1, &fCode, NULL);
+		glCompileShader(fragment);
+		checkCompileErrors(fragment, "FRAGMENT");
+
+		ID = glCreateProgram();
+		glAttachShader(ID, vertex);
+		glAttachShader(ID, geometry);
+		glAttachShader(ID, fragment);
+		glLinkProgram(ID);
+		checkCompileErrors(ID, "PROGRAM");
+		glDeleteShader(vertex);
+		glDeleteShader(geometry);
+		glDeleteShader(fragment);
+	}
+
 	// constructor generates the shader on the fly
 	Shader(const char* vertexPath, const char* fragmentPath)
 	{

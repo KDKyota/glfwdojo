@@ -8,11 +8,11 @@ namespace gl {
 	struct PointLight {
 		glm::vec3 position ;
 		glm::vec3 ambient = glm::vec3(0.05f, 0.05f, 0.05f);
-		glm::vec3 diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
-		glm::vec3 specular = glm::vec3(1.0f, 1.0f, 1.0f);
+		glm::vec3 diffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		glm::vec3 specular = glm::vec3(0.7f, 0.7f, 0.7f);
 		float constant = 1.0f;
-		float linear = 0.0f;
-		float quadratic = 0.0f;
+		float linear = 0.02f;
+		float quadratic = 0.001f;
 
 		void applyToShader(const Shader& shader, const std::string& name) const;
 	};

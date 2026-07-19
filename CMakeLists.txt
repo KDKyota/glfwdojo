@@ -63,6 +63,11 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.frag
 	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/wall.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/wall.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.geom
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.frag
 )
 
 add_custom_command(TARGET glfwdojo POST_BUILD

@@ -23,13 +23,14 @@ private:
 	void initFramebuffer();
 	static constexpr unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 	static constexpr float shadowNearPlane_ = 1.0f;
-	static constexpr float shadowFarPlane_  = 30.0f;
+	static constexpr float shadowFarPlane_  = 50.0f;
 	unsigned int loadTexture(const char* path, bool hasAlpha);
 	unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_, transparentVBO_, quadVAO_, quadVBO_, skyboxVAO_, skyboxVBO_;
 	unsigned int lightVAO_, lightVBO_;
 	unsigned int cubeInstanceVBO_;
 	unsigned int transparentInstanceVBO_;
 	unsigned int cubeEBO_, planeEBO_, transparentEBO_;
+	unsigned int wallVAO_, wallVBO_, wallEBO_;
 	unsigned int depthMapFBO_;
 
 	Material material_;
@@ -44,8 +45,9 @@ private:
 	std::unique_ptr<gl::Shader> skyboxShader_;
 	//std::unique_ptr<Model> model_; // 3Dモデル
 	std::shared_ptr<Camera> camera_;
-	std::unique_ptr<gl::Shader> depthShader_;
+	std::unique_ptr<gl::Shader> pointDepthShader_;
 	std::unique_ptr<gl::Shader> debugDepthShader_;
+	std::unique_ptr<gl::Shader> wallShader_;
 
 	unsigned int matricesUBO_;
 	
@@ -57,6 +59,7 @@ private:
 	void renderLightCubes();
 	void renderSkybox();
 	void renderTransparentWindows(const std::vector<gl::TransparentDraw>& sorted);
+	void renderWalls();
 
 	gl::PointLight pointlight_;
 	//gl::DirectionalLight directionalLight_;
@@ -64,8 +67,10 @@ private:
 	std::shared_ptr<Texture> cubeTexture_;
 	std::shared_ptr<Texture> floorTexture_;
 	std::shared_ptr<Texture> transparentTexture_;
+	std::shared_ptr<Texture> brickwallTexture_;
+	std::shared_ptr<Texture> brickwallNormalTexture_;
 	unsigned int cubemapTexture_;
-	unsigned int depthmapTexture_; // 陰影レンダリング用のテクスチャ
+	unsigned int depthCubemap_; // ポイントシャドウ用キューブマップ
 	int scrWidth_, scrHeight_;
 	float elapsedTime_ = 0.0f;
 	int viewLoc_ = -1; // viewのローケーション番号(初期値-1)

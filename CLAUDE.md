@@ -29,6 +29,13 @@
 - ユーザーがヒントを試した上で「やっぱり分からないのでコードを見せてほしい」と明示的に要求した場合に限り、具体的なコードを提示してよい。
 - 自発的にコードを書いて見せることは避け、必ずユーザーからの明示的な要求を待つこと。
 
+## 実行環境と Claude の制約
+
+- Claude の動作環境は **Linux (WSL2)** だが、プログラムのビルドと実行は **Windows 側（Visual Studio）** でユーザーが行う。
+- Claude は `cmake --build` や実行ファイルの起動など、**ビルド・実行コマンドを自分では実行しない**。
+- シェーダーはビルド後に `add_custom_command` で exe フォルダへコピーされるため、新しいシェーダーを追加した場合は **CMakeLists.txt の `SHADER_SOURCES`** への追記も必要。
+- IntelliSense（clangd）が `glad/glad.h` を解決できずに赤波線を出すことがあるが、ビルド自体には影響しない。
+
 ## 技術スタック
 
 - C++17 / CMake (CMakePresets.json, vcpkg manifest mode)

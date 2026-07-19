@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd /mnt/c/Users/kyota/Desktop/glfwdojo/shader_src/cube.vert)",
+      "Bash(xxd /mnt/c/Users/kyota/Desktop/glfwdojo/build/Debug/cube.vert)",
+      "Bash(xxd /mnt/c/Users/kyota/Desktop/glfwdojo/build/Debug/shader.vert)"
+    ]
+  }
+}

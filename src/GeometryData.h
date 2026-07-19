@@ -200,6 +200,30 @@ namespace gl {
 		return glm::normalize(glm::cross(v1 - v0, v2 - v1));
 	}
 
+	inline std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2
+		, const glm::vec2& uv0, const glm::vec2 uv1, const glm::vec2 uv2)
+	{
+		glm::vec3 edge1 = v1 - v0;
+		glm::vec3 edge2 = v2 - v0;
+		glm::vec2 deltaUV1 = uv1 - uv0;
+		glm::vec2 deltaUV2 = uv2 - uv0;
+
+		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+		glm::vec3 tangent, bitangent;
+		tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+		tangent = glm::normalize(tangent);
+
+		bitangent.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+		bitangent.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+		bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+		bitangent = glm::normalize(bitangent);
+
+		return std::array<glm::vec3, 2> {tangent, bitangent};
+	}
+
 	// 頂点配列が「1面 = 4頂点」の並びである前提で、面ごとに法線を計算して4頂点に割り当てる関数
 	// (EBOで頂点を共有するため、三角形単位ではなく面単位でまとめて処理する)
 	template <std::size_t N> // Nは頂点数（インデックス数）
@@ -224,7 +248,33 @@ namespace gl {
 		return vertices;
 	}
 
-	inline const std::array<Vertex, 24> cubeVertices = calculateFaceNormals(rawVertices);
+	template <std::size_t N>
+	// TangentとBitangentを計算する関数
+	std::array<Vertex, N> calculateTangentBitangent(std::array<Vertex, N> vertices)
+	{
+		static_assert(N % 4 == 0, "calculateTangentBitangent expects 4 vertices per face");
+
+		for (std::size_t i = 0; i < N; i += 4)
+		{
+			auto [tangent, bitangent] = calcTangentBitangent(
+				vertices[i].position, vertices[i + 1].position, vertices[i + 2].position,
+				vertices[i].uv, vertices[i + 1].uv, vertices[i + 2].uv);
+
+			vertices[i].tangent =
+			vertices[i + 1].tangent =
+			vertices[i + 2].tangent =
+			vertices[i + 3].tangent = tangent;
+
+			vertices[i].bitangent =
+			vertices[i + 1].bitangent =
+			vertices[i + 2].bitangent =
+			vertices[i + 3].bitangent = bitangent;
+		}
+
+		return vertices;
+	}
+
+	inline const std::array<Vertex, 24> cubeVertices = calculateTangentBitangent(calculateFaceNormals(rawVertices));
 	inline const std::array<Vertex, 4> planeVertices = calculateFaceNormals(rawplaneVertices);
 	inline const std::array<Vertex, 4> transparentVertices = calculateFaceNormals(rawtransparentVertices);
 

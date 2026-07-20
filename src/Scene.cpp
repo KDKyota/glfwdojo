@@ -17,12 +17,13 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	//shaderSingleColor_ = std::make_unique<gl::Shader>("shader.vert", "stencil_single_color.frag");
 	//glasscubeShader_ = std::make_unique<gl::Shader>("glasscube.vert", "glasscube.frag");
 	//model_ = std::make_unique<Model>("resources\\objects\\backpack\\backpack.obj", cache_);
-	screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "fragment_quad.frag");
+	screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "hdr.frag");  
 	skyboxShader_ = std::make_unique<gl::Shader>("skybox.vert", "skybox.frag");
 	transparentwindowShader_ = std::make_unique<gl::Shader>("window.vert", "shader.frag");
 	pointDepthShader_ = std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_depth.frag");
 	debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");
 	wallShader_ = std::make_unique<gl::Shader>("wall.vert", "wall.frag");
+	blurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "blur.frag");
 
 	//cubePositions_ = std::move(cubePositions);
 
@@ -190,6 +191,10 @@ void Scene::initTextures() {
 	cubeShader_->setInt("normalMap", 2);
 	cubeShader_->setInt("heightMap", 3);
 	cubeShader_->setFloat("farPlane", shadowFarPlane_);
+	transparentwindowShader_->use();
+	transparentwindowShader_->setInt("texture1", 0);
+	transparentwindowShader_->setInt("shadowMap", 1);
+	transparentwindowShader_->setFloat("farPlane", shadowFarPlane_);
 	screenshader_->use();
 	screenshader_->setInt("screenTexture", 0);
 	skyboxShader_->use();
@@ -204,20 +209,31 @@ void Scene::initTextures() {
 	wallShader_->setInt("shadowMap", 2);
 	wallShader_->setFloat("farPlane", shadowFarPlane_);
 	//material_.setUniforms(*shader_);
+	blurShader_->setInt("image", 0);
 }
 
 void Scene::initFramebuffer() {
-	// framebuffer configuration
-	glGenFramebuffers(1, &framebuffer_); // フレームバッファ
+	/* framebuffer configuration */
+	glGenFramebuffers(1, &framebuffer_); // フレームバッファ（通常は *FBO とかに命名するけど…）
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
-	// create a color attachment texture
+	// create a color attachment texture（通常のカラーバッファをアタッチメント location=0 -> FragColor）
 	glGenTextures(1, &textureColorbuffer_); // 最終的に画面に貼り付けるカラーバッファ
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, scrWidth_, scrHeight_, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer_, 0);
-	// create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
+	// 明るい部分のカラーバッファをアタッチメント（location = 1 -> BrightColor）
+	glGenTextures(1, &brightColorBuffer_);
+	glBindTexture(GL_TEXTURE_2D, brightColorBuffer_);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, brightColorBuffer_, 0);
+	unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    glDrawBuffers(2, attachments);
+
+	/* create a renderbuffer object for depth and stencil attachment(we won't be sampling these) */
 	glGenRenderbuffers(1, &rbo_); // デプスやステンシルの処理を行う
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo_);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scrWidth_, scrHeight_); // use a single renderbuffer object for both a depth AND stencil buffer.
@@ -227,7 +243,7 @@ void Scene::initFramebuffer() {
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);// フレームバッファの初期化処理
 
-	// ポイントシャドウ用キューブマップFBO
+	/* ポイントシャドウ用キューブマップFBO */
 	// depthMapFBO_: カラーバッファを持たず、深度だけを depthCubemap_ に書き込む専用FBO
 	glGenFramebuffers(1, &depthMapFBO_);
 	// depthCubemap_: 6面ぶんの深度テクスチャ。各テクセルには point_shadow_depth.frag が書き込む
@@ -249,6 +265,23 @@ void Scene::initFramebuffer() {
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glGenFramebuffers(2, pingpongFBO_);
+    glGenTextures(2, pingpongColorbuffers_);
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[i]);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers_[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers_[i], 0);
+        // also check if framebuffers are complete (no need for depth buffer)
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "Framebuffer not complete!" << std::endl;
+    }
 }
 
 void Scene::initUBO() {
@@ -374,6 +407,7 @@ void Scene::Render(float deltaTime, float heightScale)
 	 //glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	screenshader_->use();
+	screenshader_->setFloat("exposure", exposure_);
 	glBindVertexArray(quadVAO_);
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -487,4 +521,8 @@ Scene::~Scene() {
 	glDeleteTextures(1, &depthCubemap_);
 	glDeleteRenderbuffers(1, &rbo_);
 	glDeleteBuffers(1, &matricesUBO_);
+	// TODO: brightColorBuffer_, pingpongFBO_[2], pingpongColorbuffers_[2] の glDelete* を追加。
+	glDeleteTextures(1, &brightColorBuffer_);
+	glDeleteFramebuffers(2, pingpongFBO_);
+	glDeleteTextures(2, pingpongColorbuffers_);
 }

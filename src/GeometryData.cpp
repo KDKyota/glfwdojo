@@ -28,6 +28,11 @@ std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3& v0, const glm::ve
 	bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
 	bitangent = glm::normalize(bitangent);
 
+	if (glm::dot(glm::cross(tangent, bitangent), calcNormal(v0, v1, v2)) < 0.0f) {
+		tangent = -tangent;
+		bitangent = -bitangent;
+	}
+
 	return std::array<glm::vec3, 2> {tangent, bitangent};
 }
 

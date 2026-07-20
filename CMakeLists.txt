@@ -70,6 +70,8 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.geom
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.frag
+	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/hdr.frag
+	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/blur.frag
 )
 
 add_custom_command(TARGET glfwdojo POST_BUILD

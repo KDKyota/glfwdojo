@@ -22,6 +22,7 @@ add_executable(glfwdojo
 	src/Lighting.cpp
     src/Model.cpp
     src/Mesh.cpp
+    src/GeometryData.cpp
 )
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)

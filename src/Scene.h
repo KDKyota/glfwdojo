@@ -32,6 +32,7 @@ private:
 	unsigned int cubeEBO_, planeEBO_, transparentEBO_;
 	unsigned int wallVAO_, wallVBO_, wallEBO_;
 	unsigned int depthMapFBO_; // point shadow のデプスパス専用フレームバッファ（depthCubemap_ をアタッチ）
+	unsigned int hdrFBO_; // HDRレンダリング用フレームバッファ（textureColorbuffer_ をアタッチ）
 
 	Material material_;
 	TextureCache cache_;
@@ -81,5 +82,25 @@ private:
 
 	static constexpr float animationTime_ = 5.0f;
 	std::vector<glm::vec3> cubePositions_;
+
+	// シーン固有の配置データ(汎用ジオメトリではなく、このシーンのオブジェクト配置そのもの)
+	const std::vector<glm::vec3> cube_pos_ = {
+		glm::vec3(-1.0f, 1.0f, -1.0f),
+		glm::vec3(2.0f,  1.5f,  0.0f),
+		glm::vec3(0.0f,  1.0f, -20.0f), // z=-25 壁の前
+		glm::vec3(0.0f,  1.0f,  20.0f), // z=+25 壁の前
+	};
+
+	const std::array<gl::PointLight, 1> pointLights_ = {{
+		{glm::vec3(-5.0f, 7.0f, 0.0f)}
+	}};
+
+	const std::vector<glm::vec3> windows_pos_ = {
+		glm::vec3(-1.5f, 0.0f, -0.48f),
+		glm::vec3( 1.5f, 0.0f, 0.51f),
+		glm::vec3( 0.0f, 0.0f, 0.7f),
+		glm::vec3(-0.3f, 0.0f, -2.3f),
+		glm::vec3( 0.5f, 0.0f, -0.6f)
+	};
 };
 

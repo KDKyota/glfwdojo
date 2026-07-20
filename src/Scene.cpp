@@ -1,6 +1,9 @@
 #include "Scene.h"
 #include <map>
 #include <cstddef>
+#include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	:
@@ -52,7 +55,7 @@ void Scene::initMesh() {
 	glEnableVertexAttribArray(5);
 	glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, bitangent));
 	glBindBuffer(GL_ARRAY_BUFFER, cubeInstanceVBO_);
-	glBufferData(GL_ARRAY_BUFFER, gl::cube_pos.size() * sizeof(glm::vec3), gl::cube_pos.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, cube_pos_.size() * sizeof(glm::vec3), cube_pos_.data(), GL_STATIC_DRAW);
 	glEnableVertexAttribArray(3);
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 	glVertexAttribDivisor(3, 1); // インスタンスごとに変化する属性
@@ -91,7 +94,7 @@ void Scene::initMesh() {
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
 	glBindBuffer(GL_ARRAY_BUFFER, transparentInstanceVBO_);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * gl::windows_pos.size(), nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * windows_pos_.size(), nullptr, GL_DYNAMIC_DRAW);
 
 	glEnableVertexAttribArray(3);
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
@@ -263,14 +266,14 @@ void Scene::Render(float deltaTime, float heightScale)
 
 	// 透過窓をカメラからの距離でソート
 	std::vector<gl::TransparentDraw> sorted;
-	for (unsigned int i = 0; i < gl::windows_pos.size(); ++i)
-		sorted.push_back({ glm::length(camera_->GetViewPosition() - gl::windows_pos[i]), i });
+	for (unsigned int i = 0; i < windows_pos_.size(); ++i)
+		sorted.push_back({ glm::length(camera_->GetViewPosition() - windows_pos_[i]), i });
 	std::sort(sorted.begin(), sorted.end(),
 		[](const gl::TransparentDraw& a, const gl::TransparentDraw& b) { return a.distance > b.distance; });
 
 	// ポイントシャドウ用: 光源から6方向へのライト空間行列を計算
 	// lightPos: シャドウを落とす点光源の位置。6方向すべての視点(lookAt)の原点になる
-	glm::vec3 lightPos = gl::pointLights[0].position;
+	glm::vec3 lightPos = pointLights_[0].position;
 	// shadowProj: 立方体の1面をちょうど覆う画角(90度)の透視投影行列。6面共通で使い回す
 	// near/far は shadowNearPlane_ / shadowFarPlane_ を使用（far は深度正規化の基準にもなる）
 	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f),
@@ -327,7 +330,7 @@ void Scene::Render(float deltaTime, float heightScale)
 	cubeShader_->use();
 	cubeShader_->setVec3("viewPos", camera_->GetViewPosition());
 	// cube.vert で TangentLightPos(= TBN * lightPos) を計算するのに必要
-	cubeShader_->setVec3("lightPos", gl::pointLights[0].position);
+	cubeShader_->setVec3("lightPos", pointLights_[0].position);
 	cubeShader_->setMat3("normalMatrix", glm::mat3(1.0f));
 	cubeShader_->setFloat("material.shininess", 32.0f);
 	cubeShader_->setFloat("heightScale", heightScale_);
@@ -378,8 +381,8 @@ void Scene::Render(float deltaTime, float heightScale)
 
 void Scene::applyPointLights(gl::Shader& shader)
 {
-	for (const auto& pointLight : gl::pointLights)
-		pointLight.applyToShader(shader, "pointLights[" + std::to_string(&pointLight - gl::pointLights.data()) + "]");
+	for (const auto& pointLight : pointLights_)
+		pointLight.applyToShader(shader, "pointLights[" + std::to_string(&pointLight - pointLights_.data()) + "]");
 }
 
 void Scene::renderCubes(gl::Shader& shader)
@@ -389,7 +392,7 @@ void Scene::renderCubes(gl::Shader& shader)
 	cubeHeightMap_->bind(3);
 	glBindVertexArray(cubeVAO_);
 	shader.setMat4("model", glm::mat4(1.0f));
-	glDrawElementsInstanced(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0, gl::cube_pos.size());
+	glDrawElementsInstanced(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0, cube_pos_.size());
 }
 
 void Scene::renderFloor(gl::Shader& shader)
@@ -405,7 +408,7 @@ void Scene::renderLightCubes()
 	lightcubeShader_->use();
 	glBindVertexArray(cubeVAO_);
 	lightcubeShader_->setVec3("lightColor", pointlight_.diffuse);
-	for (const auto& pointLight : gl::pointLights)
+	for (const auto& pointLight : pointLights_)
 	{
 		glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
 		lightModel = glm::scale(lightModel, glm::vec3(0.2f));
@@ -430,7 +433,7 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw>& sor
 {
 	transparent_positions_.clear();
 	for (const auto& draw : sorted)
-		transparent_positions_.push_back(gl::windows_pos[draw.index]);
+		transparent_positions_.push_back(windows_pos_[draw.index]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, transparentInstanceVBO_);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * transparent_positions_.size(), transparent_positions_.data());

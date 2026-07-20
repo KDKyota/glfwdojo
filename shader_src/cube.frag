@@ -50,10 +50,15 @@ struct SpotLight {
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
+in vec3 TangentLightPos;
+in vec3 TangentViewPos;
+in vec3 TangentFragPos;
 
-uniform sampler2D texture1;
+uniform sampler2D diffuseMap; // 画像テクスチャ
 // point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）
 uniform samplerCube shadowMap;
+uniform sampler2D normalMap;
+uniform sampler2D heightMap;
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 uniform float farPlane;
 
@@ -62,37 +67,52 @@ uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
 uniform Material material;
 
-uniform vec3 lightPos; // 光源の位置
-uniform vec3 viewPos; // カメラの位置
+// lightPos と viewPos は.vertで計算
+//uniform vec3 lightPos; // 光源の位置
+//uniform vec3 viewPos; // カメラの位置
+
+uniform float heightScale;
 
 //function
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewdir);
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir);
+vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir);
+vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir);
 
 void main()
 {
-	// Diffuse
-    vec3 normal = normalize(Normal);
-	vec3 viewDir = normalize(viewPos - FragPos);
+	vec3 viewDir = normalize(TangentViewPos - TangentFragPos);
+	vec4 texColor = texture(diffuseMap, TexCoords);
+    vec2 texCoords = ParallaxOcclusionMapping(TexCoords, viewDir);
+	if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0)
+        discard;
+    vec3 TangentNormal = texture(normalMap, texCoords).rgb;
+    TangentNormal = normalize(TangentNormal * 2.0 - 1.0);
 
+    vec3 color = texture(diffuseMap, texCoords).rgb;
 	// 1. directional lighting
-	// directional lightは今は使わないのでコメントアウト
 	//vec3 result = CalcDirLight(dirLight, norm, viewDir);
+
 	// 2. point lighting
-    vec3 lightDir = normalize(pointLights[0].position - FragPos);
-    float shadow = ShadowCalculation(FragPos, normal, lightDir);
+    vec3 lightDir = normalize(TangentLightPos - TangentFragPos);
+    float shadow = ShadowCalculation(FragPos, TangentNormal, lightDir);
 	vec3 result = vec3(0.0f);
+    vec3 normal = TangentNormal;
 	for(int i = 0; i < NR_POINT_LIGHTS; i++)
 	{
-	  result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
+	  // CalcPointLight は light.position を内部で fragPos と比較するので、
+	  // normal(タンジェント空間)と揃えるために、この呼び出し専用に position をタンジェント空間へ置き換えたコピーを渡す
+	  // （TBNは直交行列なので、同じTBNで変換した2点間の距離・内積はワールド空間と同じ値になる）
+	  PointLight tangentLight = pointLights[i];
+	  tangentLight.position = TangentLightPos;
+	  result += CalcPointLight(tangentLight, normal, TangentFragPos, viewDir, shadow);
 	}
 	// 3. spot lighting
 	// result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
-	vec4 texColor = texture(texture1, TexCoords);
-	FragColor = vec4(result, texColor.a);
+	FragColor = vec4(result, 1.0);
 }
 
 // DirLightの計算関数
@@ -117,16 +137,16 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
       // Diffuse
       float diff = max(dot(normal, lightDir), 0.0);
       //vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
-      vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
+      vec3 diffuse = light.diffuse * diff * vec3(texture(diffuseMap, TexCoords));
       // Specular
       vec3 reflectDir = reflect(-lightDir, normal);
       float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
       //vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
-      vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
+      vec3 specular = light.specular * spec * vec3(texture(diffuseMap, TexCoords));
 
       // Combine results
       //vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
-      vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
+      vec3 ambient = light.ambient * vec3(texture(diffuseMap, TexCoords));
 
       // attenuation
       float distance = length(light.position - fragPos);
@@ -203,3 +223,80 @@ float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
     }
     return shadow / 26.0;
 }
+
+// Steep Parallax Mapping
+// 視線レイを numLayers 個の深度レイヤーに分割し、手前から奥へ1層ずつ進めながら
+// 「レイヤーの深さ」と「ハイトマップが示す深さ」を比較し、レイが表面にぶつかった層のテクスチャ座標を返す
+vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
+{
+    // 視線が面に対して斜めになるほどレイヤー数を増やす
+    // （真上から見るときは少ないレイヤーでも破綻しにくいが、斜めから見るほど階段状の見た目が目立ちやすいため）
+    const float minLayers = 8.0;
+    const float maxLayers = 32.0;
+    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
+
+    // 1レイヤー分の深さと、現在調べているレイヤーの累積深度（0.0〜1.0）
+    float layerDepth = 1.0 / numLayers;
+    float currentLayerDepth = 0.0;
+
+    // 視線を1レイヤー分進めるごとに、テクスチャ座標をどれだけずらすか
+    // （viewDir.xy / viewDir.z で「奥に1進んだときの横方向の移動量」を求め、heightScaleで強さを調整する）
+    vec2 P = viewDir.xy / viewDir.z * heightScale;
+    vec2 deltaTexCoords = P / numLayers;
+
+    // 一番手前のレイヤーから探索を開始する
+    vec2 currentTexCoords = texCoords;
+    float currentDepthMapValue = texture(heightMap, currentTexCoords).r;
+
+    // 「レイヤーの深さ」が「ハイトマップの深さ」を追い越すまで、視線を奥へ進めていく
+    while (currentLayerDepth < currentDepthMapValue)
+    {
+        currentTexCoords -= deltaTexCoords;
+        currentDepthMapValue = texture(heightMap, currentTexCoords).r;
+        currentLayerDepth += layerDepth;
+    }
+
+    return currentTexCoords;
+}
+
+// Parallax Occlusion Mapping (POM)
+// Steep Parallax Mapping で見つけた「衝突した層」と、その1つ手前の層の間を線形補間することで、
+// レイヤーの粗さによる階段状のアーティファクトをさらに滑らかにする
+vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir)
+{
+    const float minLayers = 8.0;
+    const float maxLayers = 32.0;
+    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
+
+    float layerDepth = 1.0 / numLayers;
+    float currentLayerDepth = 0.0;
+
+    vec2 P = viewDir.xy / viewDir.z * heightScale;
+    vec2 deltaTexCoords = P / numLayers;
+
+    vec2 currentTexCoords = texCoords;
+    float currentDepthMapValue = texture(heightMap, currentTexCoords).r;
+
+    // ここまでは Steep Parallax Mapping と同じ探索処理
+    while (currentLayerDepth < currentDepthMapValue)
+    {
+        currentTexCoords -= deltaTexCoords;
+        currentDepthMapValue = texture(heightMap, currentTexCoords).r;
+        currentLayerDepth += layerDepth;
+    }
+
+    // 衝突が検出される直前（1つ手前）のテクスチャ座標を復元する
+    vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+    // 衝突後・衝突前それぞれについて「ハイトマップの深さ」と「レイヤーの深さ」の差を求める
+    // （負なら表面より奥、正なら表面より手前を表す）
+    float afterDepth = currentDepthMapValue - currentLayerDepth;
+    float beforeDepth = texture(heightMap, prevTexCoords).r - currentLayerDepth + layerDepth;
+
+    // 2つの深度差の比率から、実際の交点に近いテクスチャ座標を線形補間で求める
+    float weight = afterDepth / (afterDepth - beforeDepth);
+    vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+    return finalTexCoords;
+}
+

@@ -26,7 +26,7 @@ CMakeUserPresets.json
 *.aps
 
 # obsidianの設定ディレクトリ
-docks/.obsidian/
+docs/.obsidian/
 
 # ============================================================
 # ログ・診断ファイル

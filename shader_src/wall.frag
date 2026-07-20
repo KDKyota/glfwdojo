@@ -24,7 +24,9 @@ in mat3 TBN;
 
 uniform sampler2D texture1;
 uniform sampler2D normalMap;
+// point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）
 uniform samplerCube shadowMap;
+// shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 uniform float farPlane;
 
 uniform PointLight pointLights[NR_POINT_LIGHTS];
@@ -78,26 +80,38 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
 
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
 {
+    // 光源からフラグメントへの方向ベクトル。samplerCube はUV座標ではなく
+    // この「方向」でどの面のどのテクセルかを解決するため、正規化せずそのまま使う
+    // ※ normal はノーマルマップ適用後（TBN変換済み）のワールド空間法線が渡ってくる
     vec3 fragToLight = fragPos - pointLights[0].position;
+    // 光源からフラグメントまでの実距離（比較の基準値。shadowMap側の値と同じスケールにする）
     float currentDepth = length(fragToLight);
+    // 法線とライト方向の角度に応じて可変にするスロープバイアス（shadow acne 対策）
     float bias = max(0.15 * (1.0 - dot(normal, lightDir)), 0.05);
 
     float shadow = 0.0;
+    // sampleOffsetDirections を掛ける係数。UV空間ではなく方向ベクトル空間でのオフセット量
     float offset = 0.05;
-    vec3 sampleOffsetDirections[20] = vec3[]
+    // {-1,0,1}^3 から中心(0,0,0)を除いた26方向すべて（頂点8+辺の中点12+面の中心6、PCF用）
+    // サンプル数を増やすほど shadow/26.0 が取り得る段階数が増え、グラデーションが細かくなる
+    vec3 sampleOffsetDirections[26] = vec3[]
     (
         vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
         vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
         vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
         vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
-        vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+        vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1),
+        vec3( 1,  0,  0), vec3(-1,  0,  0), vec3( 0,  1,  0), vec3( 0, -1,  0),
+        vec3( 0,  0,  1), vec3( 0,  0, -1)
     );
-    for(int i = 0; i < 20; ++i)
+    for(int i = 0; i < 26; ++i)
     {
+        // 方向ベクトルを少し揺らしてサンプリングした、光源から見た「最も近い遮蔽物」までの距離
         float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * offset).r;
+        // [0,1] 正規化されていた値を farPlane 倍して実距離スケールに戻す
         closestDepth *= farPlane;
         if(currentDepth - bias > closestDepth)
             shadow += 1.0;
     }
-    return shadow / 20.0;
+    return shadow / 26.0;
 }

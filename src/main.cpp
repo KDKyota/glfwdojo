@@ -10,6 +10,7 @@ constexpr int SCR_HEIGHT = 600;
 
 std::shared_ptr<Camera> camera = std::make_shared<Camera>();
 std::shared_ptr<MouseState> mouse = std::make_shared<MouseState>();
+float heightScale = 0.1f; // Parallax Mapping の強さ（矢印キー↑↓で調整）
 int main(void)
 {
 	// インスタンスを作成
@@ -26,7 +27,7 @@ int main(void)
 
 		processInput(window->Get(), frametime.delta);
 
-		scene->Render(frametime.delta);
+		scene->Render(frametime.delta, heightScale);
 		
 		window->SwapBuffers();
 		window->PolleEvents();

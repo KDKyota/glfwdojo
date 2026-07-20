@@ -9,7 +9,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	scrHeight_(scrHeight)
 {
 	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
-	cubeShader_ = std::make_unique<gl::Shader>("cube.vert", "shader.frag");
+	cubeShader_ = std::make_unique<gl::Shader>("cube.vert", "cube.frag");
 	lightcubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
 	//shaderSingleColor_ = std::make_unique<gl::Shader>("shader.vert", "stencil_single_color.frag");
 	//glasscubeShader_ = std::make_unique<gl::Shader>("glasscube.vert", "glasscube.frag");
@@ -47,6 +47,10 @@ void Scene::initMesh() {
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, normal));
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, uv));
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, tangent));
+	glEnableVertexAttribArray(5);
+	glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, bitangent));
 	glBindBuffer(GL_ARRAY_BUFFER, cubeInstanceVBO_);
 	glBufferData(GL_ARRAY_BUFFER, gl::cube_pos.size() * sizeof(glm::vec3), gl::cube_pos.data(), GL_STATIC_DRAW);
 	glEnableVertexAttribArray(3);
@@ -153,7 +157,10 @@ void Scene::initMesh() {
 void Scene::initTextures() {
 	//material_.diffuse = cache_.get("resources\\textures\\container2.png", false);
 	//material_.specular = cache_.get("resources\\textures\\container2_specular.png", true);
-	cubeTexture_ = cache_.get("resources/textures/marble.jpg", true);
+	cubeTexture_ = cache_.get("resources/textures/bricks2.jpg", true);
+	cubeNormalMap_ = cache_.get("resources/textures/bricks2_normal.jpg", true);
+	cubeHeightMap_ = cache_.get("resources/textures/bricks2_disp.jpg", true);
+
 	floorTexture_ = cache_.get("resources/textures/wood.png", true);
 	transparentTexture_ = cache_.get("resources/textures/window.png", true);
 	std::vector<std::string> faces
@@ -175,8 +182,10 @@ void Scene::initTextures() {
 	shader_->setInt("shadowMap", 1);
 	shader_->setFloat("farPlane", shadowFarPlane_);
 	cubeShader_->use();
-	cubeShader_->setInt("texture1", 0);
+	cubeShader_->setInt("diffuseMap", 0);
 	cubeShader_->setInt("shadowMap", 1);
+	cubeShader_->setInt("normalMap", 2);
+	cubeShader_->setInt("heightMap", 3);
 	cubeShader_->setFloat("farPlane", shadowFarPlane_);
 	screenshader_->use();
 	screenshader_->setInt("screenTexture", 0);
@@ -216,7 +225,10 @@ void Scene::initFramebuffer() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);// フレームバッファの初期化処理
 
 	// ポイントシャドウ用キューブマップFBO
+	// depthMapFBO_: カラーバッファを持たず、深度だけを depthCubemap_ に書き込む専用FBO
 	glGenFramebuffers(1, &depthMapFBO_);
+	// depthCubemap_: 6面ぶんの深度テクスチャ。各テクセルには point_shadow_depth.frag が書き込む
+	// 「光源からの正規化距離 [0,1]」が入る（通常のcubemapのような色情報ではない点に注意）
 	glGenTextures(1, &depthCubemap_);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_);
 	for (unsigned int i = 0; i < 6; ++i)
@@ -228,6 +240,8 @@ void Scene::initFramebuffer() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_);
+	// depthCubemap_ をFBOの深度アタッチメントに設定。glFramebufferTexture (Texture2Dではない) を使うことで
+	// 6面すべてが1つのアタッチメントとして扱われ、geometry shaderのgl_Layerで面を選択できるようになる
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap_, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
@@ -242,9 +256,10 @@ void Scene::initUBO() {
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Scene::Render(float deltaTime)
+void Scene::Render(float deltaTime, float heightScale)
 {
 	elapsedTime_ += deltaTime;
+	heightScale_ = heightScale; // Parallax Mapping の強さ（Callbacks.cpp の processInput で矢印キーにより更新される）
 
 	// 透過窓をカメラからの距離でソート
 	std::vector<gl::TransparentDraw> sorted;
@@ -254,9 +269,14 @@ void Scene::Render(float deltaTime)
 		[](const gl::TransparentDraw& a, const gl::TransparentDraw& b) { return a.distance > b.distance; });
 
 	// ポイントシャドウ用: 光源から6方向へのライト空間行列を計算
+	// lightPos: シャドウを落とす点光源の位置。6方向すべての視点(lookAt)の原点になる
 	glm::vec3 lightPos = gl::pointLights[0].position;
+	// shadowProj: 立方体の1面をちょうど覆う画角(90度)の透視投影行列。6面共通で使い回す
+	// near/far は shadowNearPlane_ / shadowFarPlane_ を使用（far は深度正規化の基準にもなる）
 	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f),
 		(float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, shadowNearPlane_, shadowFarPlane_);
+	// shadowTransforms: cubemapの+X,-X,+Y,-Y,+Z,-Zの6面それぞれに対応する view*projection 行列
+	// この配列を point_shadow_depth.geom の shadowMatrices[6] にそのまま渡す
 	std::vector<glm::mat4> shadowTransforms;
 	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)));
 	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0)));
@@ -265,15 +285,19 @@ void Scene::Render(float deltaTime)
 	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)));
 	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)));
 
+	// ここから、シャドウデプスの作成
 	// ── Pass 1: ポイントシャドウ デプスパス ──
 	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_);
 	glEnable(GL_DEPTH_TEST);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	pointDepthShader_->use();
+	// shadowTransforms[6] を geometry shader の uniform 配列 shadowMatrices[6] に渡す
 	for (int i = 0; i < 6; ++i)
 		pointDepthShader_->setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+	// フラグメントシェーダー側で距離を正規化する際の基準値（shader.frag側の farPlane と揃える）
 	pointDepthShader_->setFloat("farPlane", shadowFarPlane_);
+	// フラグメントシェーダー側で「光源からの距離」を計算するための光源位置
 	pointDepthShader_->setVec3("lightPos", lightPos);
 	renderFloor(*pointDepthShader_);
 	renderCubes(*pointDepthShader_);
@@ -302,8 +326,11 @@ void Scene::Render(float deltaTime)
 	// キューブ
 	cubeShader_->use();
 	cubeShader_->setVec3("viewPos", camera_->GetViewPosition());
+	// cube.vert で TangentLightPos(= TBN * lightPos) を計算するのに必要
+	cubeShader_->setVec3("lightPos", gl::pointLights[0].position);
 	cubeShader_->setMat3("normalMatrix", glm::mat3(1.0f));
 	cubeShader_->setFloat("material.shininess", 32.0f);
+	cubeShader_->setFloat("heightScale", heightScale_);
 	applyPointLights(*cubeShader_);
 	renderCubes(*cubeShader_);
 
@@ -358,6 +385,8 @@ void Scene::applyPointLights(gl::Shader& shader)
 void Scene::renderCubes(gl::Shader& shader)
 {
 	cubeTexture_->bind(0);
+	cubeNormalMap_->bind(2);
+	cubeHeightMap_->bind(3);
 	glBindVertexArray(cubeVAO_);
 	shader.setMat4("model", glm::mat4(1.0f));
 	glDrawElementsInstanced(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0, gl::cube_pos.size());

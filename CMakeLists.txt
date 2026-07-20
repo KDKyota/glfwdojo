@@ -59,6 +59,7 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.frag

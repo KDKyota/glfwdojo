@@ -1,5 +1,6 @@
 #include "Callbacks.h"
 #include <iostream>
+#include <algorithm>
 
 void error_callback(int error, const char* description)
 {
@@ -55,4 +56,11 @@ void processInput(GLFWwindow* window, float deltaTime)
 		camera->ProcessKeyboard(Camera_Movement::UP, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 		camera->ProcessKeyboard(Camera_Movement::DOWN, deltaTime);
+
+	// Parallax Mapping の heightScale を矢印キーで調整（1秒あたりの変化量 = heightScaleSpeed）
+	constexpr float heightScaleSpeed = 0.2f;
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		heightScale = std::min(heightScale + heightScaleSpeed * deltaTime, 1.0f);
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		heightScale = std::max(heightScale - heightScaleSpeed * deltaTime, 0.0f);
 }

@@ -46,15 +46,15 @@ struct SpotLight {
 	float outerCutOff;
 };
 
-#define NR_POINT_LIGHTS 1 
+#define NR_POINT_LIGHTS 4
 
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 
 uniform sampler2D texture1;
-// point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）
-uniform samplerCube shadowMap;
+// point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）。4灯ぶん
+uniform samplerCube shadowMap[NR_POINT_LIGHTS];
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 uniform float farPlane;
 
@@ -70,7 +70,7 @@ uniform vec3 viewPos; // カメラの位置
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewdir);
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir);
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap);
 
 void main()
 {
@@ -82,11 +82,11 @@ void main()
 	// directional lightは今は使わないのでコメントアウト
 	//vec3 result = CalcDirLight(dirLight, norm, viewDir);
 	// 2. point lighting
-    vec3 lightDir = normalize(pointLights[0].position - FragPos);
-    float shadow = ShadowCalculation(FragPos, normal, lightDir);
 	vec3 result = vec3(0.0f);
 	for(int i = 0; i < NR_POINT_LIGHTS; i++)
 	{
+	  vec3 lightDir = normalize(pointLights[i].position - FragPos);
+	  float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
 	  result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
 	}
 	// 3. spot lighting
@@ -171,11 +171,11 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir   )
     return (ambient + diffuse + specular);
 }
 
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap)
 {
     // 光源からフラグメントへの方向ベクトル。samplerCube はUV座標ではなく
     // この「方向」でどの面のどのテクセルかを解決するため、正規化せずそのまま使う
-    vec3 fragToLight = fragPos - pointLights[0].position;
+    vec3 fragToLight = fragPos - lightPos;
     // 光源からフラグメントまでの実距離（比較の基準値。shadowMap側の値と同じスケールにする）
     float currentDepth = length(fragToLight);
     // 法線とライト方向の角度に応じて可変にするスロープバイアス（shadow acne 対策）

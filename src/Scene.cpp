@@ -183,20 +183,26 @@ void Scene::initTextures() {
 
 	shader_->use();
 	shader_->setInt("texture1", 0);
-	shader_->setInt("shadowMap", 1);
+	// shadowMap[4]: depthCubemap_[0..3] をそれぞれユニット3〜6に割り当てる（cubeShader_と共通）
+	for (unsigned int i = 0; i < 4; ++i)
+		shader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
 	shader_->setFloat("farPlane", shadowFarPlane_);
 	cubeShader_->use();
 	cubeShader_->setInt("diffuseMap", 0);
-	cubeShader_->setInt("shadowMap", 1);
-	cubeShader_->setInt("normalMap", 2);
-	cubeShader_->setInt("heightMap", 3);
+	cubeShader_->setInt("normalMap", 1);
+	cubeShader_->setInt("heightMap", 2);
+	// shadowMap[4]: depthCubemap_[0..3] をそれぞれユニット3〜6に割り当てる
+	for (unsigned int i = 0; i < 4; ++i)
+		cubeShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
 	cubeShader_->setFloat("farPlane", shadowFarPlane_);
 	transparentwindowShader_->use();
 	transparentwindowShader_->setInt("texture1", 0);
-	transparentwindowShader_->setInt("shadowMap", 1);
+	for (unsigned int i = 0; i < 4; ++i)
+		transparentwindowShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
 	transparentwindowShader_->setFloat("farPlane", shadowFarPlane_);
 	screenshader_->use();
 	screenshader_->setInt("screenTexture", 0);
+	screenshader_->setInt("bloomBlur", 1);
 	skyboxShader_->use();
 	skyboxShader_->setInt("skybox", 0);
 	debugDepthShader_->use();
@@ -206,7 +212,8 @@ void Scene::initTextures() {
 	wallShader_->use();
 	wallShader_->setInt("texture1", 0);
 	wallShader_->setInt("normalMap", 1);
-	wallShader_->setInt("shadowMap", 2);
+	for (unsigned int i = 0; i < 4; ++i)
+		wallShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
 	wallShader_->setFloat("farPlane", shadowFarPlane_);
 	//material_.setUniforms(*shader_);
 	blurShader_->setInt("image", 0);
@@ -245,25 +252,29 @@ void Scene::initFramebuffer() {
 
 	/* ポイントシャドウ用キューブマップFBO */
 	// depthMapFBO_: カラーバッファを持たず、深度だけを depthCubemap_ に書き込む専用FBO
-	glGenFramebuffers(1, &depthMapFBO_);
+	glGenFramebuffers(4, depthMapFBO_);
 	// depthCubemap_: 6面ぶんの深度テクスチャ。各テクセルには point_shadow_depth.frag が書き込む
 	// 「光源からの正規化距離 [0,1]」が入る（通常のcubemapのような色情報ではない点に注意）
-	glGenTextures(1, &depthCubemap_);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_);
-	for (unsigned int i = 0; i < 6; ++i)
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
-			SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_);
-	// depthCubemap_ をFBOの深度アタッチメントに設定。glFramebufferTexture (Texture2Dではない) を使うことで
-	// 6面すべてが1つのアタッチメントとして扱われ、geometry shaderのgl_Layerで面を選択できるようになる
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap_, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
+	glGenTextures(4, depthCubemap_);
+	for (unsigned int j = 0; j < 4; ++j)
+
+	{
+		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_[j]);
+		for (unsigned int i = 0; i < 6; ++i)
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+				SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_[j]);
+		// depthCubemap_ をFBOの深度アタッチメントに設定。glFramebufferTexture (Texture2Dではない) を使うことで
+		// 6面すべてが1つのアタッチメントとして扱われ、geometry shaderのgl_Layerで面を選択できるようになる
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap_[j], 0);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glGenFramebuffers(2, pingpongFBO_);
@@ -304,39 +315,42 @@ void Scene::Render(float deltaTime, float heightScale)
 	std::sort(sorted.begin(), sorted.end(),
 		[](const gl::TransparentDraw& a, const gl::TransparentDraw& b) { return a.distance > b.distance; });
 
-	// ポイントシャドウ用: 光源から6方向へのライト空間行列を計算
-	// lightPos: シャドウを落とす点光源の位置。6方向すべての視点(lookAt)の原点になる
-	glm::vec3 lightPos = pointLights_[0].position;
-	// shadowProj: 立方体の1面をちょうど覆う画角(90度)の透視投影行列。6面共通で使い回す
-	// near/far は shadowNearPlane_ / shadowFarPlane_ を使用（far は深度正規化の基準にもなる）
-	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f),
-		(float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, shadowNearPlane_, shadowFarPlane_);
-	// shadowTransforms: cubemapの+X,-X,+Y,-Y,+Z,-Zの6面それぞれに対応する view*projection 行列
-	// この配列を point_shadow_depth.geom の shadowMatrices[6] にそのまま渡す
-	std::vector<glm::mat4> shadowTransforms;
-	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0), glm::vec3(0, 0, -1)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)));
-	shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)));
-
-	// ここから、シャドウデプスの作成
-	// ── Pass 1: ポイントシャドウ デプスパス ──
 	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_);
 	glEnable(GL_DEPTH_TEST);
-	glClear(GL_DEPTH_BUFFER_BIT);
 	pointDepthShader_->use();
-	// shadowTransforms[6] を geometry shader の uniform 配列 shadowMatrices[6] に渡す
-	for (int i = 0; i < 6; ++i)
-		pointDepthShader_->setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-	// フラグメントシェーダー側で距離を正規化する際の基準値（shader.frag側の farPlane と揃える）
-	pointDepthShader_->setFloat("farPlane", shadowFarPlane_);
-	// フラグメントシェーダー側で「光源からの距離」を計算するための光源位置
-	pointDepthShader_->setVec3("lightPos", lightPos);
-	renderFloor(*pointDepthShader_);
-	renderCubes(*pointDepthShader_);
+	for (unsigned int j = 0; j < 4; ++j)
+	{
+		// ポイントシャドウ用: 光源から6方向へのライト空間行列を計算
+		// lightPos: シャドウを落とす点光源の位置。6方向すべての視点(lookAt)の原点になる
+		glm::vec3 lightPos = pointLights_[j].position;
+		// shadowProj: 立方体の1面をちょうど覆う画角(90度)の透視投影行列。6面共通で使い回す
+		// near/far は shadowNearPlane_ / shadowFarPlane_ を使用（far は深度正規化の基準にもなる）
+		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f),
+			(float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, shadowNearPlane_, shadowFarPlane_);
+		// shadowTransforms: cubemapの+X,-X,+Y,-Y,+Z,-Zの6面それぞれに対応する view*projection 行列
+		// この配列を point_shadow_depth.geom の shadowMatrices[6] にそのまま渡す
+		std::vector<glm::mat4> shadowTransforms;
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, -1, 0), glm::vec3(0, 0, -1)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)));
+
+		// ここから、シャドウデプスの作成
+		// ── Pass 1: ポイントシャドウ デプスパス ──
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_[j]);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		// shadowTransforms[6] を geometry shader の uniform 配列 shadowMatrices[6] に渡す
+		for (int i = 0; i < 6; ++i)
+			pointDepthShader_->setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+		// フラグメントシェーダー側で距離を正規化する際の基準値（shader.frag側の farPlane と揃える）
+		pointDepthShader_->setFloat("farPlane", shadowFarPlane_);
+		// フラグメントシェーダー側で「光源からの距離」を計算するための光源位置
+		pointDepthShader_->setVec3("lightPos", lightPos);
+		renderFloor(*pointDepthShader_);
+		renderCubes(*pointDepthShader_);
+	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// ── Pass 2: メインパス ──
@@ -355,17 +369,24 @@ void Scene::Render(float deltaTime, float heightScale)
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	// キューブマップをシャドウ用テクスチャとして事前バインド
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_);
+	// キューブマップをシャドウ用テクスチャとして事前バインド（4灯ぶんを別々のユニット3〜6に）
+	for (unsigned int j = 0; j < 4; ++j)
+	{
+		glActiveTexture(GL_TEXTURE3 + j);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_[j]);
+	}
 
 	// キューブ
 	cubeShader_->use();
 	cubeShader_->setVec3("viewPos", camera_->GetViewPosition());
 	// cube.vert で TangentLightPos(= TBN * lightPos) を計算するのに必要
-	cubeShader_->setVec3("lightPos", pointLights_[0].position);
+	//for (size_t i = 0; i < 4; ++i)
+	//{
+	//	cubeShader_->setVec3("pointLights["+ std::to_string(i) + "]", pointLights_[i].position);
+	//}
 	cubeShader_->setMat3("normalMatrix", glm::mat3(1.0f));
-	cubeShader_->setFloat("material.shininess", 32.0f);
+	cubeShader_->setFloat("material.shininess", 16.0f);
+	
 	cubeShader_->setFloat("heightScale", heightScale_);
 	applyPointLights(*cubeShader_);
 	renderCubes(*cubeShader_);
@@ -394,9 +415,29 @@ void Scene::Render(float deltaTime, float heightScale)
 	// 透過窓
 	renderTransparentWindows(sorted);
 
+	/* blur bright fragments with two - pass Gaussian blur */
+	glDisable(GL_DEPTH_TEST);
+	bool first_iteration = true;
+	unsigned int amount = 10;
+	blurShader_->use();
+	for (unsigned int i = 0; i < amount; ++i)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[horizontal_]);
+		blurShader_->setInt("horizontal", horizontal_);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, first_iteration ? brightColorBuffer_ : pingpongColorbuffers_[!horizontal_]);
+		glBindVertexArray(quadVAO_);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		horizontal_ = !horizontal_;
+		if (first_iteration)
+			first_iteration = false;
+		
+	}
+
+	
+
 	// ── スクリーンクワッド ──
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDisable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// [DEBUG] デプスマップを画面全体に表示して確認したい場合はここをアンコメント
@@ -408,8 +449,12 @@ void Scene::Render(float deltaTime, float heightScale)
 
 	screenshader_->use();
 	screenshader_->setFloat("exposure", exposure_);
-	glBindVertexArray(quadVAO_);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers_[!horizontal_]); // ブラー結果の最終バッファ
+
+	glBindVertexArray(quadVAO_);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
@@ -422,8 +467,8 @@ void Scene::applyPointLights(gl::Shader& shader)
 void Scene::renderCubes(gl::Shader& shader)
 {
 	cubeTexture_->bind(0);
-	cubeNormalMap_->bind(2);
-	cubeHeightMap_->bind(3);
+	cubeNormalMap_->bind(1);
+	cubeHeightMap_->bind(2);
 	glBindVertexArray(cubeVAO_);
 	shader.setMat4("model", glm::mat4(1.0f));
 	glDrawElementsInstanced(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0, cube_pos_.size());
@@ -441,9 +486,9 @@ void Scene::renderLightCubes()
 {
 	lightcubeShader_->use();
 	glBindVertexArray(cubeVAO_);
-	lightcubeShader_->setVec3("lightColor", pointlight_.diffuse);
 	for (const auto& pointLight : pointLights_)
 	{
+		lightcubeShader_->setVec3("lightColor", pointLight.diffuse);
 		glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
 		lightModel = glm::scale(lightModel, glm::vec3(0.2f));
 		lightcubeShader_->setMat4("model", lightModel);
@@ -487,8 +532,7 @@ void Scene::renderWalls()
 {
 	brickwallTexture_->bind(0);
 	brickwallNormalTexture_->bind(1);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_);
+	// shadowMap(白ライト用)はPass 2の冒頭でユニット3にバインド済みなのでここでは何もしない
 
 	glBindVertexArray(wallVAO_);
 	wallShader_->setMat4("model", glm::mat4(1.0f));
@@ -515,10 +559,10 @@ Scene::~Scene() {
 	glDeleteBuffers(1, &transparentEBO_);
 	glDeleteBuffers(1, &wallEBO_);
 	glDeleteFramebuffers(1, &framebuffer_);
-	glDeleteFramebuffers(1, &depthMapFBO_);
+	glDeleteFramebuffers(4, depthMapFBO_);
 	glDeleteTextures(1, &textureColorbuffer_);
 	glDeleteTextures(1, &cubemapTexture_);
-	glDeleteTextures(1, &depthCubemap_);
+	glDeleteTextures(4, depthCubemap_);
 	glDeleteRenderbuffers(1, &rbo_);
 	glDeleteBuffers(1, &matricesUBO_);
 	// TODO: brightColorBuffer_, pingpongFBO_[2], pingpongColorbuffers_[2] の glDelete* を追加。

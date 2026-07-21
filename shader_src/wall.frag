@@ -17,7 +17,7 @@ struct Material {
     float shininess;
 };
 
-#define NR_POINT_LIGHTS 1
+#define NR_POINT_LIGHTS 4
 
 in vec3 FragPos;
 in vec2 TexCoords;
@@ -25,8 +25,8 @@ in mat3 TBN;
 
 uniform sampler2D texture1;
 uniform sampler2D normalMap;
-// point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）
-uniform samplerCube shadowMap;
+// point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）。4灯ぶん
+uniform samplerCube shadowMap[NR_POINT_LIGHTS];
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 uniform float farPlane;
 
@@ -35,7 +35,7 @@ uniform Material material;
 uniform vec3 viewPos;
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir);
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap);
 
 void main()
 {
@@ -46,12 +46,14 @@ void main()
     normal = normalize(TBN * normal);
 
     vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 lightDir = normalize(pointLights[0].position - FragPos);
-    float shadow = ShadowCalculation(FragPos, normal, lightDir);
 
     vec3 result = vec3(0.0);
     for (int i = 0; i < NR_POINT_LIGHTS; i++)
+    {
+        vec3 lightDir = normalize(pointLights[i].position - FragPos);
+        float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
         result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
+    }
 
     vec4 texColor = texture(texture1, TexCoords);
     FragColor = vec4(result, texColor.a);
@@ -85,12 +87,12 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
     return ambient + (1.0 - shadow) * (diffuse + specular);
 }
 
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap)
 {
     // 光源からフラグメントへの方向ベクトル。samplerCube はUV座標ではなく
     // この「方向」でどの面のどのテクセルかを解決するため、正規化せずそのまま使う
     // ※ normal はノーマルマップ適用後（TBN変換済み）のワールド空間法線が渡ってくる
-    vec3 fragToLight = fragPos - pointLights[0].position;
+    vec3 fragToLight = fragPos - lightPos;
     // 光源からフラグメントまでの実距離（比較の基準値。shadowMap側の値と同じスケールにする）
     float currentDepth = length(fragToLight);
     // 法線とライト方向の角度に応じて可変にするスロープバイアス（shadow acne 対策）

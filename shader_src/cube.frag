@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
@@ -46,7 +46,7 @@ struct SpotLight {
 	float outerCutOff;
 };
 
-#define NR_POINT_LIGHTS 1 
+#define NR_POINT_LIGHTS 4
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -54,10 +54,12 @@ in vec2 TexCoords;
 in vec3 TangentLightPos;
 in vec3 TangentViewPos;
 in vec3 TangentFragPos;
+in mat3 TBNtoWorld;
+uniform vec3 viewPos;
 
 uniform sampler2D diffuseMap; // 画像テクスチャ
 // point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）
-uniform samplerCube shadowMap;
+uniform samplerCube shadowMap[4];
 uniform sampler2D normalMap;
 uniform sampler2D heightMap;
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
@@ -78,38 +80,35 @@ uniform float heightScale;
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewdir);
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir);
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap);
 vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir);
 vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir);
 
 void main()
 {
-	vec3 viewDir = normalize(TangentViewPos - TangentFragPos);
+	vec3 tangentViewDir = normalize(TangentViewPos - TangentFragPos);
 	vec4 texColor = texture(diffuseMap, TexCoords);
-    vec2 texCoords = ParallaxOcclusionMapping(TexCoords, viewDir);
+    vec2 texCoords = ParallaxOcclusionMapping(TexCoords, tangentViewDir);
 	if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0)
         discard;
     vec3 TangentNormal = texture(normalMap, texCoords).rgb;
     TangentNormal = normalize(TangentNormal * 2.0 - 1.0);
+	vec3 normal = normalize(TBNtoWorld * TangentNormal); // ワールド空間の法線に戻す
+    vec3 viewDir = normalize(viewPos - FragPos); // ライティング計算用（ワールド空間）
 
     vec3 color = texture(diffuseMap, texCoords).rgb;
 	// 1. directional lighting
 	//vec3 result = CalcDirLight(dirLight, norm, viewDir);
 
-	// 2. point lighting
-    vec3 lightDir = normalize(TangentLightPos - TangentFragPos);
-    float shadow = ShadowCalculation(FragPos, TangentNormal, lightDir);
 	vec3 result = vec3(0.0f);
-    vec3 normal = TangentNormal;
+	// 2. point lighting
 	for(int i = 0; i < NR_POINT_LIGHTS; i++)
 	{
-	  // CalcPointLight は light.position を内部で fragPos と比較するので、
-	  // normal(タンジェント空間)と揃えるために、この呼び出し専用に position をタンジェント空間へ置き換えたコピーを渡す
-	  // （TBNは直交行列なので、同じTBNで変換した2点間の距離・内積はワールド空間と同じ値になる）
-	  PointLight tangentLight = pointLights[i];
-	  tangentLight.position = TangentLightPos;
-	  result += CalcPointLight(tangentLight, normal, TangentFragPos, viewDir, shadow);
+		vec3 lightDir = normalize(pointLights[i].position - FragPos);
+		float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
+		result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
 	}
+
 	// 3. spot lighting
 	// result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
@@ -140,30 +139,30 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow)
 {
-      vec3 lightDir = normalize(light.position - fragPos);
-      // Diffuse
-      float diff = max(dot(normal, lightDir), 0.0);
-      //vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
-      vec3 diffuse = light.diffuse * diff * vec3(texture(diffuseMap, TexCoords));
-      // Specular
-      vec3 reflectDir = reflect(-lightDir, normal);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-      //vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
-      vec3 specular = light.specular * spec * vec3(texture(diffuseMap, TexCoords));
+	vec3 lightDir = normalize(light.position - fragPos);
+	// Diffuse
+	float diff = max(dot(normal, lightDir), 0.0);
+	//vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
+	vec3 diffuse = light.diffuse * diff * vec3(texture(diffuseMap, TexCoords));
+	// Specular
+	vec3 reflectDir = reflect(-lightDir, normal);
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+	//vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+	vec3 specular = light.specular * spec * vec3(texture(diffuseMap, TexCoords));
 
-      // Combine results
-      //vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
-      vec3 ambient = light.ambient * vec3(texture(diffuseMap, TexCoords));
+	// Combine results
+	//vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+	vec3 ambient = light.ambient * vec3(texture(diffuseMap, TexCoords));
 
-      // attenuation
-      float distance = length(light.position - fragPos);
-      float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+	// attenuation
+	float distance = length(light.position - fragPos);
+	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
-      ambient *= attenuation;
-      diffuse *= attenuation;
-      specular *= attenuation;
-      // 返し値にshadowを考慮
-      return (ambient + (1.0f - shadow) * (diffuse + specular));
+	ambient *= attenuation;
+	diffuse *= attenuation * 0.01; // 今のレンガcubeにはdiffuseとspecularは小さいほうが自然
+	specular *= attenuation * 0.1;
+	// 返し値にshadowを考慮
+	return (ambient + (1.0f - shadow) * (diffuse + specular));
 }
 
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir   )
@@ -191,11 +190,11 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir   )
     return (ambient + diffuse + specular);
 }
 
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap)
 {
     // 光源からフラグメントへの方向ベクトル。samplerCube はUV座標ではなく
     // この「方向」でどの面のどのテクセルかを解決するため、正規化せずそのまま使う
-    vec3 fragToLight = fragPos - pointLights[0].position;
+    vec3 fragToLight = fragPos - lightPos;
     // 光源からフラグメントまでの実距離（比較の基準値。shadowMap側の値と同じスケールにする）
     float currentDepth = length(fragToLight);
     // 法線とライト方向の角度に応じて可変にするスロープバイアス（shadow acne 対策）

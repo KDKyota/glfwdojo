@@ -44,7 +44,7 @@ private:
 	unsigned int wallVAO_, wallVBO_, wallEBO_;
 	/* フレームバッファ */
 	unsigned int framebuffer_, textureColorbuffer_, rbo_;  // メンバ変数として持つ
-	unsigned int depthMapFBO_; // point shadow のデプスパス専用フレームバッファ（depthCubemap_ をアタッチ）
+	unsigned int depthMapFBO_[4]; // point shadow のデプスパス専用フレームバッファ（depthCubemap_ をアタッチ）
 	unsigned int hdrFBO_; // HDRレンダリング用フレームバッファ（textureColorbuffer_ をアタッチ）
 	unsigned int pingpongFBO_[2]; // HDRレンダリング後のガウシアンブラー用フレームバッファ（pingpongColorbuffers_ をアタッチ）
 	unsigned int pingpongColorbuffers_[2]; // HDRレンダリング後のガウシアンブラー用テクスチャ（pingpongFBO_ にアタッチ）
@@ -71,7 +71,6 @@ private:
 	std::unique_ptr<gl::Shader> wallShader_;
 	std::unique_ptr<gl::Shader> blurShader_; // Boolの際にぼかしを入れるシェーダ
 
-	gl::PointLight pointlight_;
 	//gl::DirectionalLight directionalLight_;
 	//gl::SpotLight spotlight_;
 
@@ -84,13 +83,14 @@ private:
 	std::shared_ptr<Texture> brickwallTexture_;
 	std::shared_ptr<Texture> brickwallNormalTexture_;
 	unsigned int cubemapTexture_;
-	unsigned int depthCubemap_; // ポイントシャドウ用キューブマップ（各テクセルは光源からの正規化距離 [0,1]。shader.frag/wall.frag の shadowMap にバインドされる）
+	unsigned int depthCubemap_[4]; // ポイントシャドウ用キューブマップ（各テクセルは光源からの正規化距離 [0,1]。shader.frag/wall.frag の shadowMap にバインドされる）
 
 	float elapsedTime_ = 0.0f;
 	float heightScale_ = 0.0f;
-	float exposure_ = 0.1f; // HDR tone mappingの明るさ調整
+	float exposure_ = 0.5f; // HDR tone mappingの明るさ調整
 	int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
-	bool boolEnable_ = true;
+	bool blurEnable_ = true;
+	bool horizontal_ = true;
 	std::vector<glm::vec3> transparent_positions_; // 透過オブジェクトのモデル行列を格納する配列
 
 	static constexpr float animationTime_ = 5.0f;
@@ -104,9 +104,12 @@ private:
 		glm::vec3(0.0f,  1.0f,  20.0f), // z=+25 壁の前
 	};
 	
-	// point light の位置
-	const std::array<gl::PointLight, 1> pointLights_ = {{
-		{glm::vec3(-5.0f, 7.0f, 0.0f)}
+	// point light の位置と色（LearnOpenGL Bloomチュートリアルの配色をベースに、cubeから少し離し、強さも抑えている）
+	const std::array<gl::PointLight, 4> pointLights_ = {{
+		{glm::vec3( 0.0f, 0.8f,  2.2f), glm::vec3(0.0f), glm::vec3(3.0f, 3.0f, 3.0f), glm::vec3(3.0f, 3.0f, 3.0f), 0.0f, 0.0f, 1.0f},
+		{glm::vec3(-5.0f, 0.8f, -4.0f), glm::vec3(0.0f), glm::vec3(6.0f, 0.0f, 0.0f), glm::vec3(6.0f, 0.0f, 0.0f), 0.0f, 0.0f, 1.0f},
+		{glm::vec3( 4.2f, 1.0f,  1.8f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 14.0f), glm::vec3(0.0f, 0.0f, 14.0f), 0.0f, 0.0f, 1.0f},
+		{glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f), glm::vec3(0.0f, 3.0f, 0.0f), glm::vec3(0.0f, 3.0f, 0.0f), 0.0f, 0.0f, 1.0f}
 	}};
 
 	// 透過オブジェクトの位置

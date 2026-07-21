@@ -1,5 +1,5 @@
-#version 330 core
-#extension GL_ARB_shading_language_420pack : enable
+#version 460 core
+//#extension GL_ARB_shading_language_420pack : enable
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;
@@ -23,6 +23,7 @@ out vec2 TexCoords;
 out vec3 TangentLightPos;
 out vec3 TangentViewPos;
 out vec3 TangentFragPos;
+out mat3 TBNtoWorld;
 
 void main()
 {
@@ -31,9 +32,10 @@ void main()
 	Normal  = normalMatrix * aNormal;
 
 	vec3 T = normalize(normalMatrix * aTangent);
-    vec3 B = normalize(normalMatrix * aBitangent);
-    vec3 N = normalize(normalMatrix * aNormal);
-    mat3 TBN = transpose(mat3(T, B, N));
+	vec3 B = normalize(normalMatrix * aBitangent);
+	vec3 N = normalize(normalMatrix * aNormal);
+	mat3 TBN = transpose(mat3(T, B, N));
+	TBNtoWorld = mat3(T, B, N);
 
 	TangentLightPos = TBN * lightPos;
 	TangentViewPos = TBN * viewPos;

@@ -241,14 +241,15 @@ void Scene::initFramebuffer() {
 	// create a color attachment texture（通常のカラーバッファをアタッチメント location=0 -> FragColor）
 	glGenTextures(1, &textureColorbuffer_); // 最終的に画面に貼り付けるカラーバッファ
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
+	// RGB16F はカラーレンダリング可能が保証されていないフォーマットなので RGBA16F を使う（initGBuffer のコメント参照）
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer_, 0);
 	// 明るい部分のカラーバッファをアタッチメント（location = 1 -> BrightColor）
 	glGenTextures(1, &brightColorBuffer_);
 	glBindTexture(GL_TEXTURE_2D, brightColorBuffer_);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, brightColorBuffer_, 0);
@@ -325,30 +326,35 @@ void Scene::initGBuffer() {
 	glGenFramebuffers(1, &gBuffer_);
 	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
 
-	// gPosition	
+	// 内部フォーマットに GL_RGB16F を使ってはいけない。
+	// OpenGL の必須フォーマット表では RGB16F は「テクスチャとしては必須／カラーレンダリング可能は非必須」に
+	// 分類されており、環境によってはテクスチャ作成も glCheckFramebufferStatus も通るのに
+	// 書き込みだけが正しく行われない。3成分しか使わなくても RGBA16F を使うこと。
+	// gPosition（ワールド座標。負値や1を超える値を持つため浮動小数点フォーマットが必要）
 	glGenTextures(1, &gPosition_);
 	glBindTexture(GL_TEXTURE_2D, gPosition_);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition_, 0);
-	// Normal
+	// gNormal（法線。[-1,1] の負値を保持する必要があるため浮動小数点フォーマット）
 	glGenTextures(1, &gNormal_);
 	glBindTexture(GL_TEXTURE_2D, gNormal_);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal_, 0);
-	// AlbedoSpec
+	// gAlbedoSpec（rgb=アルベド, a=スペキュラ強度。いずれも [0,1] なので8bitで十分）
 	glGenTextures(1, &gAlbedoSpec_);
 	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec_);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, scrWidth_, scrHeight_, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec_, 0);
 
 	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 	glDrawBuffers(3, attachments);
+
 	// --- Depth Buffer ---
 	glGenRenderbuffers(1, &gDepthRBO_);
 	glBindRenderbuffer(GL_RENDERBUFFER, gDepthRBO_);
@@ -356,7 +362,7 @@ void Scene::initGBuffer() {
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gDepthRBO_);
 	// エラーチェック
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "Framebuffer not complete!" << std::endl;
+		std::cout << "ERROR::G-BUFFER:: Framebuffer is not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // フレームバッファをデフォルトに戻す
 }
 
@@ -414,6 +420,11 @@ void Scene::Render(float deltaTime, float heightScale)
 	/* -- deferred shading Geometry pass --*/
 	glViewport(0, 0, scrWidth_, scrHeight_); // viewport を元に戻す
 	glEnable(GL_DEPTH_TEST);
+	// G-Buffer に入るのは「色」ではなく座標・法線という幾何情報なので、絶対にブレンドしてはいけない。
+	// Window.cpp で透過窓のために glEnable(GL_BLEND) されたままだと、
+	// gPosition / gNormal は out vec3（アルファ成分が未定義＝実質0）なので
+	// src.rgb * 0 + dst.rgb * 1 となって書き込みが丸ごと消え、G-Buffer がクリア値のままになる。
+	glDisable(GL_BLEND);
 
 	/* write view / projection into UBO*/
 	glm::mat4 view = camera_->GetViewMatrix();
@@ -490,8 +501,10 @@ void Scene::Render(float deltaTime, float heightScale)
 	/* スカイボックス */
 	renderSkybox();
 
-	/* 透過窓 */
+	/* 透過窓（ブレンドが必要なのはここだけ。Geometryパスの冒頭で無効化しているので、描画中だけ有効にする）*/
+	glEnable(GL_BLEND);
 	renderTransparentWindows(sorted);
+	glDisable(GL_BLEND);
 
 	/* blur bright fragments with two - pass Gaussian blur */
 	glDisable(GL_DEPTH_TEST);

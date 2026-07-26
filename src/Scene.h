@@ -96,7 +96,7 @@ private:
 
 	float elapsedTime_ = 0.0f;
 	float heightScale_ = 0.0f;
-	float exposure_ = 0.3f; // HDR tone mappingの明るさ調整
+	float exposure_ = 0.5f; // HDR tone mappingの明るさ調整
 	int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
 	bool blurEnable_ = true;
 	bool horizontal_ = true;
@@ -128,7 +128,7 @@ private:
 	// ambient は影の内側が完全な黒に潰れないための下駄。ここも上げすぎると影が薄くなる。
 	const std::array<gl::PointLight, 4> pointLights_ = {{
 		// position,                    ambient,                        diffuse,                     specular,                    constant, linear, quadratic
-		{glm::vec3( 0.0f, 0.8f,  2.2f), glm::vec3(0.04f, 0.04f, 0.04f), glm::vec3(1.8f, 1.8f, 1.8f), glm::vec3(0.9f, 0.9f, 0.9f), 1.0f, 0.14f, 0.07f},
+		{glm::vec3( 0.0f, 2.0f,  2.2f), glm::vec3(0.04f, 0.04f, 0.04f), glm::vec3(4.0f, 4.0f, 4.0f), glm::vec3(2.0f, 2.0f, 2.0f), 1.0f, 0.14f, 0.07f},
 		{glm::vec3(-5.0f, 0.8f, -4.0f), glm::vec3(0.04f, 0.01f, 0.01f), glm::vec3(2.2f, 0.4f, 0.25f), glm::vec3(1.1f, 0.2f, 0.12f), 1.0f, 0.14f, 0.07f},
 		{glm::vec3( 4.2f, 3.0f,  1.8f), glm::vec3(0.01f, 0.02f, 0.04f), glm::vec3(0.4f, 0.6f, 2.2f), glm::vec3(0.2f, 0.3f, 1.1f), 1.0f, 0.14f, 0.07f},
 		{glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.01f, 0.04f, 0.02f), glm::vec3(0.35f, 1.8f, 0.5f), glm::vec3(0.18f, 0.9f, 0.25f), 1.0f, 0.14f, 0.07f}

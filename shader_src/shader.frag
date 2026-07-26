@@ -1,14 +1,18 @@
-#version 330 core
+// サンプラー配列をループ変数で添字する（shadowMap[i]）ため 4.60 が必要。
+// GLSL 3.30 以前の仕様ではサンプラー配列は定数式でしか添字できず、Mesa など仕様に厳密な
+// ドライバではコンパイルエラーになる（NVIDIA/AMD は 330 でも黙って通してしまう）。
+#version 460 core
 
 out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
 
+// 元は sampler2D diffuse / sampler2D specular をメンバに持っていたが、
+// WSL の Mesa d3d12 ドライバは「struct のメンバに sampler がある」だけで
+// シェーダーのDXIL変換時に segfault する（実際に使っていなくても落ちる）。
+// texture1 を直接サンプルする形にして、struct からは sampler を外している。
 struct Material {
 	vec3 ambient; // 環境光の影響
-	sampler2D diffuse;
-	// ふつうの物体はambientとdiffuseは同じ色
-	sampler2D specular;
-	float shininess;
+	float shininess; // C++側から material.shininess として設定される
 };
 
 struct DirLight {
@@ -108,13 +112,13 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
       vec3 lightDir = normalize(-light.direction);
       // Diffuse
       float diff = max(dot(normal, lightDir), 0.0);
-      vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
+      vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
       // Specular
       vec3 reflectDir = reflect(-lightDir, normal);
       float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-      vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+      vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
       // Combine results
-      vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+      vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
       return (ambient + diffuse + specular);
 }
 
@@ -123,16 +127,16 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
       vec3 lightDir = normalize(light.position - fragPos);
       // Diffuse
       float diff = max(dot(normal, lightDir), 0.0);
-      //vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
+      //vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
       vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
       // Specular
       vec3 reflectDir = reflect(-lightDir, normal);
       float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-      //vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+      //vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
       vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
 
       // Combine results
-      //vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+      //vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
       vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
 
       // attenuation
@@ -162,9 +166,9 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir   )
     float epsilon = light.cutOff - light.outerCutOff;
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
-    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+    vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
+    vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
     ambient *= attenuation * intensity;
     diffuse *= attenuation * intensity;
     specular *= attenuation * intensity;

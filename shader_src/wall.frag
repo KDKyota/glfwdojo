@@ -1,4 +1,5 @@
-#version 330 core
+// サンプラー配列をループ変数で添字する（shadowMap[i]）ため 4.60 が必要。詳細は shader.frag のコメント参照。
+#version 460 core
 
 out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;

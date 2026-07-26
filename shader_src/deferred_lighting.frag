@@ -18,6 +18,10 @@ struct PointLight {
 	vec3 ambient;
 	vec3 diffuse;
 	vec3 specular;
+
+	// このライトの影響が及ぶ最大距離（ライトボリュームの半径）。
+	// C++側の PointLight::calcRadius() が減衰式から逆算して送ってくる。
+	float radius;
 };
 
 const int NR_LIGHTS = 4;
@@ -57,6 +61,12 @@ void main()
     vec3 result = vec3(0.0);
     for(int i = 0; i < NR_LIGHTS; ++i)
     {
+        // ライトボリューム: このライトの影響半径の外なら、以降の計算を丸ごと省く。
+        // 26回サンプリングする ShadowCalculation() が最も重いので、その手前で弾くのが要点。
+        float dist = length(pointLights[i].position - FragPos);
+        if(dist >= pointLights[i].radius)
+            continue;
+
         vec3 lightDir = normalize(pointLights[i].position - FragPos);
 		float shadow = ShadowCalculation(FragPos, Normal, lightDir, pointLights[i].position, shadowMap[i]);
         result += CalcPointLight(pointLights[i], Normal, FragPos, viewDir, Albedo, Specular, shadow);

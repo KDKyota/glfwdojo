@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd /mnt/c/Users/kyota/Desktop/glfwdojo/shader_src/cube.vert)",
+      "Bash(xxd /mnt/c/Users/kyota/Desktop/glfwdojo/build/Debug/cube.vert)",
+      "Bash(xxd /mnt/c/Users/kyota/Desktop/glfwdojo/build/Debug/shader.vert)",
+      "Bash(sed -n '/^void Scene::Render/,/^}/p' src/Scene.cpp)",
+      "Bash(sed -n '/void Scene::initTextures/,/^}/p' src/Scene.cpp)",
+      "Bash(sed -n '/Scene::~Scene/,/^}/p' src/Scene.cpp)",
+      "Bash(sed -n '/void main/,/^}/p' shader_src/cube.frag)",
+      "Bash(sed -n '/void main/,/^}/p' shader_src/shader.frag)",
+      "Bash(sed -n '/void main/,/^}/p' shader_src/wall.frag)"
+    ]
+  }
+}

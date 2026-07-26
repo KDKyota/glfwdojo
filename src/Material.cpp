@@ -1,4 +1,5 @@
 #include "Material.h"
+#include <stdexcept>
 
 void Material::bind() const
 {

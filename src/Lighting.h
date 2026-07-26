@@ -8,11 +8,17 @@ namespace gl {
 	struct PointLight {
 		glm::vec3 position ;
 		glm::vec3 ambient = glm::vec3(0.05f, 0.05f, 0.05f);
-		glm::vec3 diffuse = glm::vec3(0.3f, 0.3f, 0.3f);
-		glm::vec3 specular = glm::vec3(1.0f, 1.0f, 1.0f);
+		glm::vec3 diffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		glm::vec3 specular = glm::vec3(0.7f, 0.7f, 0.7f);
 		float constant = 1.0f;
-		float linear = 0.09f;
-		float quadratic = 0.032f;
+		float linear = 0.02f;
+		float quadratic = 0.001f;
+
+		// このライトが実質的に届かなくなる距離（ライトボリュームの半径）を減衰式から逆算する。
+		// 減衰後の明るさが 5/256 未満（8bit カラーで1階調に満たない）になる距離を求めている。
+		// メンバとして持たず都度計算しているのは、position などと違って
+		// constant / linear / quadratic / diffuse から一意に決まる派生値だから。
+		float calcRadius() const;
 
 		void applyToShader(const Shader& shader, const std::string& name) const;
 	};

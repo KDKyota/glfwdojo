@@ -1,6 +1,7 @@
-﻿#include "Window.h"
+#include "Window.h"
 #include "Callbacks.h"
 #include <stdexcept>
+#include <iostream>
 
 Window::Window(int width, int height, const std::string& title) : width_(width), height_(height)
 {
@@ -9,9 +10,13 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 
 	glfwSetErrorCallback(error_callback); // エラーのコールバック関数を登録
 	// バージョン指定
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor(); // 今回は利用しない
+	// フルスクリーンのためのモニターの解像度を取得
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor); // 今回は利用しない
 
 	// スマートポインタの変数handle_にglfwCreateWindowの返り値を右辺値として代入するイメージ
 	handle_.reset(glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr));
@@ -28,8 +33,14 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 
 	glViewport(0, 0, width, height);
 
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	std::cout << glGetString(GL_VERSION) << std::endl;
+	std::cout << glGetString(GL_VENDOR) << std::endl;
+	std::cout << glGetString(GL_RENDERER) << std::endl;
 	// コールマック関数を登録
 	// ふつうは第一引数がwindowだが、今回はスマートポインタにhandle_代入しているのでその先頭ポインタという意味でhandle_.get()
 	glfwSetFramebufferSizeCallback(handle_.get(), framebuffer_size_callback);

@@ -7,6 +7,7 @@
 
 extern std::shared_ptr<Camera> camera;
 extern std::shared_ptr<MouseState> mouse;
+extern float heightScale;
 
 struct LastPos {
 	float x = 800.0f / 2.0f;

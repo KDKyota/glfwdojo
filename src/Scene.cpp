@@ -12,7 +12,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	scrHeight_(scrHeight)
 {
 	shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
-	cubeShader_ = std::make_unique<gl::Shader>("cube.vert", "cube.frag");
+	//cubeShader_ = std::make_unique<gl::Shader>("cube.vert", "cube.frag");
 	lightcubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
 	//shaderSingleColor_ = std::make_unique<gl::Shader>("shader.vert", "stencil_single_color.frag");
 	//glasscubeShader_ = std::make_unique<gl::Shader>("glasscube.vert", "glasscube.frag");
@@ -22,8 +22,14 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	transparentwindowShader_ = std::make_unique<gl::Shader>("window.vert", "shader.frag");
 	pointDepthShader_ = std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_depth.frag");
 	debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");
-	wallShader_ = std::make_unique<gl::Shader>("wall.vert", "wall.frag");
+	//wallShader_ = std::make_unique<gl::Shader>("wall.vert", "wall.frag");
 	blurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "blur.frag");
+
+	/* G-Buffer */
+	gbufferFloorShader_ = std::make_unique<gl::Shader>("shader.vert", "gbuffer_floor.frag");
+	gbufferCubeShader_ = std::make_unique<gl::Shader>("cube.vert", "gbuffer_cube.frag");
+	gbufferWallShader_ = std::make_unique<gl::Shader>("wall.vert", "gbuffer_wall.frag");
+	deferredLightingShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "deferred_lighting.frag");
 
 	//cubePositions_ = std::move(cubePositions);
 
@@ -31,6 +37,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 	initTextures();
 	initFramebuffer();
 	initUBO();
+	initGBuffer();
 }
 
 void Scene::initMesh() {
@@ -146,6 +153,7 @@ void Scene::initMesh() {
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glBindVertexArray(0);
 
+	
 	//glBindVertexArray(VAO_);
 	//glBindBuffer(GL_ARRAY_BUFFER, VBO_);
 	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(gl::Vertex, position));
@@ -181,42 +189,49 @@ void Scene::initTextures() {
 	brickwallTexture_ = cache_.get("resources/textures/brickwall.jpg", true);
 	brickwallNormalTexture_ = cache_.get("resources/textures/brickwall_normal.jpg", true);
 
-	shader_->use();
-	shader_->setInt("texture1", 0);
-	// shadowMap[4]: depthCubemap_[0..3] をそれぞれユニット3〜6に割り当てる（cubeShader_と共通）
-	for (unsigned int i = 0; i < 4; ++i)
-		shader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
-	shader_->setFloat("farPlane", shadowFarPlane_);
-	cubeShader_->use();
-	cubeShader_->setInt("diffuseMap", 0);
-	cubeShader_->setInt("normalMap", 1);
-	cubeShader_->setInt("heightMap", 2);
-	// shadowMap[4]: depthCubemap_[0..3] をそれぞれユニット3〜6に割り当てる
-	for (unsigned int i = 0; i < 4; ++i)
-		cubeShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
-	cubeShader_->setFloat("farPlane", shadowFarPlane_);
+	/* cube */
+	// use G-Buffer in cube, floor, wall
+	gbufferCubeShader_->use();
+	gbufferCubeShader_->setInt("diffuseMap", 0);
+	gbufferCubeShader_->setInt("normalMap", 1);
+	gbufferCubeShader_->setInt("heightMap", 2);
+	/* floor */
+	gbufferFloorShader_->use();
+	gbufferFloorShader_->setInt("diffuseMap", 0);
+	/* wall */
+	gbufferWallShader_->use();
+	gbufferWallShader_->setInt("diffuseMap", 0);
+	gbufferWallShader_->setInt("normalMap", 1);
+	/* transparent window */
 	transparentwindowShader_->use();
 	transparentwindowShader_->setInt("texture1", 0);
 	for (unsigned int i = 0; i < 4; ++i)
 		transparentwindowShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
 	transparentwindowShader_->setFloat("farPlane", shadowFarPlane_);
+	/* screen */
 	screenshader_->use();
 	screenshader_->setInt("screenTexture", 0);
 	screenshader_->setInt("bloomBlur", 1);
+	/* skybox */
 	skyboxShader_->use();
 	skyboxShader_->setInt("skybox", 0);
+	/* depth */
 	debugDepthShader_->use();
 	debugDepthShader_->setInt("depthMap", 0);
 	debugDepthShader_->setFloat("near_plane", shadowNearPlane_);
 	debugDepthShader_->setFloat("far_plane", shadowFarPlane_);
-	wallShader_->use();
-	wallShader_->setInt("texture1", 0);
-	wallShader_->setInt("normalMap", 1);
-	for (unsigned int i = 0; i < 4; ++i)
-		wallShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
-	wallShader_->setFloat("farPlane", shadowFarPlane_);
 	//material_.setUniforms(*shader_);
+	blurShader_->use();
 	blurShader_->setInt("image", 0);
+	/* deferred lighting */
+	deferredLightingShader_->use();
+	deferredLightingShader_->setInt("gPosition", 0);
+	deferredLightingShader_->setInt("gNormal", 1);
+	deferredLightingShader_->setInt("gAlbedoSpec", 2);
+	for (unsigned int i = 0; i < 4; ++i)
+		deferredLightingShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
+	deferredLightingShader_->setFloat("farPlane", shadowFarPlane_);
+
 }
 
 void Scene::initFramebuffer() {
@@ -238,7 +253,7 @@ void Scene::initFramebuffer() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, brightColorBuffer_, 0);
 	unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-    glDrawBuffers(2, attachments);
+	glDrawBuffers(2, attachments);
 
 	/* create a renderbuffer object for depth and stencil attachment(we won't be sampling these) */
 	glGenRenderbuffers(1, &rbo_); // デプスやステンシルの処理を行う
@@ -277,22 +292,24 @@ void Scene::initFramebuffer() {
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glGenFramebuffers(2, pingpongFBO_);
-    glGenTextures(2, pingpongColorbuffers_);
-    for (unsigned int i = 0; i < 2; i++)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[i]);
-        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers_[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers_[i], 0);
-        // also check if framebuffers are complete (no need for depth buffer)
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            std::cout << "Framebuffer not complete!" << std::endl;
-    }
+	/* ぼかし処理を書き込むFBO */
+	glGenFramebuffers(2, pingpongFBO_);
+	glGenTextures(2, pingpongColorbuffers_);
+	// 縦方向と横方向にガウシアンブラー（ぼかし手法）をかけるのでそのために二回のループ
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[i]);
+		glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers_[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers_[i], 0);
+		// also check if framebuffers are complete (no need for depth buffer)
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			std::cout << "Framebuffer not complete!" << std::endl;
+	}
 }
 
 void Scene::initUBO() {
@@ -303,12 +320,52 @@ void Scene::initUBO() {
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
+void Scene::initGBuffer() {
+	// gBuffer_にバインド
+	glGenFramebuffers(1, &gBuffer_);
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
+
+	// gPosition	
+	glGenTextures(1, &gPosition_);
+	glBindTexture(GL_TEXTURE_2D, gPosition_);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition_, 0);
+	// Normal
+	glGenTextures(1, &gNormal_);
+	glBindTexture(GL_TEXTURE_2D, gNormal_);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, scrWidth_, scrHeight_, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal_, 0);
+	// AlbedoSpec
+	glGenTextures(1, &gAlbedoSpec_);
+	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec_);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec_, 0);
+
+	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+	glDrawBuffers(3, attachments);
+	// --- Depth Buffer ---
+	glGenRenderbuffers(1, &gDepthRBO_);
+	glBindRenderbuffer(GL_RENDERBUFFER, gDepthRBO_);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scrWidth_, scrHeight_);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gDepthRBO_);
+	// エラーチェック
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // フレームバッファをデフォルトに戻す
+}
+
 void Scene::Render(float deltaTime, float heightScale)
 {
 	elapsedTime_ += deltaTime;
 	heightScale_ = heightScale; // Parallax Mapping の強さ（Callbacks.cpp の processInput で矢印キーにより更新される）
 
-	// 透過窓をカメラからの距離でソート
+	/* 透過窓をカメラからの距離でソート */
 	std::vector<gl::TransparentDraw> sorted;
 	for (unsigned int i = 0; i < windows_pos_.size(); ++i)
 		sorted.push_back({ glm::length(camera_->GetViewPosition() - windows_pos_[i]), i });
@@ -337,8 +394,8 @@ void Scene::Render(float deltaTime, float heightScale)
 		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)));
 		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)));
 
-		// ここから、シャドウデプスの作成
-		// ── Pass 1: ポイントシャドウ デプスパス ──
+		/* ここから、シャドウデプスの作成 */
+		/* ── Pass 1: Point Shadow Depth Pass ── */
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_[j]);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		// shadowTransforms[6] を geometry shader の uniform 配列 shadowMatrices[6] に渡す
@@ -350,17 +407,15 @@ void Scene::Render(float deltaTime, float heightScale)
 		pointDepthShader_->setVec3("lightPos", lightPos);
 		renderFloor(*pointDepthShader_);
 		renderCubes(*pointDepthShader_);
+		renderWalls(*pointDepthShader_);
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	// ── Pass 2: メインパス ──
+	/* -- deferred shading Geometry pass --*/
 	glViewport(0, 0, scrWidth_, scrHeight_); // viewport を元に戻す
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
 	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// UBO に view / projection を書き込む
+	/* write view / projection into UBO*/
 	glm::mat4 view = camera_->GetViewMatrix();
 	glm::mat4 projection = glm::perspective(glm::radians(camera_->GetZoomValue()),
 		(float)scrWidth_ / (float)scrHeight_, 0.1f, 100.0f);
@@ -369,50 +424,73 @@ void Scene::Render(float deltaTime, float heightScale)
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	// キューブマップをシャドウ用テクスチャとして事前バインド（4灯ぶんを別々のユニット3〜6に）
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	/* cube */
+	// cube は閉じた立体なので裏面を描く必要がない。カリングしておくと、
+	// Parallax Occlusion Mapping の discard でシルエット付近に穴が開いたときに
+	// 内側（反対側の面）が透けて見えるアーティファクトを防げる。
+	// 床・壁・透過窓・スカイボックスは片面／両面ポリゴンでカリングすると消えるため、cube の描画中だけ有効にする。
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	gbufferCubeShader_->use();
+	gbufferCubeShader_->setVec3("viewPos", camera_->GetViewPosition());
+	gbufferCubeShader_->setMat3("normalMatrix", glm::mat3(1.0f));
+	gbufferCubeShader_->setFloat("heightScale", heightScale_);
+	renderCubes(*gbufferCubeShader_);
+	glDisable(GL_CULL_FACE);
+
+	/* floor */
+	gbufferFloorShader_->use();
+	gbufferFloorShader_->setMat3("normalMatrix", glm::mat3(1.0f));
+	renderFloor(*gbufferFloorShader_);
+
+	/* wall */
+	gbufferWallShader_->use();
+	renderWalls(*gbufferWallShader_);
+
+	/* copy Geometry pass's depthMap to framebuffer_ (to test for transparent window ex.)*/
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer_);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer_);
+	glBlitFramebuffer(0, 0, scrWidth_, scrHeight_, 0, 0, scrWidth_, scrHeight_, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	/* -- Deferred shading Lighting Pass -- */
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
+	glClear(GL_COLOR_BUFFER_BIT); // 深度は上でコピー済みなのでクリアしない
+	glDisable(GL_DEPTH_TEST); // フルスクリーンクワッドなので深度テスト不要
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gPosition_);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, gNormal_);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec_);
 	for (unsigned int j = 0; j < 4; ++j)
 	{
 		glActiveTexture(GL_TEXTURE3 + j);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_[j]);
 	}
+	deferredLightingShader_->use();
+	deferredLightingShader_->setVec3("viewPos", camera_->GetViewPosition());
+	applyPointLights(*deferredLightingShader_);
+	glBindVertexArray(quadVAO_);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glEnable(GL_DEPTH_TEST);
 
-	// キューブ
-	cubeShader_->use();
-	cubeShader_->setVec3("viewPos", camera_->GetViewPosition());
-	// cube.vert で TangentLightPos(= TBN * lightPos) を計算するのに必要
-	//for (size_t i = 0; i < 4; ++i)
-	//{
-	//	cubeShader_->setVec3("pointLights["+ std::to_string(i) + "]", pointLights_[i].position);
-	//}
-	cubeShader_->setMat3("normalMatrix", glm::mat3(1.0f));
-	cubeShader_->setFloat("material.shininess", 16.0f);
-	
-	cubeShader_->setFloat("heightScale", heightScale_);
-	applyPointLights(*cubeShader_);
-	renderCubes(*cubeShader_);
+	/* ── Pass 2: Main Pass ── （For transparent window and skybox, light cube cannot be used G-Buffer）*/
+	glViewport(0, 0, scrWidth_, scrHeight_);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
+	glEnable(GL_DEPTH_TEST);
 
-	// 床
-	shader_->use();
-	shader_->setVec3("viewPos", camera_->GetViewPosition());
-	shader_->setMat3("normalMatrix", glm::mat3(1.0f));
-	shader_->setFloat("material.shininess", 32.0f);
-	applyPointLights(*shader_);
-	renderFloor(*shader_);
-
-	// 壁 (Normal Mapping)
-	wallShader_->use();
-	wallShader_->setVec3("viewPos", camera_->GetViewPosition());
-	wallShader_->setFloat("material.shininess", 32.0f);
-	applyPointLights(*wallShader_);
-	renderWalls();
-
-	// ライトキューブ（FBO バインド中に描画）
+	/* ライトキューブ（FBO バインド中に描画）*/
 	renderLightCubes();
 
-	// スカイボックス
+	/* スカイボックス */
 	renderSkybox();
 
-	// 透過窓
+	/* 透過窓 */
 	renderTransparentWindows(sorted);
 
 	/* blur bright fragments with two - pass Gaussian blur */
@@ -434,9 +512,7 @@ void Scene::Render(float deltaTime, float heightScale)
 		
 	}
 
-	
-
-	// ── スクリーンクワッド ──
+	/* ── スクリーンクワッド ── */
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -528,14 +604,14 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw>& sor
 	glDrawElementsInstanced(GL_TRIANGLES, gl::transparentIndices.size(), GL_UNSIGNED_INT, 0, transparent_positions_.size());
 }
 
-void Scene::renderWalls()
+void Scene::renderWalls(gl::Shader& shader)
 {
 	brickwallTexture_->bind(0);
 	brickwallNormalTexture_->bind(1);
 	// shadowMap(白ライト用)はPass 2の冒頭でユニット3にバインド済みなのでここでは何もしない
 
 	glBindVertexArray(wallVAO_);
-	wallShader_->setMat4("model", glm::mat4(1.0f));
+	shader.setMat4("model", glm::mat4(1.0f));
 	glDrawElements(GL_TRIANGLES, gl::wallIndices.size(), GL_UNSIGNED_INT, 0);
 }
 
@@ -565,8 +641,12 @@ Scene::~Scene() {
 	glDeleteTextures(4, depthCubemap_);
 	glDeleteRenderbuffers(1, &rbo_);
 	glDeleteBuffers(1, &matricesUBO_);
-	// TODO: brightColorBuffer_, pingpongFBO_[2], pingpongColorbuffers_[2] の glDelete* を追加。
 	glDeleteTextures(1, &brightColorBuffer_);
 	glDeleteFramebuffers(2, pingpongFBO_);
 	glDeleteTextures(2, pingpongColorbuffers_);
+	glDeleteFramebuffers(1, &gBuffer_);
+	glDeleteTextures(1, &gPosition_);
+	glDeleteTextures(1, &gNormal_);
+	glDeleteTextures(1, &gAlbedoSpec_);
+	glDeleteRenderbuffers(1, &gDepthRBO_);
 }

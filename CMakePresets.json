@@ -27,11 +27,16 @@
       "name": "linux-debug",
       "displayName": "Linux Debug (vcpkg)",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/Linux",
+      "binaryDir": "${sourceDir}/build/linux-debug",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
       }
     }
   ],

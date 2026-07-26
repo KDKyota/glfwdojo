@@ -72,6 +72,10 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.frag
 	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/hdr.frag
 	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/blur.frag
+	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_floor.frag
+	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_wall.frag
+	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_cube.frag
+	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/deferred_lighting.frag
 )
 
 add_custom_command(TARGET glfwdojo POST_BUILD
@@ -83,5 +87,6 @@ add_custom_command(TARGET glfwdojo POST_BUILD
         $<TARGET_FILE_DIR:glfwdojo>/resources
     COMMENT "Copying shaders and resources"
 )
+
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

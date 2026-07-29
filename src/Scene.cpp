@@ -278,7 +278,7 @@ void Scene::initTextures() {
   deferredLightingShader_->setFloat("farPlane", shadowFarPlane_);
   // 既存の割り当て（0〜2=G-Buffer, 3〜6=shadowMap）を壊さないよう 7 を使う
   deferredLightingShader_->setInt("ssao", 7);
-  deferredLightingShader_->setFloat("ambientStrength", AMBIENT_STRENGTH);
+  // ambientStrength は UI から変更するので Render() 側で毎フレーム送る
   // ssaoShader_ / ssaoBlurShader_ の uniform は initSSAO() 側で設定する。
   // initTextures() は initSSAO() より先に呼ばれるため、ここではまだ
   // ssaoKernel_ が空で、カーネルを送れないため。
@@ -661,6 +661,9 @@ void Scene::Render(float deltaTime, float heightScale) {
   glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
   glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
+  // G-Buffer は色ではなくデータなので必ずゼロクリアする。
+  // 非ゼロだと ssao.frag の「法線がゼロなら背景」判定をすり抜ける
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   /* cube */
@@ -748,6 +751,7 @@ void Scene::Render(float deltaTime, float heightScale) {
   // initTextures() で一度だけ送ると、値を変えても反映されない。
   deferredLightingShader_->setInt("debugMode", debugMode_);
   deferredLightingShader_->setFloat("ssaoStrength", ssaoStrength_);
+  deferredLightingShader_->setFloat("ambientStrength", ambientStrength_);
   applyPointLights(*deferredLightingShader_);
   glBindVertexArray(quadVAO_);
   glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -803,6 +807,7 @@ void Scene::Render(float deltaTime, float heightScale) {
   screenshader_->use();
   screenshader_->setFloat("exposure", exposure_);
   screenshader_->setBool("debugRawOutput", debugRawOutput_);
+  screenshader_->setFloat("bloomStrength", bloomStrength_);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
   glActiveTexture(GL_TEXTURE1);

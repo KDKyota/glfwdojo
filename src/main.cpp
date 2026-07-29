@@ -58,7 +58,9 @@ int main(void) {
       ImGui::Separator();
 
       ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
-      ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.1f, 5.0f);
+      ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 1.0f);
+      ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);
+      ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
     }
     ImGui::End();
 

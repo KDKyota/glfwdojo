@@ -5,6 +5,9 @@
 # cmake --preset default で生成されるビルドディレクトリ
 build/
 
+# 自分用の計画ファイル
+docs/plan.md
+
 # マシンごとにパスが異なるため、各自のローカル設定は共有しない
 # （CMakePresets.json を上書きするためのファイル）
 CMakeUserPresets.json

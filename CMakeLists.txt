@@ -6,6 +6,10 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
+# imgui は vcpkg.json で glfw-binding / opengl3-binding の feature を指定している。
+# feature を付けないと imgui 本体だけが入り、backends/imgui_impl_glfw.h などが
+# インストールされないため、include できずにビルドが失敗する。
+find_package(imgui CONFIG REQUIRED)
 
 add_executable(glfwdojo
     src/main.cpp
@@ -23,6 +27,7 @@ add_executable(glfwdojo
     src/Model.cpp
     src/Mesh.cpp
     src/GeometryData.cpp
+    src/Gui.cpp
 )
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
@@ -47,6 +52,7 @@ target_link_libraries(glfwdojo PRIVATE
     glm::glm
     glad::glad
     assimp::assimp
+    imgui::imgui
 )
 
 set(SHADER_SOURCES
@@ -64,18 +70,20 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.frag
-	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/wall.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/wall.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.geom
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.frag
-	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/hdr.frag
-	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/blur.frag
-	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_floor.frag
-	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_wall.frag
-	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_cube.frag
-	${CMAKE_CURRENT_SOURCE_DIR}/shader_src/deferred_lighting.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/hdr.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/blur.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_floor.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_wall.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_cube.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/deferred_lighting.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao_blur.frag
 )
 
 add_custom_command(TARGET glfwdojo POST_BUILD

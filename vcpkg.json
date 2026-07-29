@@ -5,7 +5,14 @@
     "glfw3",
     "glm",
     "glad",
-    "assimp"
+    "assimp",
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "opengl3-binding"
+      ]
+    }
   ],
   "builtin-baseline": "a0400024711b283056538ac19ced80b91a83c24c"
 }

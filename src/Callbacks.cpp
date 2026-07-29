@@ -1,4 +1,5 @@
 #include "Callbacks.h"
+#include "Gui.h"
 #include <iostream>
 #include <algorithm>
 
@@ -29,6 +30,16 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
+	// UI 上でドラッグしているときはカメラを回さない。
+	// このプロジェクトの視点操作は右ドラッグなので、ガードしないと
+	// スライダーを右ドラッグした瞬間に視点が回転してしまう。
+	if (Gui::WantCaptureMouse())
+	{
+		// 追従だけはしておく。そうしないと UI から抜けた瞬間に
+		// 前回位置との差分が巨大になり、視点が飛ぶ。
+		mouse->ComputeOffset(xposIn, yposIn);
+		return;
+	}
 	if (!mouse->IsRightPressed()) return;
 	auto[xoffset, yoffset] = mouse->ComputeOffset(xposIn, yposIn);
 	camera->ProcessMouseMovement(xoffset, yoffset);
@@ -36,6 +47,8 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
+	// UI 上のスクロールでカメラがズームしないように
+	if (Gui::WantCaptureMouse()) return;
 	camera->ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
@@ -43,6 +56,10 @@ void processInput(GLFWwindow* window, float deltaTime)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
+
+	// UI のテキスト入力中に WASD でカメラが動かないようにする。
+	// Esc は UI に関わらず効かせたいので、このガードより前に置いている。
+	if (Gui::WantCaptureKeyboard()) return;
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		camera->ProcessKeyboard(Camera_Movement::FORWARD, deltaTime);

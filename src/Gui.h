@@ -2,36 +2,24 @@
 
 struct GLFWwindow;
 
-/*
- * Dear ImGui のラッパー。
- *
- * Window にも Scene にも混ぜず独立させているのは、ImGui が
- * 「GLFW のコールバック」「OpenGL の描画」「毎フレームの開始/終了」という
- * 複数の関心事にまたがるため。ここに閉じ込めておくと、
- * ImGui をやめたくなったときにこのクラスごと外せる。
- */
+// Dear ImGui のラッパー。ImGui は GLFW のコールバック・OpenGL の描画・
+// フレームの開始/終了にまたがるので、ここに閉じ込めて切り離せるようにしている
 class Gui {
 public:
 	// GLFW のコールバック登録がすべて済んだ「後」に呼ぶこと。
-	// ImGui_ImplGlfw_InitForOpenGL(window, true) は既存のコールバックを保存して
-	// 連鎖呼び出しする仕組みなので、先に ImGui を初期化すると
-	// プロジェクト側のコールバックが ImGui を素通りして登録され、
-	// UI がマウス入力を受け取れなくなる。
+	// ImGui は既存のコールバックを保存して連鎖呼び出しするため、順序が逆だと入力を拾えない
 	explicit Gui(GLFWwindow* window);
 	~Gui();
 
 	Gui(const Gui&) = delete;
 	Gui& operator=(const Gui&) = delete;
 
-	// 毎フレーム、ImGui:: の呼び出しより前に1回
+	// ImGui:: の呼び出しより前に1回
 	void NewFrame();
-	// 毎フレーム、Scene の描画がすべて終わった後に1回。
-	// デフォルトフレームバッファに描画されるので、スクリーンクワッドより後に呼ぶこと。
+	// Scene の描画がすべて終わった後に1回（デフォルトFBOに描画される）
 	void Render();
 
-	// UI がマウス/キーボードを掴んでいるか。
-	// これを見てカメラ操作を抑止しないと、スライダーを右ドラッグした瞬間に
-	// 視点が回転してしまう（このプロジェクトの視点操作が右ドラッグのため）。
+	// UI が入力を掴んでいるか。カメラ操作の抑止に使う
 	static bool WantCaptureMouse();
 	static bool WantCaptureKeyboard();
 };

@@ -1,8 +1,6 @@
 #include "Gui.h"
 
-// vcpkg 版の imgui はバックエンドのヘッダーを include 直下に置く。
-// 公式リポジトリを直接使う場合は <backends/imgui_impl_glfw.h> になるので、
-// LearnOpenGL や公式のサンプルをそのまま写すとパスが合わない。
+// vcpkg 版はバックエンドのヘッダーを include 直下に置く（公式は backends/ 配下）
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -12,11 +10,8 @@ Gui::Gui(GLFWwindow* window) {
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 
-	// 第2引数 true で、既に登録されている GLFW のコールバックを ImGui が保存し、
-	// 自分の処理の後に連鎖して呼んでくれる（chaining）。
-	// そのためこの呼び出しは Window のコールバック登録より後でなければならない。
+	// 第2引数 true で既存のコールバックを保存して連鎖呼び出しする
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	// GLSL のバージョン文字列。プロジェクトのコンテキストは 4.6 core。
 	ImGui_ImplOpenGL3_Init("#version 460 core");
 }
 

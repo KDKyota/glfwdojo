@@ -78,13 +78,10 @@ LearnOpenGL のサンプルコードをそのまま写経するのではなく�
 
 OpenGL **4.6 コアプロファイル**が必要です。
 
-<!-- ▼▼▼ ここに実行環境を記入 ▼▼▼ -->
+> **実行環境**: Windows laptop, RyzenのCPU，iGPUとWSL2のUbuntu
 
-> **【実行環境を記入】** 動作確認した OS / CPU / GPU / ドライバのバージョンなど
-
-<!-- ▲▲▲ ここに実行環境を記入 ▲▲▲ -->
-
-Windows と Linux（WSL2）の両方でビルド・実行できます。WSL2 で GPU を使う場合は `GALLIUM_DRIVER=d3d12` の指定が必要です（詳細は [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) の「Linux (WSL2) で動かす」を参照）。
+Windows と Linux（WSL2）の両方でビルド・実行できます。WSL2 で GPU を使う場合は `GALLIUM_DRIVER=d3d12` のオプション指定が必要です（詳細は [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) の「Linux (WSL2) で動かす」を参照）。
+> Macでの動作はテストしていません。なぜかというとMacが高すぎて買えなかったから。
 
 ---
 

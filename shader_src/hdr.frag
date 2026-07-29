@@ -8,14 +8,12 @@ uniform float exposure;
 
 out vec4 FragColor;
 
-// デバッグ用スイッチ。
-// true にすると Bloom の合成・トーンマッピング・ガンマ補正をすべて飛ばし、
-// screenTexture の値をそのまま出力する。
-//
-// deferred_lighting.frag の debugMode で G-Buffer や AO を可視化するときは必ず有効にすること。
-// 通常経路の mapped = 1 - exp(-c * exposure) と pow(c, 1/2.2) は値を大きく持ち上げるため、
-// 例えば 0.5 が 0.89 として表示され、正常な値でも「真っ白」に見えて判別できなくなる。
+// Bloom合成・トーンマッピング・ガンマ補正を全て飛ばす。
+// これらは値を大きく持ち上げるため、G-Buffer や AO を可視化するときは必ず有効にすること
 uniform bool debugRawOutput;
+
+// Bloom の合成強度。0.0 で完全に無効化できる
+uniform float bloomStrength;
 
 /*
  * screenTexture から HDR の色を読み、
@@ -31,7 +29,7 @@ void main() {
     return;
   }
 
-  hdrColor += bloomColor; // 合成処理
+  hdrColor += bloomColor * bloomStrength; // 合成処理
 
   // exposure tone mapping (Reinhardなら hdrColor / (hdrColor +
   // vec3(1.0))でもいい）

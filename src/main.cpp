@@ -1,35 +1,76 @@
-﻿#include "Shader.h"
+﻿#include "Callbacks.h"
 #include "Camera.h"
-#include "Callbacks.h"
+#include "Gui.h"
 #include "Mouse.h"
 #include "Scene.h"
+#include "Shader.h"
 #include "Window.h"
 
-constexpr int SCR_WIDTH = 800;
-constexpr int SCR_HEIGHT = 600;
+#include <imgui.h>
+
+constexpr int SCR_WIDTH = 1600;
+constexpr int SCR_HEIGHT = 900;
 
 std::shared_ptr<Camera> camera = std::make_shared<Camera>();
 std::shared_ptr<MouseState> mouse = std::make_shared<MouseState>();
 float heightScale = 0.1f; // Parallax Mapping の強さ（矢印キー↑↓で調整）
-int main(void)
-{
-	// インスタンスを作成
-	auto window = std::make_unique<Window>(SCR_WIDTH, SCR_HEIGHT, "learnopengl");
-	auto scene = std::make_unique<Scene>(camera, window->GetWidth(), window->GetHeight());
+int main(void) {
+  // インスタンスを作成
+  auto window = std::make_unique<Window>(SCR_WIDTH, SCR_HEIGHT, "learnopengl");
+  auto scene =
+      std::make_unique<Scene>(camera, window->GetWidth(), window->GetHeight());
+  // Window のコンストラクタで glfwSet*Callback がすべて済んだ後に生成すること。
+  // ImGui は既存のコールバックを保存して連鎖呼び出しするため、順序が逆だと
+  // UI がマウス入力を受け取れなくなる。
+  auto gui = std::make_unique<Gui>(window->Get());
 
-	struct { float delta = 0.0f, last = 0.0f, targetFrameTime = 1.0f / 60.0f; } frametime; // ループごとの経過時間を確認する構造体
+  struct {
+    float delta = 0.0f, last = 0.0f, targetFrameTime = 1.0f / 60.0f;
+  } frametime; // ループごとの経過時間を確認する構造体
 
-	while (!window->ShouldClose())
-	{
-		float currentFrame = static_cast<float> (glfwGetTime());
-		frametime.delta = currentFrame - frametime.last;
-		frametime.last = currentFrame;
+  while (!window->ShouldClose()) {
+    float currentFrame = static_cast<float>(glfwGetTime());
+    frametime.delta = currentFrame - frametime.last;
+    frametime.last = currentFrame;
 
-		processInput(window->Get(), frametime.delta);
+    processInput(window->Get(), frametime.delta);
 
-		scene->Render(frametime.delta, heightScale);
-		
-		window->SwapBuffers();
-		window->PolleEvents();
-	}
+    // ImGui:: の呼び出しより前に必ず1回
+    gui->NewFrame();
+
+    // TODO(Phase 4): ライトや SSAO のパラメータもここに追加する
+    ImGui::Begin("Debug");
+    {
+      ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate,
+                  1000.0f / ImGui::GetIO().Framerate);
+      ImGui::Separator();
+
+      static const char *kDebugModes[] = {
+          "0: Normal lighting", "1: Shadow (light 0)", "2: shadowMap[0] raw",
+          "3: G-Buffer Albedo",  "4: G-Buffer Normal",  "5: G-Buffer Position",
+          "6: Split view",       "7: SSAO"};
+      ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
+                   IM_ARRAYSIZE(kDebugModes));
+
+      // G-Buffer や AO を見るときはトーンマッピングを切らないと階調が潰れる
+      ImGui::Checkbox("Raw output (skip tonemap/bloom)",
+                      &scene->DebugRawOutput());
+      ImGui::Separator();
+
+      ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
+      ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.1f, 5.0f);
+    }
+    ImGui::End();
+
+    scene->Render(frametime.delta, heightScale);
+
+    // Scene の全パス（スクリーンクワッド含む）が終わった後、
+    // デフォルトフレームバッファに対して描画する。
+    // Scene::Render() の中に入れると、SSAO やライティングのパスの途中で
+    // UI を描くことになり順序管理が破綻する。
+    gui->Render();
+
+    window->SwapBuffers();
+    window->PolleEvents();
+  }
 }

@@ -33,7 +33,8 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 
 	glViewport(0, 0, width, height);
 
-	glEnable(GL_FRAMEBUFFER_SRGB);
+	// glEnable(GL_FRAMEBUFFER_SRGB) は使わない。hdr.frag の手動ガンマ補正と
+	// 二重になり、暗部が持ち上がって画面全体が白っぽくなる（DEVELOPMENT.md 参照）
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -41,6 +42,16 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 	std::cout << glGetString(GL_VERSION) << std::endl;
 	std::cout << glGetString(GL_VENDOR) << std::endl;
 	std::cout << glGetString(GL_RENDERER) << std::endl;
+
+	// GL_SRGB なら GL_FRAMEBUFFER_SRGB による自動ガンマ補正が効く環境ということ
+	{
+		GLint encoding = 0;
+		glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_BACK_LEFT,
+			GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, &encoding);
+		std::cout << "default framebuffer color encoding = 0x" << std::hex << encoding
+			<< std::dec << (encoding == 0x8C40 ? "  (GL_SRGB)" : "  (GL_LINEAR)")
+			<< std::endl;
+	}
 	// コールマック関数を登録
 	// ふつうは第一引数がwindowだが、今回はスマートポインタにhandle_代入しているのでその先頭ポインタという意味でhandle_.get()
 	glfwSetFramebufferSizeCallback(handle_.get(), framebuffer_size_callback);

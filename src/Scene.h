@@ -179,24 +179,24 @@ private:
       glm::vec3(0.0f, 0.0f, 20.0f),  // z=+25 壁の前
   };
 
-  // 強度と減衰は LearnOpenGL の SSAO の章に合わせている（linear 0.09 / quadratic 0.032）。
-  // 直接光を弱く保つことで、SSAO が効く ambient 項が埋もれないようにしている。
+  // 減衰は LearnOpenGL の減衰テーブルの「到達距離 32」の行（linear 0.14 / quadratic 0.07）。
   // ambient が全てゼロなのは、環境光を ambientStrength_ に一本化したため。
-  // 位置は cube 群から離して高い位置に置いている（至近距離だと直接光が支配的になるため）
+  // diffuse を上げすぎると輝度1.0超えの面が増えて Bloom が影や AO の上に滲むので、
+  // 全体の明るさは exposure_ 側で調整すること
   const std::array<gl::PointLight, 4> pointLights_ = {
       {// position, ambient, diffuse, specular, constant, linear, quadratic
-       {glm::vec3(0.0f, 7.0f, 8.0f), glm::vec3(0.0f),
-        glm::vec3(0.7f, 0.7f, 0.7f), glm::vec3(0.7f, 0.7f, 0.7f), 1.0f, 0.09f,
-        0.032f},
-       {glm::vec3(-10.0f, 6.0f, -9.0f), glm::vec3(0.0f),
-        glm::vec3(0.7f, 0.2f, 0.2f), glm::vec3(0.7f, 0.2f, 0.2f), 1.0f, 0.09f,
-        0.032f},
-       {glm::vec3(10.0f, 7.0f, 6.0f), glm::vec3(0.0f),
-        glm::vec3(0.2f, 0.2f, 0.7f), glm::vec3(0.2f, 0.2f, 0.7f), 1.0f, 0.09f,
-        0.032f},
-       {glm::vec3(-7.0f, 8.0f, -7.0f), glm::vec3(0.0f),
-        glm::vec3(0.2f, 0.6f, 0.3f), glm::vec3(0.2f, 0.6f, 0.3f), 1.0f, 0.09f,
-        0.032f}}};
+       {glm::vec3(0.0f, 2.0f, 2.2f), glm::vec3(0.0f),
+        glm::vec3(4.0f, 4.0f, 4.0f), glm::vec3(2.0f, 2.0f, 2.0f), 1.0f, 0.14f,
+        0.07f},
+       {glm::vec3(-5.0f, 0.8f, -4.0f), glm::vec3(0.0f),
+        glm::vec3(2.2f, 0.4f, 0.25f), glm::vec3(1.1f, 0.2f, 0.12f), 1.0f, 0.14f,
+        0.07f},
+       {glm::vec3(4.2f, 3.0f, 1.8f), glm::vec3(0.0f),
+        glm::vec3(0.4f, 0.6f, 2.2f), glm::vec3(0.2f, 0.3f, 1.1f), 1.0f, 0.14f,
+        0.07f},
+       {glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f),
+        glm::vec3(0.35f, 1.8f, 0.5f), glm::vec3(0.18f, 0.9f, 0.25f), 1.0f, 0.14f,
+        0.07f}}};
 
   // 透過オブジェクトの位置
   const std::vector<glm::vec3> windows_pos_ = {

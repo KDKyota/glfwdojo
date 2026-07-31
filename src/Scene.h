@@ -47,7 +47,6 @@ private:
       1.0f; // 光源視点の投影のnear plane（shadowProj計算に使用）
   static constexpr float shadowFarPlane_ =
       50.0f; // 光源視点の投影のfar plane。シェーダー側の farPlane uniform
-             // と同じ値で、深度の正規化・逆正規化の基準になる
 
   /* メッシュのVAO / VBO / EBO */
   unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_,
@@ -65,13 +64,13 @@ private:
                        // をアタッチ）
   unsigned int pingpongFBO_
       [2]; // HDRレンダリング後のガウシアンブラー用フレームバッファ（pingpongColorbuffers_
-           // をアタッチ）
+
   unsigned int pingpongColorbuffers_
       [2]; // HDRレンダリング後のガウシアンブラー用テクスチャ（pingpongFBO_
-           // にアタッチ）
+
   unsigned int
       brightColorBuffer_; // HDRレンダリング後の明るい部分だけを抽出するためのテクスチャ（pingpongFBO_
-                          // にアタッチ）
+
   /* UBO */
   unsigned int matricesUBO_;
   /* G-Buffer */
@@ -118,8 +117,6 @@ private:
   unsigned int cubemapTexture_;
   unsigned int depthCubemap_
       [4]; // ポイントシャドウ用キューブマップ（各テクセルは光源からの正規化距離
-           // [0,1]。shader.frag/wall.frag の shadowMap
-           // にバインドされる）
 
   /* ==== UI から実行時に変更する設定（毎フレーム送る） ==== */
   // 0=通常 / 1=ライト0のシャドウ / 2=shadowMap[0]の生値 / 3=Albedo
@@ -139,23 +136,24 @@ private:
   std::unique_ptr<gl::Shader> ssaoShader_;
   std::unique_ptr<gl::Shader> ssaoBlurShader_;
 
-  static constexpr unsigned int SSAO_KERNEL_SIZE = 64;
-  // 遮蔽物とみなす近傍の半径。暗くなる帯の幅を決める。目安は物体サイズの 0.2〜1.0 倍
-  static constexpr float SSAO_RADIUS = 0.6f;
-  // 自己遮蔽によるアクネ対策。radius を変えたら比例させること
-  static constexpr float SSAO_BIAS = 0.03f;
-  // AO のコントラスト。pow(ao, SSAO_POWER)。実用範囲は 1.5〜3.0
-  static constexpr float SSAO_POWER = 2.0f;
-
-  // シーン全体の環境光。SSAO が掛かるのはこの項だけなので、0 にすると AO も見えなくなる
+  static constexpr unsigned int SSAO_KERNEL_SIZE = 64; // 遮蔽物とみなす近傍の半径。暗くなる帯の幅を決める。目安は物体サイズの
+                                                       // 0.2〜1.0 倍
+  static constexpr float SSAO_RADIUS =
+      0.6f; // 自己遮蔽によるアクネ対策。radius を変えたら比例させること
+  static constexpr float SSAO_BIAS =
+      0.03f; // AO のコントラスト。pow(ao, SSAO_POWER)。実用範囲は 1.5〜3.0
+  static constexpr float SSAO_POWER =
+      2.0f; // シーン全体の環境光。SSAO が掛かるのはこの項だけなので、0 にすると
+            // AO も見えなくなる
   float ambientStrength_ = 0.3f;
   // Bloom の合成強度。0.0 で完全に無効化できる
   float bloomStrength_ = 1.0f;
 
   float elapsedTime_ = 0.0f;
-  float heightScale_ = 0.0f;
-  // HDR tone mapping の明るさ調整。HDR値自体は変えないので、
-  // Bloom の閾値や飽和に影響せず、AO や影のコントラストを保ったまま明るくできる
+  float heightScale_ =
+      0.0f; // HDR tone mapping の明るさ調整。HDR値自体は変えないので、Bloom
+            // の閾値や飽和に影響せず、AO
+            // や影のコントラストを保ったまま明るくできる
   float exposure_ = 0.5f;
   int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
   bool blurEnable_ = true;
@@ -167,22 +165,14 @@ private:
   std::vector<glm::vec3> cubePositions_;
 
   /* シーン固有の配置データ */
-  // cube は1辺 1.0、床は y = -0.5 なので y = 0.0 で接地する。
-  // SSAO は面と面が近い場所でしか効かないため、接地・近接・積み重ねを用意している
   const std::vector<glm::vec3> cube_pos_ = {
-      glm::vec3(-1.0f, 0.0f, -1.0f),
-      glm::vec3(2.0f, 0.0f, 0.0f),
+      glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(2.0f, 0.0f, 0.0f),
       glm::vec3(0.0f, 0.0f, 2.5f), // 近接配置（中心間 1.2 = 隙間 0.2）
-      glm::vec3(1.2f, 0.0f, 2.5f),
-      glm::vec3(-1.0f, 1.0f, -1.0f), // 積み重ね
+      glm::vec3(1.2f, 0.0f, 2.5f),   glm::vec3(-1.0f, 1.0f, -1.0f), // 積み重ね
       glm::vec3(0.0f, 0.0f, -20.0f), // z=-25 壁の前
       glm::vec3(0.0f, 0.0f, 20.0f),  // z=+25 壁の前
   };
 
-  // 減衰は LearnOpenGL の減衰テーブルの「到達距離 32」の行（linear 0.14 / quadratic 0.07）。
-  // ambient が全てゼロなのは、環境光を ambientStrength_ に一本化したため。
-  // diffuse を上げすぎると輝度1.0超えの面が増えて Bloom が影や AO の上に滲むので、
-  // 全体の明るさは exposure_ 側で調整すること
   const std::array<gl::PointLight, 4> pointLights_ = {
       {// position, ambient, diffuse, specular, constant, linear, quadratic
        {glm::vec3(0.0f, 2.0f, 2.2f), glm::vec3(0.0f),
@@ -195,8 +185,8 @@ private:
         glm::vec3(0.4f, 0.6f, 2.2f), glm::vec3(0.2f, 0.3f, 1.1f), 1.0f, 0.14f,
         0.07f},
        {glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f),
-        glm::vec3(0.35f, 1.8f, 0.5f), glm::vec3(0.18f, 0.9f, 0.25f), 1.0f, 0.14f,
-        0.07f}}};
+        glm::vec3(0.35f, 1.8f, 0.5f), glm::vec3(0.18f, 0.9f, 0.25f), 1.0f,
+        0.14f, 0.07f}}};
 
   // 透過オブジェクトの位置
   const std::vector<glm::vec3> windows_pos_ = {

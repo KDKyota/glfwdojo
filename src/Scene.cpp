@@ -280,8 +280,6 @@ void Scene::initTextures() {
   deferredLightingShader_->setInt("ssao", 7);
   // ambientStrength は UI から変更するので Render() 側で毎フレーム送る
   // ssaoShader_ / ssaoBlurShader_ の uniform は initSSAO() 側で設定する。
-  // initTextures() は initSSAO() より先に呼ばれるため、ここではまだ
-  // ssaoKernel_ が空で、カーネルを送れないため。
 }
 
 void Scene::initFramebuffer() {
@@ -323,8 +321,6 @@ void Scene::initFramebuffer() {
                                      // both a depth AND stencil buffer.
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                             GL_RENDERBUFFER, rbo_); // now actually attach it
-  // now that we actually created the framebuffer and added all attachments we
-  // want to check if it is actually complete now
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!"
               << std::endl;
@@ -353,7 +349,7 @@ void Scene::initFramebuffer() {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_[j]);
     // depthCubemap_ をFBOの深度アタッチメントに設定。glFramebufferTexture
-    // (Texture2Dではない) を使うことで
+    // を使うことで
     // 6面すべてが1つのアタッチメントとして扱われ、geometry
     // shaderのgl_Layerで面を選択できるようになる
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap_[j],
@@ -366,7 +362,7 @@ void Scene::initFramebuffer() {
   /* ぼかし処理を書き込むFBO */
   glGenFramebuffers(2, pingpongFBO_);
   glGenTextures(2, pingpongColorbuffers_);
-  // 縦方向と横方向にガウシアンブラー（ぼかし手法）をかけるのでそのために二回のループ
+  // 縦方向と横方向にガウシアンブラーをかけるのでそのために二回のループ
   for (unsigned int i = 0; i < 2; i++) {
     glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[i]);
     glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers_[i]);
@@ -414,8 +410,8 @@ void Scene::initGBuffer() {
                GL_FLOAT, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  // SSAO はサンプル点を投影した位置をサンプルするため、画面端では [0,1] の外に出る。
-  // デフォルトの GL_REPEAT のままだと画面の反対側の値を拾い、画面端に不自然な遮蔽が出る。
+  // デフォルトの GL_REPEAT
+  // のままだと画面の反対側の値を拾い、画面端に不自然な遮蔽が出る。
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
@@ -432,8 +428,8 @@ void Scene::initGBuffer() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
                          gNormal_, 0);
-  // gAlbedoSpec（rgb=アルベド, a=スペキュラ強度。いずれも [0,1]
-  // なので8bitで十分）
+  // gAlbedoSpec（rgb=アルベド, a=スペキュラ強度。いずれも
+  // [0,1]なので8bitで十分）
   glGenTextures(1, &gAlbedoSpec_);
   glBindTexture(GL_TEXTURE_2D, gAlbedoSpec_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, scrWidth_, scrHeight_, 0, GL_RGBA,
@@ -470,17 +466,12 @@ void Scene::initSSAO() {
   // 接空間（+Z が法線方向）における、半球内のサンプル点のテンプレート。
   ssaoKernel_.reserve(SSAO_KERNEL_SIZE);
   for (unsigned int i = 0; i < SSAO_KERNEL_SIZE; ++i) {
-    // z を 0 以上にすることで「球」ではなく「半球」になる。
-    // 球にすると平坦な面でも約半分のサンプルが面の裏側に入って遮蔽と判定され、
-    // シーン全体が一様に灰色がかってしまう。
     glm::vec3 sample(randomFloats(generator) * 2.0f - 1.0f,
                      randomFloats(generator) * 2.0f - 1.0f,
                      randomFloats(generator));
     sample = glm::normalize(sample);
     sample *= randomFloats(generator); // 半球の表面ではなく内部に散らす
 
-    // 遮蔽への寄与は近い遮蔽物ほど大きいので、限られたサンプル数を原点付近に厚く配分する。
-    // 均等に散らすと遠くのサンプルばかりになり、隅の暗さが出ない。
     float scale = static_cast<float>(i) / static_cast<float>(SSAO_KERNEL_SIZE);
     scale = 0.1f + 0.9f * scale * scale; // 二次関数で原点寄りに偏らせる
     sample *= scale;
@@ -489,9 +480,6 @@ void Scene::initSSAO() {
   }
 
   /* --- ノイズテクスチャ --- */
-  // ピクセルごとにカーネルを法線まわりにランダム回転させるためのベクトル。
-  // 全ピクセルで同じカーネルを使うと規則的な縞（バンディング）が出るので、
-  // 4x4 をタイル状に敷いて回転させ、その代償のノイズを後段の 4x4 ブラーで打ち消す。
   std::vector<glm::vec3> ssaoNoise;
   ssaoNoise.reserve(16);
   for (unsigned int i = 0; i < 16; ++i) {
@@ -502,7 +490,6 @@ void Scene::initSSAO() {
   glGenTextures(1, &noiseTexture_);
   glBindTexture(GL_TEXTURE_2D, noiseTexture_);
   // 負の値を保持する必要があるため浮動小数点フォーマット。
-  // GL_RGBA8 だと [0,1] に丸められて回転ベクトルとして機能しなくなる。
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT,
                ssaoNoise.data());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -512,7 +499,7 @@ void Scene::initSSAO() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
   /* --- SSAO パスの出力先 --- */
-  // 遮蔽率はスカラー [0,1] なので 1チャンネル 8bit で十分
+  // 遮蔽率はスカラー [0,1] なので 1チャンネル 8bit
   glGenFramebuffers(1, &ssaoFBO_);
   glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO_);
   glGenTextures(1, &ssaoColorBuffer_);
@@ -548,7 +535,8 @@ void Scene::initSSAO() {
 
   /* --- シェーダーの uniform 設定 --- */
   // initTextures() ではなくここで設定するのは、カーネルを送るのに
-  // 上で生成した ssaoKernel_ が必要なため（initTextures() は initSSAO() より先に呼ばれる）。
+  // 上で生成した ssaoKernel_ が必要なため（initTextures() は initSSAO()
+  // より先に呼ばれる）。
   ssaoShader_->use();
   ssaoShader_->setInt("gPosition", 0);
   ssaoShader_->setInt("gNormal", 1);
@@ -566,8 +554,7 @@ void Scene::initSSAO() {
 
 void Scene::Render(float deltaTime, float heightScale) {
   elapsedTime_ += deltaTime;
-  heightScale_ = heightScale; // Parallax Mapping の強さ（Callbacks.cpp の
-                              // processInput で矢印キーにより更新される）
+  heightScale_ = heightScale;
 
   /* 透過窓をカメラからの距離でソート */
   std::vector<gl::TransparentDraw> sorted;
@@ -583,20 +570,10 @@ void Scene::Render(float deltaTime, float heightScale) {
   glEnable(GL_DEPTH_TEST);
   pointDepthShader_->use();
   for (unsigned int j = 0; j < 4; ++j) {
-    // ポイントシャドウ用: 光源から6方向へのライト空間行列を計算
-    // lightPos:
-    // シャドウを落とす点光源の位置。6方向すべての視点(lookAt)の原点になる
     glm::vec3 lightPos = pointLights_[j].position;
-    // shadowProj:
-    // 立方体の1面をちょうど覆う画角(90度)の透視投影行列。6面共通で使い回す
-    // near/far は shadowNearPlane_ / shadowFarPlane_ を使用（far
-    // は深度正規化の基準にもなる）
     glm::mat4 shadowProj = glm::perspective(
         glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT,
         shadowNearPlane_, shadowFarPlane_);
-    // shadowTransforms: cubemapの+X,-X,+Y,-Y,+Z,-Zの6面それぞれに対応する
-    // view*projection 行列 この配列を point_shadow_depth.geom の
-    // shadowMatrices[6] にそのまま渡す
     std::vector<glm::mat4> shadowTransforms;
     shadowTransforms.push_back(
         shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1, 0, 0),
@@ -626,10 +603,7 @@ void Scene::Render(float deltaTime, float heightScale) {
     for (int i = 0; i < 6; ++i)
       pointDepthShader_->setMat4("shadowMatrices[" + std::to_string(i) + "]",
                                  shadowTransforms[i]);
-    // フラグメントシェーダー側で距離を正規化する際の基準値（shader.frag側の
-    // farPlane と揃える）
     pointDepthShader_->setFloat("farPlane", shadowFarPlane_);
-    // フラグメントシェーダー側で「光源からの距離」を計算するための光源位置
     pointDepthShader_->setVec3("lightPos", lightPos);
     renderFloor(*pointDepthShader_);
     renderCubes(*pointDepthShader_);
@@ -646,6 +620,7 @@ void Scene::Render(float deltaTime, float heightScale) {
   // gPosition / gNormal は out vec3（アルファ成分が未定義＝実質0）なので
   // src.rgb * 0 + dst.rgb * 1 となって書き込みが丸ごと消え、G-Buffer
   // がクリア値のままになる。
+  // 著者はここをミスっちゃった（バグ解消に位置に近かった）
   glDisable(GL_BLEND);
 
   /* write view / projection into UBO*/
@@ -707,7 +682,8 @@ void Scene::Render(float deltaTime, float heightScale) {
   glDrawArrays(GL_TRIANGLES, 0, 6);
 
   /* -- SSAO blur pass -- */
-  // 4x4 のノイズをタイル状に敷いた代償として出る格子模様を、4x4 の平均で打ち消す
+  // 4x4 のノイズをタイル状に敷いた代償として出る格子模様を、4x4
+  // の平均で打ち消す
   glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO_);
   glClear(GL_COLOR_BUFFER_BIT);
   glActiveTexture(GL_TEXTURE0);
@@ -882,6 +858,9 @@ void Scene::renderTransparentWindows(
   transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());
   transparentwindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
   transparentwindowShader_->setFloat("material.shininess", 32.0f);
+  // 不透明面（Deferred）と環境光の扱いを揃える。UI
+  // から変更するので毎フレーム送る
+  transparentwindowShader_->setFloat("ambientStrength", ambientStrength_);
   applyPointLights(*transparentwindowShader_);
   glBindVertexArray(transparentVAO_);
   transparentTexture_->bind(0);
@@ -900,6 +879,7 @@ void Scene::renderWalls(gl::Shader &shader) {
   glDrawElements(GL_TRIANGLES, gl::wallIndices.size(), GL_UNSIGNED_INT, 0);
 }
 
+// デストラクタ（デリーター）
 Scene::~Scene() {
   glDeleteVertexArrays(1, &cubeVAO_);
   glDeleteVertexArrays(1, &planeVAO_);

@@ -70,8 +70,14 @@ uniform Material material;
 uniform vec3 lightPos; // 光源の位置
 uniform vec3 viewPos; // カメラの位置
 
+// シーン全体にかかる環境光。deferred_lighting.frag と同じ値を受け取る。
+// ライトごとの ambient を使うと attenuation が掛かって光源から離れるほど消えるため、
+// 不透明面（Deferred）と透過窓（前方描画）で扱いを揃えている
+uniform float ambientStrength;
+
 //function
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
+// ambient は扱わない。この関数が返すのはこの光源からの直接光だけ
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewdir);
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap);
@@ -85,8 +91,12 @@ void main()
 	// 1. directional lighting
 	// directional lightは今は使わないのでコメントアウト
 	//vec3 result = CalcDirLight(dirLight, norm, viewDir);
+	vec4 texColor = texture(texture1, TexCoords);
+
+	// 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
+	vec3 result = ambientStrength * texColor.rgb;
+
 	// 2. point lighting
-	vec3 result = vec3(0.0f);
 	for(int i = 0; i < NR_POINT_LIGHTS; i++)
 	{
 	  vec3 lightDir = normalize(pointLights[i].position - FragPos);
@@ -96,7 +106,6 @@ void main()
 	// 3. spot lighting
 	// result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
-	vec4 texColor = texture(texture1, TexCoords);
 	FragColor = vec4(result, texColor.a);
 
 	float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
@@ -127,27 +136,20 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
       vec3 lightDir = normalize(light.position - fragPos);
       // Diffuse
       float diff = max(dot(normal, lightDir), 0.0);
-      //vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
       vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
       // Specular
       vec3 reflectDir = reflect(-lightDir, normal);
       float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-      //vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
       vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
-
-      // Combine results
-      //vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
-      vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
 
       // attenuation
       float distance = length(light.position - fragPos);
       float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
-      ambient *= attenuation;
       diffuse *= attenuation;
       specular *= attenuation;
-      // 返し値にshadowを考慮
-      return (ambient + (1.0f - shadow) * (diffuse + specular));
+      // 直接光の遮蔽はシャドウマップが担当する
+      return (1.0f - shadow) * (diffuse + specular);
 }
 
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir   )

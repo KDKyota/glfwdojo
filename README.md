@@ -87,7 +87,13 @@ OpenGL **4.6 コアプロファイル**が必要です。
 
 Windows と Linux（WSL2）の両方でビルド・実行できます。WSL2 で GPU を使う場合は `GALLIUM_DRIVER=d3d12` のオプション指定が必要です（詳細は [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) の「Linux (WSL2) で動かす」を参照）。
 
-> Macでの動作はテストしていません。なぜかというとMacが高すぎて買えなかったから。
+> 環境次第では`GaLLIUM_DRIVER`の値が違ったり，別の環境変数を用意する必要があるかもしれないです．以下のサイトを参考にして見てください
+
+[Arch Wiki](https://wiki.archlinux.jp/index.php/OpenGL)
+
+[Qiita](https://qiita.com/HD_mount_Music/items/701559d57787a2f183c9)
+
+> Macでの動作はテストしていません。なぜかというとMacが高すぎて買えなかったから
 
 ---
 
@@ -104,7 +110,7 @@ cd build/Debug && ./glfwdojo
 # Linux (WSL2)
 cmake --preset linux-debug
 cmake --build --preset linux-debug
-cd build/linux-debug && GALLIUM_DRIVER=d3d12 ./glfwdojo
+cd build/linux-debug && GALLIUM_DRIVER=d3d12 ./glfwdojo // 環境によっては異なる可能性があります
 ```
 
 シェーダーと `resources/` は実行ファイルと同じディレクトリに相対パスで読み込まれるため、**実行時はビルドディレクトリに移動してから起動してください。**

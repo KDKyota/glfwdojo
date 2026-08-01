@@ -208,6 +208,56 @@ struct PointLight {
 > **ambient が小さすぎると影側の面が真っ黒になる。** 点光源1灯だと光の当たらない面は
 > ambient 値しか明るさがないため、0.05 程度では暗くなりすぎることがある。シーンに合わせて調整する。
 
+### 環境光は「ライトごと」ではなく「シーン全体で1つ」にしている
+
+`PointLight` 構造体には `ambient` メンバがあるが、**このプロジェクトでは使っていない**（全て
+`glm::vec3(0.0f)`）。代わりに `Scene` の `ambientStrength_` をシーン全体で1つだけ持ち、
+`deferred_lighting.frag` / `shader.frag` の両方でライトのループの**外**から加算している。
+
+```glsl
+vec3 result = ambientStrength * Albedo;  // 距離減衰を掛けない
+for (int i = 0; i < NR_LIGHTS; ++i) { result += CalcPointLight(...); }
+```
+
+LearnOpenGL では章によって扱いが変わるので、混乱しやすい箇所。
+
+| 章 | 環境光の扱い |
+|---|---|
+| Basic Lighting | シーン全体の定数（`float ambientStrength = 0.1;`） |
+| Light Casters / Multiple Lights | ライトごとのメンバ + `attenuation` |
+| **SSAO** | **シーン全体の定数に戻る。`attenuation` なし** |
+
+Light Casters の章には減衰について次の注意書きがある。
+
+> We could leave the ambient component alone so ambient lighting is not decreased over distance,
+> but if we were to use more than 1 light source all the ambient components will start to stack up.
+> In that case we want to attenuate ambient lighting as well. Simply play around with what's best
+> for your environment.
+
+つまり「ライトごとに持たせて減衰させる」のは**複数光源で環境光が足し合わさって明るくなりすぎる
+のを防ぐため**の措置であって、物理的な正しさから来ているわけではない。
+
+一方 SSAO の章では、
+
+```glsl
+vec3 ambient = vec3(0.3 * Diffuse * AmbientOcclusion);
+```
+
+とシーン全体の定数に戻り、減衰も掛けていない。**SSAO が掛かる対象が ambient しかないため**で、
+ライトごとに減衰させると光源から離れた場所で ambient が 0 に近づき、AO を掛ける相手そのものが
+消えてしまう。実際このプロジェクトでも、Multiple Lights の形のまま SSAO を実装したときは
+**光源のすぐ近くでしか AO が見えなかった。**
+
+シーン全体で1つに持てば「足し合わさって明るくなりすぎる」問題も同時に解消されるので、
+SSAO を使うならこちらの形が適している。
+
+> **前方描画側の更新漏れに注意。** 環境光の方式を変えるときは `deferred_lighting.frag` と
+> `shader.frag`（透過窓が使う）の**両方**を直すこと。片方だけ直すと、`light.ambient` が
+> `(0,0,0)` のまま掛け算されて**そのオブジェクトだけ環境光が完全にゼロになる**。
+> uniform は存在していて値が 0 なだけなのでエラーも警告も出ず、
+> 「透過窓だけ不自然に暗い」「UI で ambient を動かしても窓だけ反応しない」という形でしか気づけない。
+> 根本原因は前方描画と Deferred でライティングが二重管理になっていること。
+
 ### ライトをシェーダーに送る
 
 `Render()` 内でシェーダーごとに `use()` した後に呼ぶ。`shader_`, `cubeShader_`, `transparentwindowShader_` それぞれに送る必要がある（同じ .frag を使っていても、シェーダープログラムオブジェクトが別なら uniform の設定も別々に行う）。

@@ -2,6 +2,9 @@
 
 このドキュメントは、既存の機能を変更したり新しい要素を追加するときの手順と注意点をまとめたものです。
 
+> コードの編集だけでかなり大変なのでこのドキュメントはClaudeが作っています．
+> もしかすると正確じゃないことを書いているかもしれません．
+
 ---
 
 ## 目次
@@ -86,6 +89,7 @@ hdr.frag でブラー結果を加算し、トーンマッピング＋ガンマ�
 view と projection は UBO（binding = 0）で全シェーダーに共有されています。
 
 **C++ 側（Scene.cpp の Render()）:**
+
 ```cpp
 glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO_);
 glBufferSubData(GL_UNIFORM_BUFFER, 0,                 sizeof(glm::mat4), glm::value_ptr(view));
@@ -94,6 +98,7 @@ glBindBuffer(GL_UNIFORM_BUFFER, 0);
 ```
 
 **GLSL 側（各 .vert ファイル）:**
+
 ```glsl
 layout (std140, binding = 0) uniform Matrices {
     mat4 view;        // offset 0
@@ -112,10 +117,10 @@ layout (std140, binding = 0) uniform Matrices {
 
 ガンマ補正のかけ方には2通りあり、**必ずどちらか一方だけを使います。**
 
-| 方法 | やり方 |
-|---|---|
-| OpenGL に任せる | `Window.cpp` で `glEnable(GL_FRAMEBUFFER_SRGB);` を呼ぶ |
-| シェーダーで手動 | 最終出力の直前で `pow(color, vec3(1.0 / 2.2))` |
+| 方法             | やり方                                                  |
+| ---------------- | ------------------------------------------------------- |
+| OpenGL に任せる  | `Window.cpp` で `glEnable(GL_FRAMEBUFFER_SRGB);` を呼ぶ |
+| シェーダーで手動 | 最終出力の直前で `pow(color, vec3(1.0 / 2.2))`          |
 
 **このプロジェクトは後者（`hdr.frag` での手動補正）を採用しています。**
 HDR + トーンマッピングを実装しており、トーンマッピングとガンマ補正を同じシェーダー内で
@@ -131,12 +136,12 @@ HDR + トーンマッピングを実装しており、トーンマッピング�
 **なぜそうなるか:** ガンマ補正は暗部を大きく持ち上げる操作です。2回かけると実効的に
 `L^(1/4.84)` となり、本来ほぼ黒であるべき値が中間グレーまで浮き上がります。
 
-| 元の値 | 1回補正 | 2回補正 |
-|---|---|---|
-| 0.05 | 0.25 | **0.51** |
-| 0.1 | 0.35 | **0.61** |
-| 0.2 | 0.48 | **0.71** |
-| 0.5 | 0.73 | **0.87** |
+| 元の値 | 1回補正 | 2回補正  |
+| ------ | ------- | -------- |
+| 0.05   | 0.25    | **0.51** |
+| 0.1    | 0.35    | **0.61** |
+| 0.2    | 0.48    | **0.71** |
+| 0.5    | 0.73    | **0.87** |
 
 `Bloom` や `ambient` や `exposure` をいくら下げても消えないのがポイントです。
 **それらを 0 にしても、残ったわずかな値がガンマ2回でグレーまで持ち上げられる**ためで、
@@ -193,6 +198,7 @@ inline const std::array<gl::PointLight, 1> pointLights = {{
 ```
 
 各 `PointLight` のメンバ（`Lighting.h` 参照）:
+
 ```cpp
 struct PointLight {
     glm::vec3 position;
@@ -221,11 +227,11 @@ for (int i = 0; i < NR_LIGHTS; ++i) { result += CalcPointLight(...); }
 
 LearnOpenGL では章によって扱いが変わるので、混乱しやすい箇所。
 
-| 章 | 環境光の扱い |
-|---|---|
-| Basic Lighting | シーン全体の定数（`float ambientStrength = 0.1;`） |
-| Light Casters / Multiple Lights | ライトごとのメンバ + `attenuation` |
-| **SSAO** | **シーン全体の定数に戻る。`attenuation` なし** |
+| 章                              | 環境光の扱い                                       |
+| ------------------------------- | -------------------------------------------------- |
+| Basic Lighting                  | シーン全体の定数（`float ambientStrength = 0.1;`） |
+| Light Casters / Multiple Lights | ライトごとのメンバ + `attenuation`                 |
+| **SSAO**                        | **シーン全体の定数に戻る。`attenuation` なし**     |
 
 Light Casters の章には減衰について次の注意書きがある。
 
@@ -320,13 +326,13 @@ glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT,
              0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 ```
 
-| 項目 | カラーテクスチャ | デプステクスチャ |
-|---|---|---|
-| 内部フォーマット | `GL_RGB` / `GL_RGBA` | `GL_DEPTH_COMPONENT` |
-| データ型 | `GL_UNSIGNED_BYTE` | `GL_FLOAT` |
-| FBO アタッチメント | `GL_COLOR_ATTACHMENT0` | `GL_DEPTH_ATTACHMENT` |
-| カラー出力 | あり | `glDrawBuffer(GL_NONE)` で無効化 |
-| カラー読み込み | あり | `glReadBuffer(GL_NONE)` で無効化 |
+| 項目               | カラーテクスチャ       | デプステクスチャ                 |
+| ------------------ | ---------------------- | -------------------------------- |
+| 内部フォーマット   | `GL_RGB` / `GL_RGBA`   | `GL_DEPTH_COMPONENT`             |
+| データ型           | `GL_UNSIGNED_BYTE`     | `GL_FLOAT`                       |
+| FBO アタッチメント | `GL_COLOR_ATTACHMENT0` | `GL_DEPTH_ATTACHMENT`            |
+| カラー出力         | あり                   | `glDrawBuffer(GL_NONE)` で無効化 |
+| カラー読み込み     | あり                   | `glReadBuffer(GL_NONE)` で無効化 |
 
 ### デプスマップ FBO の初期化手順
 
@@ -355,11 +361,11 @@ Deferred Shading は処理を2段階に分けます。
 
 ### G-Buffer の構成（`Scene::initGBuffer()`）
 
-| アタッチメント | 変数 | 内部フォーマット | 中身 |
-|---|---|---|---|
-| COLOR_ATTACHMENT0 | `gPosition_` | `GL_RGBA16F` | ワールド座標 |
-| COLOR_ATTACHMENT1 | `gNormal_` | `GL_RGBA16F` | ワールド法線（ノーマルマップ適用後） |
-| COLOR_ATTACHMENT2 | `gAlbedoSpec_` | `GL_RGBA8` | rgb=アルベド, a=スペキュラ強度 |
+| アタッチメント    | 変数           | 内部フォーマット | 中身                                 |
+| ----------------- | -------------- | ---------------- | ------------------------------------ |
+| COLOR_ATTACHMENT0 | `gPosition_`   | `GL_RGBA16F`     | ワールド座標                         |
+| COLOR_ATTACHMENT1 | `gNormal_`     | `GL_RGBA16F`     | ワールド法線（ノーマルマップ適用後） |
+| COLOR_ATTACHMENT2 | `gAlbedoSpec_` | `GL_RGBA8`       | rgb=アルベド, a=スペキュラ強度       |
 
 **位置と法線に浮動小数点フォーマット（16F）が必須な理由**は、どちらも `[0,1]` に収まらない値だからです。
 座標は 20 のような大きな値を取り、法線は `-1` のような負の値を取ります。
@@ -416,14 +422,14 @@ Lighting パスはフルスクリーンクワッドを描くだけなので、�
 
 **全 VAO・全頂点シェーダーで以下の割り当てに統一すること。**
 
-| location | 意味 |
-|---|---|
-| 0 | position |
-| 1 | normal |
-| 2 | uv |
-| 3 | tangent |
-| 4 | bitangent |
-| 5 | インスタンスごとの位置オフセット（`glVertexAttribDivisor(5, 1)`） |
+| location | 意味                                                              |
+| -------- | ----------------------------------------------------------------- |
+| 0        | position                                                          |
+| 1        | normal                                                            |
+| 2        | uv                                                                |
+| 3        | tangent                                                           |
+| 4        | bitangent                                                         |
+| 5        | インスタンスごとの位置オフセット（`glVertexAttribDivisor(5, 1)`） |
 
 ### なぜ規約が必要か
 
@@ -817,13 +823,13 @@ GALLIUM_DRIVER=d3d12 LD_PRELOAD=./segvtrace.so ./glfwdojo
 多段パス構成では、どのパスまで正しいかを1つずつ確認するのが最短です。
 `deferred_lighting.frag` の先頭には、そのための `DEBUG_MODE` スイッチが用意してあります。
 
-| 値 | 表示内容 |
-|---|---|
-| 0 | 通常のライティング |
-| 1 | ライト0のシャドウ判定だけ |
-| 2 | `shadowMap[0]` の生の深度値 |
+| 値        | 表示内容                               |
+| --------- | -------------------------------------- |
+| 0         | 通常のライティング                     |
+| 1         | ライト0のシャドウ判定だけ              |
+| 2         | `shadowMap[0]` の生の深度値            |
 | 3 / 4 / 5 | G-Buffer の Albedo / Normal / Position |
-| 6 | 画面4分割で上記を一度に表示 |
+| 6         | 画面4分割で上記を一度に表示            |
 
 同様に `gbuffer_floor.frag` には `GBUFFER_WRITE_TEST` があり、
 1 にすると床を描くときに G-Buffer へ**位置や法線と無関係な固定色**を書き込みます。
@@ -836,11 +842,11 @@ GALLIUM_DRIVER=d3d12 LD_PRELOAD=./segvtrace.so ./glfwdojo
 `hdr.frag` は `mapped = 1 - exp(-color * exposure)` の後に `pow(mapped, 1/2.2)` をかけます。
 exposure が 3.0 のとき、値の見え方はこうなります。
 
-| 元の値 | 画面上 |
-|---|---|
-| 0.1 | 0.55（中間グレー） |
-| 0.5 | 0.89（ほぼ白） |
-| 1.0 | 0.98（白） |
+| 元の値 | 画面上             |
+| ------ | ------------------ |
+| 0.1    | 0.55（中間グレー） |
+| 0.5    | 0.89（ほぼ白）     |
+| 1.0    | 0.98（白）         |
 
 つまり `normal * 0.5 + 0.5` のような**正常な値でも一律に真っ白に見えてしまい、判定に使えません。**
 
@@ -971,6 +977,7 @@ G-Buffer の Position が一様になったときはまずここを疑ってく�
 ### ライトキューブを FBO の外で描画してしまう
 
 `glBindFramebuffer(GL_FRAMEBUFFER, 0)` でデフォルト FB に戻った後にライトキューブを描画すると：
+
 - `glDisable(GL_DEPTH_TEST)` が有効な状態なので全オブジェクトの手前に描画される
 - カスタム FB を通さないのでポストプロセス（ガンマ補正等）が適用されない
 - 結果として「2D の板ポリ」に見える
@@ -1055,6 +1062,7 @@ const std::vector<glm::vec3> myPositions = { ... };         // NG（複数回定
 ### シャドウマッピングが基本的なPCFのみ
 
 現在の点光源シャドウ（`ShadowCalculation()`）は、固定オフセット（0.05）・26方向サンプリングのPCFで縁をぼかしているだけの、比較的古典的な実装です。以下のような発展手法は未導入です:
+
 - **PCSS（Percentage Closer Soft Shadows）**: 光源とオクルーダーの距離に応じて影の輪郭のぼけ方を可変にする
 - **カスケードシャドウマップ**: 遠近でシャドウマップの解像度を分割し、シーン全体の精度を上げる（現状は directional light 自体が未使用なので該当なし）
 - より高度な bias 制御（Peter panning対策など）

@@ -2,7 +2,8 @@
 
 void MouseState::SetRightPressed(bool pressed) {
 	this->RightPressed = pressed;
-	if (!pressed) FirstMouse = true;
+	// 押した時もリセットする。ドラッグ開始の1回目を差分0にして視点の飛びを防ぐ
+	FirstMouse = true;
 }
 
 bool MouseState::IsRightPressed() const {

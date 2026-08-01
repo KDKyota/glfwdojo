@@ -30,16 +30,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
-	// UI 上でドラッグしているときはカメラを回さない。
-	// このプロジェクトの視点操作は右ドラッグなので、ガードしないと
-	// スライダーを右ドラッグした瞬間に視点が回転してしまう。
-	if (Gui::WantCaptureMouse())
-	{
-		// 追従だけはしておく。そうしないと UI から抜けた瞬間に
-		// 前回位置との差分が巨大になり、視点が飛ぶ。
-		mouse->ComputeOffset(xposIn, yposIn);
-		return;
-	}
+	// 視点操作が右ドラッグなので、ガードしないとスライダー操作で視点が回る
+	if (Gui::WantCaptureMouse()) return;
 	if (!mouse->IsRightPressed()) return;
 	auto[xoffset, yoffset] = mouse->ComputeOffset(xposIn, yposIn);
 	camera->ProcessMouseMovement(xoffset, yoffset);

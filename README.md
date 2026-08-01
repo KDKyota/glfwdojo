@@ -4,8 +4,13 @@
 
 <!-- ▼▼▼ ここにスクリーンショットを挿入 ▼▼▼ -->
 
-> **【画像を挿入】** 現在のシーンのスクリーンショット
-> （Deferred Shading + ポイントシャドウ + Bloom + 視差マッピングが分かるアングルが望ましい）
+<table>
+<tr>
+<td><img src="images/Screenshot.png"></td>
+<td><img src="images/Screenshot_skip.png"></td>
+<td><img src="images/Screenshot_ssao.png"></td>
+</tr>
+</table>
 
 <!-- ▲▲▲ ここにスクリーンショットを挿入 ▲▲▲ -->
 
@@ -27,20 +32,20 @@ LearnOpenGL のサンプルコードをそのまま写経するのではなく�
 
 ## 実装済みの機能
 
-| 分類 | 機能 |
-|---|---|
-| 基礎 | カメラ操作、深度テスト、ステンシルテスト、ブレンディング、フェイスカリング |
-| ライティング | Phong 反射モデル、点光源 / 平行光源 / スポットライト |
-| モデル | Assimp による OBJ 読み込み、テクスチャキャッシュ（`weak_ptr` 管理） |
-| テクスチャ | キューブマップ（スカイボックス）、法線マッピング、視差遮蔽マッピング（POM） |
-| 高度な機能 | フレームバッファ、インスタンシング、UBO によるユニフォーム共有 |
-| 影 | ポイントシャドウ（キューブマップ + 26方向サンプリングの PCF） |
-| ポストプロセス | HDR + 露出トーンマッピング、Bloom（2パス ガウシアンブラー） |
-| **描画方式** | **Deferred Shading（G-Buffer + ライトボリュームによる打ち切り）** |
+| 分類           | 機能                                                                        |
+| -------------- | --------------------------------------------------------------------------- |
+| 基礎           | カメラ操作、深度テスト、ステンシルテスト、ブレンディング、フェイスカリング  |
+| ライティング   | Phong 反射モデル、点光源 / 平行光源 / スポットライト                        |
+| モデル         | Assimp による OBJ 読み込み、テクスチャキャッシュ（`weak_ptr` 管理）         |
+| テクスチャ     | キューブマップ（スカイボックス）、法線マッピング、視差遮蔽マッピング（POM） |
+| 高度な機能     | フレームバッファ、インスタンシング、UBO によるユニフォーム共有              |
+| 影             | ポイントシャドウ（キューブマップ + 26方向サンプリングの PCF）               |
+| ポストプロセス | HDR + 露出トーンマッピング、Bloom（2パス ガウシアンブラー）                 |
+| **描画方式**   | **Deferred Shading（G-Buffer + ライトボリュームによる打ち切り）**           |
 
 ### 今後の予定
 
-- [ ] SSAO（Screen Space Ambient Occlusion）
+- [x] SSAO（Screen Space Ambient Occlusion）
 - [ ] PBR（物理ベースレンダリング）
 - [ ] ライトボリュームのジオメトリ描画による最適化
 - [ ] G-Buffer の帯域削減（深度からの位置復元、法線の圧縮）
@@ -81,6 +86,7 @@ OpenGL **4.6 コアプロファイル**が必要です。
 > **実行環境**: Windows laptop, RyzenのCPU，iGPUとWSL2のUbuntu
 
 Windows と Linux（WSL2）の両方でビルド・実行できます。WSL2 で GPU を使う場合は `GALLIUM_DRIVER=d3d12` のオプション指定が必要です（詳細は [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) の「Linux (WSL2) で動かす」を参照）。
+
 > Macでの動作はテストしていません。なぜかというとMacが高すぎて買えなかったから。
 
 ---
@@ -109,15 +115,15 @@ cd build/linux-debug && GALLIUM_DRIVER=d3d12 ./glfwdojo
 
 ## 操作方法
 
-| 入力 | 動作 |
-|---|---|
-| `W` / `S` | 前進 / 後退 |
-| `A` / `D` | 左 / 右へ移動 |
-| `Q` / `E` | 下降 / 上昇 |
-| 右ドラッグ | 視点の回転 |
-| マウスホイール | ズーム（FOV の変更） |
-| `↑` / `↓` | 視差遮蔽マッピングの深さ（`heightScale`）を調整 |
-| `Esc` | 終了 |
+| 入力           | 動作                                            |
+| -------------- | ----------------------------------------------- |
+| `W` / `S`      | 前進 / 後退                                     |
+| `A` / `D`      | 左 / 右へ移動                                   |
+| `Q` / `E`      | 下降 / 上昇                                     |
+| 右ドラッグ     | 視点の回転                                      |
+| マウスホイール | ズーム（FOV の変更）                            |
+| `↑` / `↓`      | 視差遮蔽マッピングの深さ（`heightScale`）を調整 |
+| `Esc`          | 終了                                            |
 
 ---
 
@@ -141,12 +147,12 @@ glfwdojo/
 
 ## ドキュメント
 
-| ファイル | 内容 |
-|---|---|
-| [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) | 実装ガイド。パスの設計意図、よくある落とし穴、画面が壊れたときのデバッグ手法、WSL2 固有の問題 |
-| [`docs/BUILD.md`](./docs/BUILD.md) | ビルド手順、ファイル追加時の CMake 設定 |
-| [`docs/shadow_mapping.md`](./docs/shadow_mapping.md) | シャドウマッピングの学習メモ |
-| [`CLAUDE.md`](./CLAUDE.md) | Claude Code に作業させる際のルール |
+| ファイル                                             | 内容                                                                                          |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)       | 実装ガイド。パスの設計意図、よくある落とし穴、画面が壊れたときのデバッグ手法、WSL2 固有の問題 |
+| [`docs/BUILD.md`](./docs/BUILD.md)                   | ビルド手順、ファイル追加時の CMake 設定                                                       |
+| [`docs/shadow_mapping.md`](./docs/shadow_mapping.md) | シャドウマッピングの学習メモ                                                                  |
+| [`CLAUDE.md`](./CLAUDE.md)                           | Claude Code に作業させる際のルール                                                            |
 
 ---
 
@@ -156,13 +162,13 @@ glfwdojo/
 
 LearnOpenGL で使われている 3D モデル（backpack / cyborg / nanosuit / planet / rock）は、いずれも再配布が許諾されていない、あるいはライセンスが不明なものです。
 
-| モデル | 出典 | ライセンス表記 |
-|---|---|---|
+| モデル     | 出典                                                                                                                                                     | ライセンス表記                         |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | `backpack` | Berk Gedik（[Sketchfab](https://sketchfab.com/3d-models/survival-guitar-backpack-low-poly-799f8c4511f84fab8c3f12887f7e6b36)） / Joey de Vries により改変 | 出典表記のみ。ライセンス条項の記載なし |
-| `cyborg` | 3dregenerator（tf3dm.com） / Joey de Vries により改変 | **"For Personal Use Only."** と明記 |
-| `planet` | Gerhald3D（[TurboSquid](https://www.turbosquid.com/3d-models/realistic-mars-photorealistic-2k-3d-1277433)） / Joey de Vries により改変 | 出典表記のみ。ライセンス条項の記載なし |
-| `nanosuit` | Crysis（Crytek）由来 | 記載なし |
-| `rock` | 不明 | 記載なし |
+| `cyborg`   | 3dregenerator（tf3dm.com） / Joey de Vries により改変                                                                                                    | **"For Personal Use Only."** と明記    |
+| `planet`   | Gerhald3D（[TurboSquid](https://www.turbosquid.com/3d-models/realistic-mars-photorealistic-2k-3d-1277433)） / Joey de Vries により改変                   | 出典表記のみ。ライセンス条項の記載なし |
+| `nanosuit` | Crysis（Crytek）由来                                                                                                                                     | 記載なし                               |
+| `rock`     | 不明                                                                                                                                                     | 記載なし                               |
 
 そのため、**モデル描画のコードは意図的にコメントアウトしてあります**（`src/Scene.cpp` の `Model` 生成箇所）。現在のシーンはプリミティブ（キューブ・平面）とテクスチャのみで構成されています。
 

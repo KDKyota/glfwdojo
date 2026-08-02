@@ -102,6 +102,7 @@ void main()
     // directional lightは今は使わないのでコメントアウト
     // vec3 result = CalcDirLight(dirLight, norm, viewDir);
     vec4 texColor = texture(texture1, TexCoords);
+    // transparent windowのガラス部分だけをレンダリングする
     if (texColor.a >= 0.5)
         discard;
 

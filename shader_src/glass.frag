@@ -42,6 +42,7 @@ uniform sampler2D texture1;
 // point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離
 // [0,1] が入っている）。4灯ぶん
 uniform samplerCube shadowMap[NR_POINT_LIGHTS];
+uniform sampler2D ssao;
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 uniform float farPlane;
 
@@ -68,6 +69,10 @@ void main()
 
     if (!gl_FrontFacing)
         normal = -normal;
+
+    vec2 screenUV = gl_FragCoord.xy / vec2(textureSize(ssao, 0));
+    float ao = texture(ssao, screenUV).r;
+
     vec3 viewDir = normalize(viewPos - FragPos);
 
     vec4 texColor = texture(texture1, TexCoords);
@@ -76,7 +81,7 @@ void main()
         discard;
 
     // 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
-    vec3 result = ambientStrength * texColor.rgb;
+    vec3 result = ambientStrength * texColor.rgb * ao;
 
     float specTotal = 0.0;
 

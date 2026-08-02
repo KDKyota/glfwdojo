@@ -9,7 +9,10 @@
       "Bash(sed -n '/Scene::~Scene/,/^}/p' src/Scene.cpp)",
       "Bash(sed -n '/void main/,/^}/p' shader_src/cube.frag)",
       "Bash(sed -n '/void main/,/^}/p' shader_src/shader.frag)",
-      "Bash(sed -n '/void main/,/^}/p' shader_src/wall.frag)"
+      "Bash(sed -n '/void main/,/^}/p' shader_src/wall.frag)",
+      "Bash(sed -n '/void Scene::renderWindow/,/^}/p' src/Scene.cpp)",
+      "Bash(sed -n '/void Scene::renderTransparentWindows/,/^}/p' src/Scene.cpp)",
+      "Bash(sed -n '/透過窓をカメラからの距離でソート/,/^$/p' src/Scene.cpp)"
     ]
   }
 }

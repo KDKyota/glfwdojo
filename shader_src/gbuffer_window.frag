@@ -17,7 +17,7 @@ void main()
     if (texColor.a < 0.5)
         discard; // ガラス部分は別処理
 
-    normal = normalize(Normal);
+    vec3 normal = normalize(Normal);
     if (!gl_FrontFacing)
         normal = -normal;
 

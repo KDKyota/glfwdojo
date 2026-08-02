@@ -216,6 +216,7 @@ void Scene::initTextures()
     transparentwindowShader_->setInt("texture1", 0);
     for (unsigned int i = 0; i < 4; ++i)
         transparentwindowShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
+    transparentwindowShader_->setInt("ssao", 7);
     transparentwindowShader_->setFloat("farPlane", shadowFarPlane_);
     /* screen */
     screenshader_->use();
@@ -801,6 +802,8 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sor
     // 不透明面（Deferred）と環境光の扱いを揃える。UI
     // から変更するので毎フレーム送る
     transparentwindowShader_->setFloat("ambientStrength", ambientStrength_);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur_);
     applyPointLights(*transparentwindowShader_);
     renderWindow(*transparentwindowShader_);
 }

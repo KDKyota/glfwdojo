@@ -21,7 +21,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     // cache_);
     screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "hdr.frag");
     skyboxShader_ = std::make_unique<gl::Shader>("skybox.vert", "skybox.frag");
-    transparentwindowShader_ = std::make_unique<gl::Shader>("window.vert", "shader.frag");
+    transparentwindowShader_ = std::make_unique<gl::Shader>("window.vert", "glass.frag");
     pointDepthShader_ =
         std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_depth.frag");
     debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");

@@ -1,7 +1,9 @@
+// 透過窓のガラス部分を前方描画するシェーダー。
+// 窓枠は gbuffer_window.frag が Deferred 側で描くので、ここでは alpha >= 0.5 を discard する。
+//
 // サンプラー配列をループ変数で添字する（shadowMap[i]）ため 4.60 が必要。
-// GLSL 3.30 以前の仕様ではサンプラー配列は定数式でしか添字できず、Mesa
-// など仕様に厳密な ドライバではコンパイルエラーになる（NVIDIA/AMD は 330
-// でも黙って通してしまう）。
+// GLSL 3.30 以前ではサンプラー配列は定数式でしか添字できず、Mesa など仕様に厳密な
+// ドライバではコンパイルエラーになる（NVIDIA/AMD は 330 でも黙って通してしまう）。
 #version 460 core
 
 out vec4 FragColor;
@@ -17,13 +19,6 @@ struct Material
     float shininess; // C++側から material.shininess として設定される
 };
 
-struct DirLight
-{
-    vec3 direction;
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-};
 
 struct PointLight
 {
@@ -38,22 +33,6 @@ struct PointLight
     vec3 specular;
 };
 
-struct SpotLight
-{
-    vec3 position;
-    vec3 direction;
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-
-    // Attenuation(減衰)の値
-    float constant;
-    float linear;
-    float quadratic;
-    // スポットライトの角度
-    float cutOff;
-    float outerCutOff;
-};
 
 #define NR_POINT_LIGHTS 4
 
@@ -68,12 +47,9 @@ uniform samplerCube shadowMap[NR_POINT_LIGHTS];
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 uniform float farPlane;
 
-uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
-uniform SpotLight spotLight;
 uniform Material material;
 
-uniform vec3 lightPos; // 光源の位置
 uniform vec3 viewPos;  // カメラの位置
 
 // シーン全体にかかる環境光。deferred_lighting.frag と同じ値を受け取る。
@@ -83,22 +59,23 @@ uniform vec3 viewPos;  // カメラの位置
 uniform float ambientStrength;
 
 // function
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 // ambient は扱わない。この関数が返すのはこの光源からの直接光だけ
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewdir);
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap);
 
 void main()
 {
     // Diffuse
     vec3 normal = normalize(Normal);
+
+    if (!gl_FrontFacing)
+        normal = -normal;
     vec3 viewDir = normalize(viewPos - FragPos);
 
-    // 1. directional lighting
-    // directional lightは今は使わないのでコメントアウト
-    // vec3 result = CalcDirLight(dirLight, norm, viewDir);
     vec4 texColor = texture(texture1, TexCoords);
+    // transparent windowのガラス部分だけをレンダリングする
+    if (texColor.a >= 0.5)
+        discard;
 
     // 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
     vec3 result = ambientStrength * texColor.rgb;
@@ -110,8 +87,6 @@ void main()
         float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
         result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
     }
-    // 3. spot lighting
-    // result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
     FragColor = vec4(result, texColor.a);
 
@@ -122,23 +97,6 @@ void main()
         BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 }
 
-// DirLightの計算関数
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
-{
-    vec3 lightDir = normalize(-light.direction);
-    // Diffuse
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
-    // Specular
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
-    // Combine results
-    // 今回はambientStrengthを用いるのでライトによるambientは必要ない
-    // vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
-    // return (ambient + diffuse + specular);
-    return (diffuse + specular);
-}
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow)
 {
@@ -161,31 +119,6 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
     return (1.0f - shadow) * (diffuse + specular);
 }
 
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
-{
-    vec3 lightDir = normalize(light.position - fragPos);
-    // diffuse shading
-    float diff = max(dot(normal, lightDir), 0.0);
-    // specular shading
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    // attenuation
-    float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-    // spotlight intensity
-    float theta = dot(lightDir, normalize(-light.direction));
-    float epsilon = light.cutOff - light.outerCutOff;
-    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
-    // combine results
-    // vec3 ambient = light.ambient * vec3(texture(texture1, TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(texture1, TexCoords));
-    vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
-    // ambient *= attenuation * intensity;
-    diffuse *= attenuation * intensity;
-    specular *= attenuation * intensity;
-    // return (ambient + diffuse + specular);
-    return (diffuse + specular);
-}
 
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap)
 {

@@ -174,21 +174,17 @@ class Scene
     std::vector<glm::vec3> cubePositions_;
 
     /* シーン固有の配置データ */
-    // 窓（原点付近）の正面を空けて、カメラから鏡面反射を観察できるようにしている
     const std::vector<glm::vec3> cube_pos_ = {
-        glm::vec3(-2.5f, 0.0f, -1.0f), glm::vec3(2.5f, 0.0f, 0.0f),
-        glm::vec3(3.0f, 0.0f, 2.0f),                                  // 近接配置（中心間 1.2 = 隙間 0.2）
-        glm::vec3(4.2f, 0.0f, 2.0f),   glm::vec3(-2.5f, 1.0f, -1.0f), // 積み重ね
+        glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(2.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 2.5f),                                  // 近接配置（中心間 1.2 = 隙間 0.2）
+        glm::vec3(1.2f, 0.0f, 2.5f),   glm::vec3(-1.0f, 1.0f, -1.0f), // 積み重ね
         glm::vec3(0.0f, 0.0f, -20.0f),                                // z=-25 壁の前
         glm::vec3(0.0f, 0.0f, 20.0f),                                 // z=+25 壁の前
     };
 
     const std::array<gl::PointLight, 4> pointLights_ = {
         {// position, ambient, diffuse, specular, constant, linear, quadratic
-         // 白ライト。窓（原点、法線+Z）の斜め前に置いてある。
-         // 法線+Zの面では反射方向が (-lx, -ly, lz) になるので、この位置なら
-         // カメラを左前（x が負・z が正）へ動かしたときにハイライトが現れる
-         {glm::vec3(2.0f, 0.6f, 2.5f), glm::vec3(0.0f), glm::vec3(4.0f, 4.0f, 4.0f), glm::vec3(2.0f, 2.0f, 2.0f), 1.0f,
+         {glm::vec3(0.0f, 2.0f, 2.2f), glm::vec3(0.0f), glm::vec3(4.0f, 4.0f, 4.0f), glm::vec3(2.0f, 2.0f, 2.0f), 1.0f,
           0.14f, 0.07f},
          {glm::vec3(-5.0f, 0.8f, -4.0f), glm::vec3(0.0f), glm::vec3(2.2f, 0.4f, 0.25f), glm::vec3(1.1f, 0.2f, 0.12f),
           1.0f, 0.14f, 0.07f},
@@ -198,8 +194,9 @@ class Scene
           1.0f, 0.14f, 0.07f}}};
 
     // 透過オブジェクトの位置
-    // 鏡面反射の見え方を確認しやすいよう1枚だけにしている。
     // 板ポリは局所座標 x[0,1] y[-0.5,0.5] z=0、法線 +Z。
-    // ここを (-0.5, 0, 0) にすると x[-0.5,0.5] y[-0.5,0.5] となり、原点に立って床（y=-0.5）に接する
-    const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-0.5f, 0.0f, 0.0f)};
+    // y = 0.0 にすると床（y = -0.5）にちょうど接する
+    const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
+                                                 glm::vec3(0.0f, 0.0f, 0.7f), glm::vec3(-0.3f, 0.0f, -2.3f),
+                                                 glm::vec3(0.5f, 0.0f, -0.6f)};
 };

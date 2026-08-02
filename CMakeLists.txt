@@ -6,54 +6,44 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
-# imgui は vcpkg.json で glfw-binding / opengl3-binding の feature を指定している。
-# feature を付けないと imgui 本体だけが入り、backends/imgui_impl_glfw.h などが
-# インストールされないため、include できずにビルドが失敗する。
+# imgui は vcpkg.json で glfw-binding / opengl3-binding の feature を指定している。 feature
+# を付けないと imgui 本体だけが入り、backends/imgui_impl_glfw.h などが インストールされないため、include
+# できずにビルドが失敗する。
 find_package(imgui CONFIG REQUIRED)
 
-add_executable(glfwdojo
-    src/main.cpp
-    src/Callbacks.cpp
-    src/Camera.cpp
-    src/Mouse.cpp
-    src/Scene.cpp
-    src/Shader.cpp
-    src/Window.cpp
-    third_party/stb_image_impl.cpp
-    src/Material.cpp
-    src/Texture.cpp 
-    src/TextureCache.cpp 
-	src/Lighting.cpp
-    src/Model.cpp
-    src/Mesh.cpp
-    src/GeometryData.cpp
-    src/Gui.cpp
-)
+add_executable(
+  glfwdojo
+  src/main.cpp
+  src/Callbacks.cpp
+  src/Camera.cpp
+  src/Mouse.cpp
+  src/Scene.cpp
+  src/Shader.cpp
+  src/Window.cpp
+  third_party/stb_image_impl.cpp
+  src/Material.cpp
+  src/Texture.cpp
+  src/TextureCache.cpp
+  src/Lighting.cpp
+  src/Model.cpp
+  src/Mesh.cpp
+  src/GeometryData.cpp
+  src/Gui.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 
-target_compile_options(glfwdojo PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
-)
+target_compile_options(glfwdojo PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(glfwdojo PRIVATE
-    third_party
-)
+target_include_directories(glfwdojo PRIVATE third_party)
 
 # stb_image.hはサードパーティコードなので警告を全て抑制する
-set_source_files_properties(third_party/stb_image_impl.cpp PROPERTIES
-    COMPILE_OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/W0>
-    COMPILE_DEFINITIONS "_CRT_SECURE_NO_WARNINGS"
-)
+set_source_files_properties(
+  third_party/stb_image_impl.cpp
+  PROPERTIES COMPILE_OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/W0>
+             COMPILE_DEFINITIONS "_CRT_SECURE_NO_WARNINGS")
 
-target_link_libraries(glfwdojo PRIVATE
-    OpenGL::GL
-    glfw
-    glm::glm
-    glad::glad
-    assimp::assimp
-    imgui::imgui
-)
+target_link_libraries(glfwdojo PRIVATE OpenGL::GL glfw glm::glm glad::glad
+                                       assimp::assimp imgui::imgui)
 
 set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.vert
@@ -84,17 +74,16 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/deferred_lighting.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao_blur.frag
-)
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_window.frag)
 
-add_custom_command(TARGET glfwdojo POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${SHADER_SOURCES}
-        $<TARGET_FILE_DIR:glfwdojo>
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-        $<TARGET_FILE_DIR:glfwdojo>/resources
-    COMMENT "Copying shaders and resources"
-)
-
+add_custom_command(
+  TARGET glfwdojo
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCES}
+          $<TARGET_FILE_DIR:glfwdojo>
+  COMMAND
+    ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    $<TARGET_FILE_DIR:glfwdojo>/resources
+  COMMENT "Copying shaders and resources")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

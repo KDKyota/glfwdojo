@@ -58,7 +58,7 @@ uniform float ambientStrength;
 
 // function
 // ambient は扱わない。この関数が返すのはこの光源からの直接光だけ
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow, out float specularOut);
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap);
 
 void main()
@@ -72,18 +72,22 @@ void main()
 
     vec4 texColor = texture(texture1, TexCoords);
     // transparent windowのガラス部分だけをレンダリングする
-    if (texColor.a >= 0.5)
+    if (texColor.a >= 0.5 || texColor.a == 0.0)
         discard;
 
     // 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
     vec3 result = ambientStrength * texColor.rgb;
 
+    float specTotal = 0.0;
+
     // 2. point lighting
     for (int i = 0; i < NR_POINT_LIGHTS; i++)
     {
+        float spec;
         vec3 lightDir = normalize(pointLights[i].position - FragPos);
         float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
-        result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
+        result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow, spec);
+        specTotal += spec;
     }
 
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
@@ -92,12 +96,12 @@ void main()
     else
         BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 
-    float a = max(texColor.a, brightness);
+    float a = max(texColor.a, specTotal);
 
     FragColor = vec4(result, a);
 }
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow, out float specularOut)
 {
     vec3 lightDir = normalize(light.position - fragPos);
     // Diffuse
@@ -106,6 +110,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
     // Specular
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    specularOut = spec;
     // vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
     vec3 specular = light.specular * spec;
 

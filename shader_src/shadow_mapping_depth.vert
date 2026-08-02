@@ -1,6 +1,6 @@
 #version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 3) in vec3 aOffset; // インスタンスごとの位置オフセット（床など非インスタンスは 0,0,0）
+layout(location = 0) in vec3 aPos;
+layout(location = 3) in vec3 aOffset; // インスタンスごとの位置オフセット（床など非インスタンスは 0,0,0）
 
 // ディレクショナルライト視点の view*projection 行列（光源を1つのカメラと見なした変換）
 // point light と違い光源に「向き」があるので、cubemapではなく1枚の2Dマップで済む

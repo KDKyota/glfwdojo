@@ -229,6 +229,8 @@ void Scene::initTextures()
     debugDepthShader_->setInt("depthMap", 0);
     debugDepthShader_->setFloat("near_plane", shadowNearPlane_);
     debugDepthShader_->setFloat("far_plane", shadowFarPlane_);
+    pointDepthShader_->use();
+    pointDepthShader_->setInt("diffuseMap", 0);
     // material_.setUniforms(*shader_);
     blurShader_->use();
     blurShader_->setInt("image", 0);
@@ -547,10 +549,14 @@ void Scene::Render(float deltaTime, float heightScale)
             pointDepthShader_->setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         pointDepthShader_->setFloat("farPlane", shadowFarPlane_);
         pointDepthShader_->setVec3("lightPos", lightPos);
+        pointDepthShader_->setBool("useAlphaTest", false);
         renderFloor(*pointDepthShader_);
         renderCubes(*pointDepthShader_);
         renderWalls(*pointDepthShader_);
+        pointDepthShader_->setBool("useAlphaTest", true);
+        renderWindow(*pointDepthShader_);
     }
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     /* -- deferred shading Geometry pass --*/
@@ -788,7 +794,6 @@ void Scene::renderSkybox()
 
 void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sorted)
 {
-
     transparentwindowShader_->use();
     transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentwindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
@@ -803,7 +808,7 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sor
 void Scene::renderWindow(gl::Shader &shader)
 {
     shader.setMat4("model", glm::mat4(1.0f));
-    shader.setMat3("normalMatrix", glm::mat3(1.0f)); // TODO
+    shader.setMat3("normalMatrix", glm::mat3(1.0f));
 
     glBindVertexArray(transparentVAO_);
     transparentTexture_->bind(0);

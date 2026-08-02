@@ -93,18 +93,12 @@ void main()
 {
     // Diffuse
     vec3 normal = normalize(Normal);
-
-    if (!gl_FrontFacing)
-        normal = -normal;
     vec3 viewDir = normalize(viewPos - FragPos);
 
     // 1. directional lighting
     // directional lightは今は使わないのでコメントアウト
     // vec3 result = CalcDirLight(dirLight, norm, viewDir);
     vec4 texColor = texture(texture1, TexCoords);
-    // transparent windowのガラス部分だけをレンダリングする
-    if (texColor.a >= 0.5)
-        discard;
 
     // 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
     vec3 result = ambientStrength * texColor.rgb;

@@ -5,7 +5,7 @@ out vec4 FragColor;
 // ここを書き忘れると brightColorBuffer_ に空でスカイボックス領域全体にゴミが入り、
 // それが Bloom のブラーで拡散して画面全体に白い靄がかかる。
 // スカイボックスは Bloom させたくないので常に黒を書く。
-layout (location = 1) out vec4 BrightColor;
+layout(location = 1) out vec4 BrightColor;
 
 in vec3 TexCoords;
 

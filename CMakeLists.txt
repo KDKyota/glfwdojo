@@ -74,7 +74,8 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/deferred_lighting.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao_blur.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_window.frag)
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_window.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/glass.frag)
 
 add_custom_command(
   TARGET glfwdojo

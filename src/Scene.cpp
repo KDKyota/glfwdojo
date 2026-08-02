@@ -797,7 +797,7 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sor
     transparentwindowShader_->use();
     transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentwindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
-    transparentwindowShader_->setFloat("material.shininess", 32.0f);
+    transparentwindowShader_->setFloat("material.shininess", 128.0f);
     // 不透明面（Deferred）と環境光の扱いを揃える。UI
     // から変更するので毎フレーム送る
     transparentwindowShader_->setFloat("ambientStrength", ambientStrength_);

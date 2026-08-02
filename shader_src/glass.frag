@@ -19,7 +19,6 @@ struct Material
     float shininess; // C++側から material.shininess として設定される
 };
 
-
 struct PointLight
 {
     vec3 position;
@@ -32,7 +31,6 @@ struct PointLight
     vec3 diffuse;
     vec3 specular;
 };
-
 
 #define NR_POINT_LIGHTS 4
 
@@ -50,7 +48,7 @@ uniform float farPlane;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform Material material;
 
-uniform vec3 viewPos;  // カメラの位置
+uniform vec3 viewPos; // カメラの位置
 
 // シーン全体にかかる環境光。deferred_lighting.frag と同じ値を受け取る。
 // ライトごとの ambient を使うと attenuation
@@ -88,15 +86,16 @@ void main()
         result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
     }
 
-    FragColor = vec4(result, texColor.a);
-
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
     if (brightness > 1.0)
         BrightColor = vec4(result, 1.0);
     else
         BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
-}
 
+    float a = max(texColor.a, brightness);
+
+    FragColor = vec4(result, a);
+}
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow)
 {
@@ -107,18 +106,18 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
     // Specular
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
+    // vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
+    vec3 specular = light.specular * spec;
 
     // attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
-    diffuse *= attenuation;
+    diffuse *= attenuation * 0.1;
     specular *= attenuation;
     // 直接光の遮蔽はシャドウマップが担当する
     return (1.0f - shadow) * (diffuse + specular);
 }
-
 
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap)
 {

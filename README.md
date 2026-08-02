@@ -117,6 +117,8 @@ cd build/linux-debug && GALLIUM_DRIVER=d3d12 ./glfwdojo // 環境によっては
 
 ファイル追加時の CMake の設定方法など、詳しい手順は [`docs/BUILD.md`](./docs/BUILD.md) にあります。
 
+> ちなみに，Linuxなら`cmake --build linux-debug -j16`ってしたらめちゃめちゃビルドが早いです
+
 ---
 
 ## 操作方法

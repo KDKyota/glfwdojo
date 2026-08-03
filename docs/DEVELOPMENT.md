@@ -10,21 +10,22 @@
 ## 目次
 
 1. [アーキテクチャ概要](#アーキテクチャ概要)
-2. [UBO（Uniform Buffer Object）](#ubouniform-buffer-object)
-3. [ガンマ補正](#ガンマ補正)
-4. [ライトの変更](#ライトの変更)
-5. [ライトキューブの追加](#ライトキューブの追加)
-6. [シャドウマッピング：デプスマップ FBO](#シャドウマッピングデプスマップ-fbo)
-7. [Deferred Shading](#deferred-shading)
-8. [頂点属性 location の割り当て規約](#頂点属性-location-の割り当て規約)
-9. [新しい3Dオブジェクトの追加](#新しい3dオブジェクトの追加)
-10. [インスタンシングの追加](#インスタンシングの追加)
-11. [新しいシェーダーの追加](#新しいシェーダーの追加)
-12. [テクスチャの追加](#テクスチャの追加)
-13. [Linux (WSL2) で動かす](#linux-wsl2-で動かす)
-14. [画面が真っ黒・真っ白になったときの調べ方](#画面が真っ黒真っ白になったときの調べ方)
-15. [よくある落とし穴](#よくある落とし穴)
-16. [今後の課題](#今後の課題)
+2. [GL リソースの持ち方](#gl-リソースの持ち方)
+3. [UBO（Uniform Buffer Object）](#ubouniform-buffer-object)
+4. [ガンマ補正](#ガンマ補正)
+5. [ライトの変更](#ライトの変更)
+6. [ライトキューブの追加](#ライトキューブの追加)
+7. [シャドウマッピング：デプスマップ FBO](#シャドウマッピングデプスマップ-fbo)
+8. [Deferred Shading](#deferred-shading)
+9. [頂点属性 location の割り当て規約](#頂点属性-location-の割り当て規約)
+10. [新しい3Dオブジェクトの追加](#新しい3dオブジェクトの追加)
+11. [インスタンシングの追加](#インスタンシングの追加)
+12. [新しいシェーダーの追加](#新しいシェーダーの追加)
+13. [テクスチャの追加](#テクスチャの追加)
+14. [Linux (WSL2) で動かす](#linux-wsl2-で動かす)
+15. [画面が真っ黒・真っ白になったときの調べ方](#画面が真っ黒真っ白になったときの調べ方)
+16. [よくある落とし穴](#よくある落とし穴)
+17. [今後の課題](#今後の課題)
 
 ---
 
@@ -45,35 +46,48 @@ main.cpp
 
 現在は Deferred Shading になっており、1フレームは以下の順で処理されます。
 
+**`Render()` 自体はこの順番を並べるだけで、各パスの中身は同名のプライベートメソッドにあります。**
+パス同士は FBO とテクスチャを介して繋がっているので、順序には意味があります
+（例: SSAO は G-Buffer が埋まっていないと計算できない）。
+
 ```
-[Pass 1] ポイントシャドウ デプスパス（4灯ぶんループ）
-   depthMapFBO_[j] にバインド → 光源視点で floor / cube / wall を描画
-   → depthCubemap_[j] に「光源からの正規化距離」が焼かれる
+updateTransparentInstances()  透過窓をカメラから遠い順に並べ、インスタンスVBOへ位置を送る
  ↓
-UBO に view / projection を書き込む
+renderShadowPasses()          4灯ぶんループ。1灯につきサブパスが2つ
+   [Pass 1]   depthMapFBO_[j] に深度のみ書き込む（glDrawBuffer(GL_NONE)）
+              光源視点で floor / cube / wall / 窓枠 を描画
+              → depthCubemap_[j] に「光源からの正規化距離」が焼かれる
+   [Pass 1.5] 同じFBOで glDrawBuffer(GL_COLOR_ATTACHMENT0) に切り替え、白でクリア
+              深度書き込みを止めたままガラスだけを乗算ブレンドで描画
+              → shadowColorCubemap_[j] に「ガラスを透過した光の色」が焼かれる
  ↓
-[Pass 2] Geometry パス
+updateMatricesUBO()           UBO に view / projection を書き込む
+ ↓
+renderGeometryPass()          [Pass 2] Geometry パス
    glDisable(GL_BLEND)  ← 必須。理由は「よくある落とし穴」参照
-   gBuffer_ にバインド → gbuffer_*.frag で cube / floor / wall を描画
+   gBuffer_ にバインド → gbuffer_*.frag で cube / floor / wall / 窓枠 を描画
    → gPosition_ / gNormal_ / gAlbedoSpec_ の3枚に「幾何情報」だけを書き込む
       （この時点ではライティングもシャドウ判定も一切しない）
  ↓
-gBuffer_ の深度を framebuffer_ へ glBlitFramebuffer でコピー
+renderSSAOPass()              G-Buffer から遮蔽率を計算し、4x4 ブラーまでかける
+   → ssaoColorBufferBlur_
+ ↓
+blitGeometryDepth()           gBuffer_ の深度を framebuffer_ へ glBlitFramebuffer でコピー
    ← これをしないと後続のスカイボックス等が正しく前後判定できない
  ↓
-[Pass 3] Lighting パス
-   framebuffer_ にバインド → G-Buffer 3枚 + depthCubemap_ 4枚をサンプラーにバインド
+renderDeferredLightingPass()  [Pass 3] Lighting パス
+   framebuffer_ にバインド
+   → G-Buffer 3枚 + depthCubemap_ 4枚 + AO 1枚 + shadowColorCubemap_ 4枚をバインド
    → フルスクリーンクワッドを1回描画するだけで全ピクセルのライティングが完了
  ↓
-[Pass 4] 前方描画（G-Buffer に載せられないもの）
-   ライトキューブ → スカイボックス → 透過窓（この間だけ GL_BLEND を有効化）
+renderForwardPass()           [Pass 4] 前方描画（G-Buffer に載せられないもの）
+   ライトキューブ → スカイボックス → ガラス（この間だけ GL_BLEND を有効化）
  ↓
-[Pass 5] Bloom
+renderBloomBlur()             [Pass 5] Bloom
    brightColorBuffer_ を pingpongFBO_ で10回ガウシアンブラー
  ↓
-デフォルトフレームバッファへ戻す
- ↓
-hdr.frag でブラー結果を加算し、トーンマッピング＋ガンマ補正して画面へ
+renderToScreen()              デフォルトフレームバッファへ戻し、
+   hdr.frag でブラー結果を加算し、トーンマッピング＋ガンマ補正して画面へ
 ```
 
 > **なぜ透過窓とスカイボックスだけ前方描画なのか**
@@ -81,6 +95,72 @@ hdr.frag でブラー結果を加算し、トーンマッピング＋ガンマ�
 > 半透明の面は「奥の面と手前の面の両方の色」が必要なので、原理的に G-Buffer に載せられません。
 > スカイボックスとライトキューブは、そもそもライティング計算が不要（自分で発光している）なので
 > 前方描画のほうが素直です。
+
+---
+
+## GL リソースの持ち方
+
+**VAO / VBO / EBO / テクスチャ / FBO / RBO は、生の `unsigned int` ではなく
+`GlHandle.h` の `gl::*Handle` で持ちます。**
+
+| 対象 | 型 |
+| --- | --- |
+| VAO | `gl::VertexArrayHandle` |
+| VBO / EBO / UBO | `gl::BufferHandle` |
+| テクスチャ（2D・キューブマップ共通） | `gl::TextureHandle` |
+| FBO | `gl::FramebufferHandle` |
+| RBO | `gl::RenderbufferHandle` |
+
+```cpp
+// Scene.h
+gl::TextureHandle myTexture_;
+std::array<gl::FramebufferHandle, 4> myFBO_;   // 配列は std::array で
+
+// init 系
+myTexture_.create();                            // glGenTextures(1, &myTexture_) の代わり
+glBindTexture(GL_TEXTURE_2D, myTexture_);       // 暗黙変換があるのでそのまま渡せる
+
+// 解放は書かない。デストラクタが自動で行う
+```
+
+### なぜこうしているか
+
+以前は `Scene` のデストラクタが37個の `glDelete*` を手作業で並べた42行でした。
+リソースを1つ増やすたびに「生成する場所」と「解放する場所」という**離れた2箇所を
+必ず同時に直さないと静かにリークする**、という手動の約束事になっていました。
+リークはエラーも警告も出ないので、増えても気づけません。
+
+PBR / IBL で irradiance map・prefilter map・BRDF LUT の FBO とテクスチャが
+さらに3セット増えることが分かっていたため、手で守りきれなくなる前に仕組みへ移しました。
+
+### 生成だけ明示的なのはなぜか
+
+コンストラクタで `glGen*` せず `create()` を明示的に呼ぶ形にしています。
+自動化して嬉しいのは解放のほうだけで、**「どこで GL オブジェクトが生まれるか」は
+初期化コードの上に見えていたほうが読みやすい**ためです。
+
+### 外部で作られた ID を受け取る場合
+
+`TextureCache::loadCubemap()` のように生の ID を返す既存の関数と繋ぐときは
+`reset()` で所有権を渡します。
+
+```cpp
+cubemapTexture_.reset(cache_.loadCubemap(faces, false, ColorSpace::SRGB));
+```
+
+### 移行時に踏んだ点
+
+三項演算子で2つのハンドルを選ぶ書き方はコンパイルできません。
+ハンドルはコピー禁止なので、`cond ? handleA : handleB` は結果をコピーで作れないためです。
+`get()` で `GLuint` を取り出してから選びます。
+
+```cpp
+// NG: cond ? brightColorBuffer_ : pingpongColorbuffers_[i]
+glBindTexture(GL_TEXTURE_2D, cond ? brightColorBuffer_.get() : pingpongColorbuffers_[i].get());
+```
+
+なお、この移行で**既存のリークは1件も見つかりませんでした**（37個すべて解放済みだった）。
+入れ替えの目的は今あるバグを直すことではなく、これから増えるぶんを人手で守らなくて済むようにすることです。
 
 ---
 
@@ -178,10 +258,62 @@ glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_BACK_LEFT,
 ディスプレイの特性で本来より暗く・コントラストが強く表示されます。
 **正しい状態は「Raw output」と「二重補正」のちょうど中間**です。
 
-> **テクスチャ側の二重補正にも注意:** スカイボックスなど既に sRGB 空間の画像を
-> リニア空間の計算に使うと、別の意味で二重になります。
-> テクスチャロード時に内部フォーマットへ `GL_SRGB` / `GL_SRGB_ALPHA` を指定すると
-> サンプリング時に自動でリニアへ変換されるため、こちらは正しく扱えます。
+### アルベドがリニア空間になっていなかった（実際に踏んだ）
+
+上の「二重補正」は出力側の話ですが、**入力側にも同じ問題があり、こちらは長く見逃していました。**
+
+**症状:** 全体的に明るく、色が薄い。ただし出力側の二重補正と違って
+`ambient` と `exposure` を下げれば「それらしい絵」にはなるので、
+**バグだと気づかないまま基準を作ってしまう。**
+決定的な症状が出るのは PBR を入れたときで、`roughness` をどう振っても
+金属らしさも粗さも出ない、という形で表面化します。
+
+**原因:** `TextureCache::get(path, bool)` の bool は **`flip`（上下反転）であって
+gamma ではありません。** ところが呼び出し側の `cache_.get(path, true)` を見て
+「ガンマ指定が `true` になっているからリニア化されている」と思い込んでいました。
+実際には `Texture.cpp` が `glTexImage2D(..., GL_RGB, ...)` で読んでいるため、
+**sRGB でエンコードされた画素値がそのままリニア値として計算に入っていました。**
+
+**なぜそうなるか:** 画像ファイルの画素値は sRGB でエンコードされています
+（人間の目に合わせて暗部に多くのビットを割いた非線形な曲線）。
+ライティング計算は光の足し算・掛け算なので、リニアな値でなければ物理的に正しくなりません。
+復号せずに使うと、中間調が実際より明るい値として扱われます。
+
+| 画像の値 | 正しいリニア値 | 復号しない場合 |
+| -------- | -------------- | -------------- |
+| 0.2      | 0.033          | **0.2**        |
+| 0.5      | 0.214          | **0.5**        |
+| 0.8      | 0.604          | **0.8**        |
+
+Blinn-Phong は経験則の寄せ集めなので「全体的に明るい」で済み、`ambient` や `exposure` で
+辻褄を合わせられます。しかし **Cook-Torrance はアルベドがリニアであることを前提に
+エネルギー保存を計算する**ので、金属/非金属の分岐もフレネルの効き方も狂います。
+
+**対処:** 色として使うテクスチャだけ、内部フォーマットに `GL_SRGB8` / `GL_SRGB8_ALPHA8`
+を指定します。サンプリング時に GPU が復号するので、シェーダー側は何も書かずに済みます。
+
+```cpp
+// 「色」か「データ」かを呼び出し側に必ず選ばせる
+cubeTexture_   = cache_.get("resources/textures/bricks2.jpg",        true, ColorSpace::SRGB);
+cubeNormalMap_ = cache_.get("resources/textures/bricks2_normal.jpg", true, ColorSpace::Linear);
+```
+
+> **法線マップ・視差マップ・roughness を `SRGB` にしてはいけません。**
+> これらは色ではなく「値」なので、復号するとベクトルの成分や係数が非線形に歪みます。
+> エラーは出ず「なんとなく陰影が変」にしかならないため、発見が非常に遅れます。
+
+**アルファは復号の対象外**で常にリニアのまま扱われる規定です。
+`window.png` の「アルファ 0.5 を閾値に窓枠とガラスを分ける」判定は、
+`GL_SRGB8_ALPHA8` にしてもそのまま成立します。
+
+**この修正を入れると画面全体が暗くなりますが、それが正しい状態です。**
+今まで明るすぎただけなので、`Ambient` と `Exposure` のスライダーで基準を作り直してください。
+「暗くなった＝失敗」と判断して元に戻さないこと。
+
+**bool を並べたインターフェースが事故の原因だったので、色空間は `enum class ColorSpace`
+にして呼び出し側に明示させる形にしました。** `TextureCache` のキーにも色空間を含めています。
+パスだけをキーにすると、同じ画像を色とデータの両方で読んだときに
+後から要求したほうが先に読まれた側の内部フォーマットを黙って受け取ってしまうためです。
 
 ---
 
@@ -336,7 +468,7 @@ glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT,
 
 ### デプスマップ FBO の初期化手順
 
-1. `unsigned int depthMapFBO_, depthMap_` を Scene.h に追加
+1. `gl::FramebufferHandle depthMapFBO_` と `gl::TextureHandle depthMap_` を Scene.h に追加
 2. 新メソッド `initDepthMap()` をコンストラクタから呼び出す
 3. FBO 生成 → デプステクスチャ生成 → FBO にアタッチ → `glDrawBuffer(GL_NONE)` / `glReadBuffer(GL_NONE)` → FBO の完全性確認（`glCheckFramebufferStatus`）
 
@@ -488,16 +620,20 @@ LF --- RF       法線:  cross(RF-LF, RB-RF) = (0,1,0) ✓
 ### 2. Scene.h にVAO/VBO/EBOを追加
 
 ```cpp
-unsigned int myObjectVAO_, myObjectVBO_, myObjectEBO_;
+gl::VertexArrayHandle myObjectVAO_;
+gl::BufferHandle myObjectVBO_, myObjectEBO_;
 ```
+
+生の `unsigned int` ではなく `gl::*Handle` を使います。詳細は
+[GL リソースの持ち方](#gl-リソースの持ち方) を参照。
 
 ### 3. initMesh() でバインド設定
 
 ```cpp
 int stride = sizeof(gl::Vertex);
-glGenVertexArrays(1, &myObjectVAO_);
-glGenBuffers(1, &myObjectVBO_);
-glGenBuffers(1, &myObjectEBO_);
+myObjectVAO_.create();
+myObjectVBO_.create();
+myObjectEBO_.create();
 glBindVertexArray(myObjectVAO_);
 glBindBuffer(GL_ARRAY_BUFFER, myObjectVBO_);
 glBufferData(GL_ARRAY_BUFFER, sizeof(gl::myObjectVertices), gl::myObjectVertices.data(), GL_STATIC_DRAW);
@@ -522,13 +658,10 @@ shader_->setMat4("model", glm::mat4(1.0f));
 glDrawElements(GL_TRIANGLES, gl::myObjectIndices.size(), GL_UNSIGNED_INT, 0);
 ```
 
-### 5. デストラクタに削除を追加
+### 5. 解放は書かない
 
-```cpp
-glDeleteVertexArrays(1, &myObjectVAO_);
-glDeleteBuffers(1, &myObjectVBO_);
-glDeleteBuffers(1, &myObjectEBO_);
-```
+`gl::*Handle` のデストラクタが自動で解放するので、**`glDelete*` を書く必要はありません**
+（`Scene` にはデストラクタ自体がありません）。
 
 ---
 
@@ -548,12 +681,13 @@ inline const std::vector<glm::vec3> myObject_pos = {
 ### 2. Scene.h にインスタンスVBOを追加
 
 ```cpp
-unsigned int myObjectInstanceVBO_;
+gl::BufferHandle myObjectInstanceVBO_;
 ```
 
 ### 3. initMesh() でインスタンスVBOを設定（VAO バインド中に行うこと）
 
 ```cpp
+myObjectInstanceVBO_.create();
 glBindBuffer(GL_ARRAY_BUFFER, myObjectInstanceVBO_);
 glBufferData(GL_ARRAY_BUFFER, sizeof(gl::myObject_pos), gl::myObject_pos.data(), GL_STATIC_DRAW);
 glEnableVertexAttribArray(5);  // location = 5（[頂点属性 location の割り当て規約](#頂点属性-location-の割り当て規約) 参照）
@@ -659,12 +793,17 @@ myShader_ = std::make_unique<gl::Shader>("myshader.vert", "myshader.frag");
 std::shared_ptr<Texture> myTexture_;
 
 // initTextures()
-myTexture_ = cache_.get("resources\\textures\\filename.png", true);
-// 第2引数: true = 上下反転あり（通常はtrue）、アルファ付きPNGも自動判別
+myTexture_ = cache_.get("resources\\textures\\filename.png", true, ColorSpace::SRGB);
+// 第2引数 flip:       true = 上下反転あり（通常はtrue）、アルファ付きPNGも自動判別
+// 第3引数 colorSpace: SRGB = アルベドなど「色」 / Linear = 法線マップなど「値」
 
 // Render()
 myTexture_->bind(0);  // テクスチャユニット0にバインド
 ```
+
+**第3引数の選択を間違えるとエラーが出ないまま陰影だけが狂います。**
+デフォルト値をあえて持たせていないので、追加のたびに「色かデータか」を判断してください。
+理由と判断基準は [ガンマ補正](#ガンマ補正) の「アルベドがリニア空間になっていなかった」を参照。
 
 ### キューブマップ（スカイボックス用）
 
@@ -678,7 +817,8 @@ std::vector<std::string> faces = {
     "resources\\textures\\skybox\\front.jpg",
     "resources\\textures\\skybox\\back.jpg",
 };
-cubemapTexture_ = cache_.loadCubemap(faces, false);  // false = 反転なし
+// false = 反転なし、SRGB = 背景として「色」に使うので復号する
+cubemapTexture_ = cache_.loadCubemap(faces, false, ColorSpace::SRGB);
 ```
 
 ---

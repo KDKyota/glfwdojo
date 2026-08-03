@@ -42,8 +42,7 @@ uniform sampler2D texture1;
 // point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離
 // [0,1] が入っている）。4灯ぶん
 uniform samplerCube shadowMap[NR_POINT_LIGHTS];
-// カラー付き透過シャドウ（ガラスを透過してきた光の色）。テクスチャユニット8〜11。
-// deferred_lighting.frag と同じマップを共有する
+// ガラスを透過した光の色。deferred_lighting.frag と同じマップを共有する
 uniform samplerCube shadowColor[NR_POINT_LIGHTS];
 uniform sampler2D ssao;
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
@@ -98,9 +97,7 @@ void main()
         {
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
             float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
-            // 他のガラスを透過してきた光にはその色を掛ける。
-            // 既知の限界: 自分自身の透過色も乗るため、スペキュラが
-            // ガラス自身の色に少し染まる（距離比較を入れれば解消できる）
+            // 自分自身の透過色も乗るのでスペキュラがガラスの色に少し染まる
             vec3 transmit = texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
             reflected += transmit * CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
         }

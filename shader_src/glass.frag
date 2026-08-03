@@ -42,6 +42,9 @@ uniform sampler2D texture1;
 // point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離
 // [0,1] が入っている）。4灯ぶん
 uniform samplerCube shadowMap[NR_POINT_LIGHTS];
+// カラー付き透過シャドウ（ガラスを透過してきた光の色）。テクスチャユニット8〜11。
+// deferred_lighting.frag と同じマップを共有する
+uniform samplerCube shadowColor[NR_POINT_LIGHTS];
 uniform sampler2D ssao;
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 uniform float farPlane;
@@ -56,10 +59,11 @@ uniform vec3 viewPos; // カメラの位置
 // が掛かって光源から離れるほど消えるため、
 // 不透明面（Deferred）と透過窓（前方描画）で扱いを揃えている
 uniform float ambientStrength;
+uniform bool reflectionPass; // 透過と反射を切り替えられるようにする
 
 // function
 // ambient は扱わない。この関数が返すのはこの光源からの直接光だけ
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow, out float specularOut);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap);
 
 void main()
@@ -77,36 +81,52 @@ void main()
 
     vec4 texColor = texture(texture1, TexCoords);
     // transparent windowのガラス部分だけをレンダリングする
-    if (texColor.a >= 0.5 || texColor.a == 0.0)
+    if (texColor.a >= 0.5 || texColor.a < 0.01)
         discard;
 
+    const vec3 F0 = vec3(0.04);
+    float cosTheta = max(dot(normal, viewDir), 0.0);
+    vec3 fresnel = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
     // 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
-    vec3 result = ambientStrength * texColor.rgb * ao;
+    // vec3 result = ambientStrength * texColor.rgb * ao;
 
-    float specTotal = 0.0;
-
-    // 2. point lighting
-    for (int i = 0; i < NR_POINT_LIGHTS; i++)
+    if (reflectionPass) // 反射(足し算)
     {
-        float spec;
-        vec3 lightDir = normalize(pointLights[i].position - FragPos);
-        float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
-        result += CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow, spec);
-        specTotal += spec;
+        vec3 reflected = vec3(0.0);
+        // 2. point lighting
+        for (int i = 0; i < NR_POINT_LIGHTS; i++)
+        {
+            vec3 lightDir = normalize(pointLights[i].position - FragPos);
+            float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
+            // 他のガラスを透過してきた光にはその色を掛ける。
+            // 既知の限界: 自分自身の透過色も乗るため、スペキュラが
+            // ガラス自身の色に少し染まる（距離比較を入れれば解消できる）
+            vec3 transmit = texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
+            reflected += transmit * CalcPointLight(pointLights[i], normal, FragPos, viewDir, shadow);
+        }
+
+        vec3 result = fresnel * reflected;
+
+        float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
+        if (brightness > 1.0)
+            BrightColor = vec4(result, 1.0);
+        else
+            BrightColor = vec4(0.0);
+
+        FragColor = vec4(result, 0.0);
     }
+    else // 透過(掛け算)
+    {
+        BrightColor = vec4(1.0);
 
-    float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
-    if (brightness > 1.0)
-        BrightColor = vec4(result, 1.0);
-    else
-        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
+        vec3 transmittance = mix(vec3(1.0), texColor.rgb, texColor.a);
 
-    float a = max(texColor.a, specTotal);
-
-    FragColor = vec4(result, a);
+        transmittance *= (1.0 - fresnel);
+        FragColor = vec4(transmittance, 1.0);
+    }
 }
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow, out float specularOut)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow)
 {
     vec3 lightDir = normalize(light.position - fragPos);
     // Diffuse
@@ -115,7 +135,6 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
     // Specular
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    specularOut = spec;
     // vec3 specular = light.specular * spec * vec3(texture(texture1, TexCoords));
     vec3 specular = light.specular * spec;
 
@@ -126,7 +145,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, f
     diffuse *= attenuation * 0.1;
     specular *= attenuation;
     // 直接光の遮蔽はシャドウマップが担当する
-    return (1.0f - shadow) * (diffuse + specular);
+    // return (1.0f - shadow) * (diffuse + specular);
+    return (1.0f - shadow) * specular;
 }
 
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, samplerCube shadowMap)

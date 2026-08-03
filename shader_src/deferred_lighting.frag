@@ -31,6 +31,10 @@ const int NR_LIGHTS = 4;
 uniform PointLight pointLights[NR_LIGHTS];
 uniform vec3 viewPos;
 uniform samplerCube shadowMap[NR_LIGHTS];
+// カラー付き透過シャドウ。各テクセルには「光源からその方向へ飛んだ光が
+// ガラスを通って何色になったか」の透過率が入っている（ガラスを通らない方向は白）。
+// テクスチャユニット8〜11
+uniform samplerCube shadowColor[NR_LIGHTS];
 uniform float farPlane;
 
 // シーン全体にかかる環境光の強さ。ライトごとに持たせて attenuation を掛けると
@@ -38,7 +42,7 @@ uniform float farPlane;
 uniform float ambientStrength;
 
 // 0=通常 / 1=ライト0のシャドウ / 2=shadowMap[0]の生値 / 3=Albedo
-// 4=Normal / 5=Position / 6=4分割 / 7=SSAO
+// 4=Normal / 5=Position / 6=4分割 / 7=SSAO / 8=shadowColor[0]の生値
 // デバッグ表示は hdr.frag の debugRawOutput も有効にしないと階調が潰れて判定できない
 uniform int debugMode;
 
@@ -78,8 +82,13 @@ void main() {
     vec3 lightDir = normalize(pointLights[i].position - FragPos);
     float shadow = ShadowCalculation(FragPos, Normal, lightDir,
                                      pointLights[i].position, shadowMap[i]);
-    result += CalcPointLight(pointLights[i], Normal, FragPos, viewDir, Albedo,
-                             Specular, shadow);
+    // ガラスを透過してきた光の色を直接光に掛ける。
+    // 窓枠は深度マップに入っている（shadow≈1で光ゼロ）ので通常の黒い影のまま、
+    // ガラス部分は shadow=0 のままここで色付きに減衰する
+    vec3 transmit =
+        texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
+    result += transmit * CalcPointLight(pointLights[i], Normal, FragPos,
+                                        viewDir, Albedo, Specular, shadow);
   }
 
   FragColor = vec4(result, 1.0);
@@ -155,6 +164,14 @@ void main() {
   // 真っ黒なら FBO・サンプラー・パスの配線が繋がっていない
   float ao = texture(ssao, TexCoords).r;
   FragColor = vec4(vec3(ao), 1.0);
+
+  } else if (debugMode == 8) {
+  // shadowColor[0] の生値。ほぼ白い画面の中に、ライト0から見た
+  // ガラスのシルエットが赤く写っていれば配線は正しい。
+  // 全面真っ白ならカラーサブパスが描いていない／全面真っ黒なら
+  // クリア色かバインドの問題
+  vec3 dir0 = FragPos - pointLights[0].position;
+  FragColor = vec4(texture(shadowColor[0], dir0).rgb, 1.0);
 
   } else {
   FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）

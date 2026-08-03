@@ -66,6 +66,7 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.geom
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_color.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/hdr.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/blur.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_floor.frag

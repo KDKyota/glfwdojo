@@ -48,7 +48,7 @@ int main(void) {
       static const char *kDebugModes[] = {
           "0: Normal lighting", "1: Shadow (light 0)", "2: shadowMap[0] raw",
           "3: G-Buffer Albedo",  "4: G-Buffer Normal",  "5: G-Buffer Position",
-          "6: Split view",       "7: SSAO"};
+          "6: Split view",       "7: SSAO",             "8: Shadow color[0]"};
       ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
                    IM_ARRAYSIZE(kDebugModes));
 

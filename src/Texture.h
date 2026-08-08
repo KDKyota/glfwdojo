@@ -1,6 +1,12 @@
 #pragma once
 #include <string>
 
+// bool を並べると flip と取り違えるため enum にしている
+enum class ColorSpace {
+	Linear,
+	SRGB
+};
+
 class Texture {
 private:
 	unsigned int id_; // OpenGLテスクチャのID
@@ -17,13 +23,11 @@ private:
 	* ダングリングポインタ（すでに解放されたり破壊されたポインタを検索し続ける）になってしまう
 	*/
 	bool flip_;
+	ColorSpace colorSpace_;
 
 public:
-	/*
-	* Textureコントラクタ
-	* 画像のパスpathと垂直反転フラグflipを受け取りロードを行う
-	*/
-	Texture(const char* path, const bool flip);
+	// colorSpace にデフォルト値を持たせないのは、色かデータかを呼び出し側に必ず選ばせるため
+	Texture(const char* path, const bool flip, const ColorSpace colorSpace);
 	/*
 	* Textureデストラクタ
 	* id_が0でないとき時だけglDeleteTextureを呼ぶ

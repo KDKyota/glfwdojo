@@ -17,7 +17,8 @@ private:
 	void processNode(aiNode* node, const aiScene* scene);
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
 	Material loadMaterial(aiMaterial* mat);
-	std::shared_ptr<Texture> loadMaterialTexture(aiMaterial* Mat, aiTextureType type, bool flip);
+	std::shared_ptr<Texture> loadMaterialTexture(aiMaterial* Mat, aiTextureType type, bool flip,
+	                                             ColorSpace colorSpace);
 
 public:
 	Model(const std::string& path, TextureCache& cache);

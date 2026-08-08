@@ -78,12 +78,13 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 Material Model::loadMaterial(aiMaterial* mat)
 {
 	Material material;
-	material.diffuse = loadMaterialTexture(mat, aiTextureType_DIFFUSE, false);
-	material.specular = loadMaterialTexture(mat, aiTextureType_SPECULAR, false);
+	material.diffuse = loadMaterialTexture(mat, aiTextureType_DIFFUSE, false, ColorSpace::SRGB);
+	material.specular = loadMaterialTexture(mat, aiTextureType_SPECULAR, false, ColorSpace::Linear);
 	return material;
 }
 
-std::shared_ptr<Texture> Model::loadMaterialTexture(aiMaterial* mat, aiTextureType type, bool flip)
+std::shared_ptr<Texture> Model::loadMaterialTexture(aiMaterial* mat, aiTextureType type, bool flip,
+                                                    ColorSpace colorSpace)
 {
 	if (mat->GetTextureCount(type) == 0) {
 		return nullptr;
@@ -93,7 +94,7 @@ std::shared_ptr<Texture> Model::loadMaterialTexture(aiMaterial* mat, aiTextureTy
 	mat->GetTexture(type, 0, &str);
 
 	const std::string path = directory_ + "/" + str.C_Str();
-	return cache_.get(path, flip);
+	return cache_.get(path, flip, colorSpace);
 }
 
 void Model::Draw(gl::Shader& shader) const {

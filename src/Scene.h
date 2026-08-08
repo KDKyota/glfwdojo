@@ -1,11 +1,13 @@
 #pragma once
 #include "Camera.h"
 #include "GeometryData.h"
+#include "GlHandle.h"
 #include "Lighting.h"
 #include "Material.h"
 #include "Model.h"
 #include "Shader.h"
 #include "TextureCache.h"
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -13,7 +15,6 @@ class Scene
 {
   public:
     Scene(std::shared_ptr<Camera> camera, int srcWindow, int scrHeight);
-    ~Scene();
     void Render(float deltaTime, float heightScale);
 
     // ImGui のパネルから直接編集するためのアクセサ
@@ -50,6 +51,19 @@ class Scene
     void initSSAO();
     unsigned int loadTexture(const char *path, bool hasAlpha);
     void initUBO();
+
+    // Render() から順に呼ばれるパス。FBO とテクスチャで繋がっているので順序に意味がある
+    void updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted);
+    void updateMatricesUBO();
+    void renderShadowPasses();
+    void renderGeometryPass();
+    void renderSSAOPass();
+    void blitGeometryDepth();
+    void renderDeferredLightingPass();
+    void renderForwardPass(const std::vector<gl::TransparentDraw> &sorted);
+    void renderBloomBlur();
+    void renderToScreen();
+
     void applyPointLights(gl::Shader &shader);
     void renderCubes(gl::Shader &shader);
     void renderFloor(gl::Shader &shader);
@@ -66,31 +80,28 @@ class Scene
     static constexpr float shadowFarPlane_ = 50.0f; // 光源視点の投影のfar plane。シェーダー側の farPlane uniform
 
     /* メッシュのVAO / VBO / EBO */
-    unsigned int cubeVAO_, planeVAO_, cubeVBO_, planeVBO_, transparentVAO_, transparentVBO_, quadVAO_, quadVBO_,
-        skyboxVAO_, skyboxVBO_;
-    unsigned int lightVAO_, lightVBO_;
-    unsigned int cubeInstanceVBO_;
-    unsigned int transparentInstanceVBO_;
-    unsigned int cubeEBO_, planeEBO_, transparentEBO_;
-    unsigned int wallVAO_, wallVBO_, wallEBO_;
+    gl::VertexArrayHandle cubeVAO_, planeVAO_, transparentVAO_, quadVAO_, skyboxVAO_, wallVAO_;
+    gl::BufferHandle cubeVBO_, planeVBO_, transparentVBO_, quadVBO_, skyboxVBO_, wallVBO_;
+    gl::BufferHandle cubeInstanceVBO_;
+    gl::BufferHandle transparentInstanceVBO_;
+    gl::BufferHandle cubeEBO_, planeEBO_, transparentEBO_, wallEBO_;
     /* フレームバッファ */
-    unsigned int framebuffer_, textureColorbuffer_, rbo_; // メンバ変数として持つ
-    unsigned int depthMapFBO_[4];                         // point shadow
-                                                          // のデプスパス専用フレームバッファ（depthCubemap_
-                                                          // をアタッチ）
-    unsigned int pingpongFBO_[2]; // HDRレンダリング後のガウシアンブラー用フレームバッファ（pingpongColorbuffers_
-
-    unsigned int pingpongColorbuffers_[2]; // HDRレンダリング後のガウシアンブラー用テクスチャ（pingpongFBO_
-
-    unsigned int brightColorBuffer_; // HDRレンダリング後の明るい部分だけを抽出するためのテクスチャ（pingpongFBO_
+    gl::FramebufferHandle framebuffer_;
+    gl::TextureHandle textureColorbuffer_;
+    gl::RenderbufferHandle rbo_;
+    // point shadow のデプスパス専用（depthCubemap_ と shadowColorCubemap_ をアタッチ）
+    std::array<gl::FramebufferHandle, 4> depthMapFBO_;
+    std::array<gl::FramebufferHandle, 2> pingpongFBO_;
+    std::array<gl::TextureHandle, 2> pingpongColorbuffers_;
+    gl::TextureHandle brightColorBuffer_;
 
     /* UBO */
-    unsigned int matricesUBO_;
+    gl::BufferHandle matricesUBO_;
     /* G-Buffer */
-    unsigned int gBuffer_;
-    unsigned int gPosition_, gNormal_,
-        gAlbedoSpec_;        // gBuffer_にアタッチする3枚のテクスチャ
-    unsigned int gDepthRBO_; // gBuffer_ 用の深度バッファ
+    gl::FramebufferHandle gBuffer_;
+    gl::TextureHandle gPosition_, gNormal_,
+        gAlbedoSpec_;              // gBuffer_にアタッチする3枚のテクスチャ
+    gl::RenderbufferHandle gDepthRBO_; // gBuffer_ 用の深度バッファ
 
     Material material_;
     TextureCache cache_;
@@ -107,6 +118,7 @@ class Scene
     // std::unique_ptr<Model> model_; // 3Dモデル
     std::shared_ptr<Camera> camera_;
     std::unique_ptr<gl::Shader> pointDepthShader_;
+    std::unique_ptr<gl::Shader> pointColorShader_; // カラー付き透過シャドウ（ガラスの透過色）用
     std::unique_ptr<gl::Shader> debugDepthShader_;
     std::unique_ptr<gl::Shader> wallShader_;
     std::unique_ptr<gl::Shader> blurShader_; // Boolの際にぼかしを入れるシェーダ
@@ -128,12 +140,15 @@ class Scene
     std::shared_ptr<Texture> transparentTexture_;
     std::shared_ptr<Texture> brickwallTexture_;
     std::shared_ptr<Texture> brickwallNormalTexture_;
-    unsigned int cubemapTexture_;
-    unsigned int depthCubemap_[4]; // ポイントシャドウ用キューブマップ（各テクセルは光源からの正規化距離
+    gl::TextureHandle cubemapTexture_;
+    // 各テクセルは光源からの正規化距離
+    std::array<gl::TextureHandle, 4> depthCubemap_;
+    // 各テクセルはガラスを透過した光の色。ガラスを通らない方向は白
+    std::array<gl::TextureHandle, 4> shadowColorCubemap_;
 
     /* ==== UI から実行時に変更する設定（毎フレーム送る） ==== */
     // 0=通常 / 1=ライト0のシャドウ / 2=shadowMap[0]の生値 / 3=Albedo
-    // 4=Normal / 5=Position / 6=4分割 / 7=SSAO
+    // 4=Normal / 5=Position / 6=4分割 / 7=SSAO / 8=shadowColor[0]の生値
     int debugMode_ = 0;
     // Bloom・トーンマッピング・ガンマ補正を飛ばす。デバッグ表示には必須
     bool debugRawOutput_ = false;
@@ -141,10 +156,10 @@ class Scene
     float ssaoStrength_ = 1.0f;
 
     /* SSAO */
-    unsigned int ssaoFBO_, ssaoBlurFBO_;
-    unsigned int ssaoColorBuffer_, ssaoColorBufferBlur_; // GL_R8
-    unsigned int noiseTexture_;                          // 4x4 GL_RGBA16F
-    std::vector<glm::vec3> ssaoKernel_;                  // 接空間のサンプル点
+    gl::FramebufferHandle ssaoFBO_, ssaoBlurFBO_;
+    gl::TextureHandle ssaoColorBuffer_, ssaoColorBufferBlur_; // GL_R8
+    gl::TextureHandle noiseTexture_;                          // 4x4 GL_RGBA16F
+    std::vector<glm::vec3> ssaoKernel_;                       // 接空間のサンプル点
 
     std::unique_ptr<gl::Shader> ssaoShader_;
     std::unique_ptr<gl::Shader> ssaoBlurShader_;

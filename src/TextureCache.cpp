@@ -3,24 +3,28 @@
 #include <stb_image.h>   // ← stbi_load に必要
 #include <iostream>      // ← std::cout に必要
 
-std::shared_ptr<Texture> TextureCache::get(const std::string& path, bool flip)
+std::shared_ptr<Texture> TextureCache::get(const std::string& path, bool flip, ColorSpace colorSpace)
 {
-	if (auto tex = cache_[path].lock()) {
+	const std::string key = path + (colorSpace == ColorSpace::SRGB ? "|srgb" : "|linear");
+
+	if (auto tex = cache_[key].lock()) {
 		return tex;
 	}
 	else {
-		std::shared_ptr<Texture> texture = std::make_shared<Texture>(path.c_str(), flip);
-		cache_[path] = texture;
+		std::shared_ptr<Texture> texture = std::make_shared<Texture>(path.c_str(), flip, colorSpace);
+		cache_[key] = texture;
 		return texture;
 	}
 }
 
-unsigned int TextureCache::loadCubemap(const std::vector<std::string>& faces, bool flip)
+unsigned int TextureCache::loadCubemap(const std::vector<std::string>& faces, bool flip, ColorSpace colorSpace)
 {
     stbi_set_flip_vertically_on_load(flip);
 	unsigned int textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    const GLenum internalFormat = (colorSpace == ColorSpace::SRGB) ? GL_SRGB8 : GL_RGB;
 
     int width, height, nrChannels;
     for (unsigned int i = 0; i < faces.size(); i++)
@@ -28,8 +32,8 @@ unsigned int TextureCache::loadCubemap(const std::vector<std::string>& faces, bo
         unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
         if (data)
         {
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 
-                         0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                         0, internalFormat, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
             );
             stbi_image_free(data);
         }

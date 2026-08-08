@@ -12,7 +12,10 @@
       "Bash(sed -n '/void main/,/^}/p' shader_src/wall.frag)",
       "Bash(sed -n '/void Scene::renderWindow/,/^}/p' src/Scene.cpp)",
       "Bash(sed -n '/void Scene::renderTransparentWindows/,/^}/p' src/Scene.cpp)",
-      "Bash(sed -n '/透過窓をカメラからの距離でソート/,/^$/p' src/Scene.cpp)"
+      "Bash(sed -n '/透過窓をカメラからの距離でソート/,/^$/p' src/Scene.cpp)",
+      "Bash(grep -n \"^#\\\\{1,4\\\\} \" docs/DEVELOPMENT.md)",
+      "PowerShell(pwsh -Command \"Get-Command cl.exe | Select-Object Source\")",
+      "PowerShell(powershell.exe -Command \"Get-Command cl.exe | Select-Object Source\")"
     ]
   }
 }

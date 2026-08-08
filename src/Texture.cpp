@@ -3,8 +3,8 @@
 #include <glad/glad.h>
 #include <iostream>
 
-Texture::Texture(const char* path, bool flip)
-	: id_(0), path_(path), flip_(flip)
+Texture::Texture(const char* path, bool flip, ColorSpace colorSpace)
+	: id_(0), path_(path), flip_(flip), colorSpace_(colorSpace)
 {
     stbi_set_flip_vertically_on_load(flip);
 
@@ -17,7 +17,11 @@ Texture::Texture(const char* path, bool flip)
     unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
     if (data) {
         format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        // sRGB 復号の対象は RGB のみで、アルファはリニアのまま（window.png の閾値判定が依存）
+        const GLenum internalFormat = (colorSpace == ColorSpace::SRGB)
+            ? ((nrChannels == 4) ? GL_SRGB8_ALPHA8 : GL_SRGB8)
+            : format;
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         std::cerr << "Failed to load texture: " << path << std::endl;
@@ -38,7 +42,7 @@ Texture::~Texture()
 
 // ムーブコントラクタ
 Texture::Texture(Texture&& other)  noexcept
-    : id_(other.id_), path_(std::move(other.path_)), flip_(other.flip_)
+    : id_(other.id_), path_(std::move(other.path_)), flip_(other.flip_), colorSpace_(other.colorSpace_)
 {
     other.id_ = 0;
 }
@@ -51,7 +55,8 @@ Texture& Texture::operator=(Texture&& other) noexcept
         id_ = other.id_;
         path_ = std::move(other.path_);
         flip_ = other.flip_;
-      
+        colorSpace_ = other.colorSpace_;
+
         other.id_ = 0;
     }
     return *this;

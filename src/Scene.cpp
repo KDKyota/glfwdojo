@@ -5,7 +5,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include <map>
 #include <random>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
@@ -56,7 +55,8 @@ void Scene::initMesh()
 {
     int stride = sizeof(gl::Vertex);
 
-    cubeVAO_.create(); // cube用のVAO
+    /* cube */
+    cubeVAO_.create();
     cubeVBO_.create();
     cubeInstanceVBO_.create();
     cubeEBO_.create();
@@ -83,7 +83,8 @@ void Scene::initMesh()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    planeVAO_.create(); // 床用のVAO
+    /* 床 */
+    planeVAO_.create();
     planeVBO_.create();
     planeEBO_.create();
     glBindVertexArray(planeVAO_);
@@ -99,7 +100,8 @@ void Scene::initMesh()
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, uv));
     glBindVertexArray(0);
 
-    transparentVAO_.create(); // 透過窓のVAO
+    /* 透過窓 */
+    transparentVAO_.create();
     transparentVBO_.create();
     transparentInstanceVBO_.create();
     transparentEBO_.create();
@@ -124,8 +126,8 @@ void Scene::initMesh()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    // skybox
-    skyboxVAO_.create(); // スカイボックスのVAO
+    /* skybox */
+    skyboxVAO_.create();
     skyboxVBO_.create();
     glBindVertexArray(skyboxVAO_);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO_);
@@ -135,7 +137,8 @@ void Scene::initMesh()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(gl::skyboxVertices[0]), (void *)0);
     glBindVertexArray(0);
 
-    // 壁 (Normal Mapping 用: location 0-4 を使用)
+    /* 壁 */
+    // Normal Mapping のため location 0-4 をすべて使う
     wallVAO_.create();
     wallVBO_.create();
     wallEBO_.create();
@@ -156,8 +159,8 @@ void Scene::initMesh()
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, bitangent));
     glBindVertexArray(0);
 
-    // screen quad
-    quadVAO_.create(); // スクリーンテクスチャのVAO
+    /* screen quad */
+    quadVAO_.create();
     quadVBO_.create();
     glBindVertexArray(quadVAO_);
     glBindBuffer(GL_ARRAY_BUFFER, quadVBO_);
@@ -167,17 +170,6 @@ void Scene::initMesh()
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     glBindVertexArray(0);
-
-    // glBindVertexArray(VAO_);
-    // glBindBuffer(GL_ARRAY_BUFFER, VBO_);
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride,
-    // (void*)offsetof(gl::Vertex, position)); glEnableVertexAttribArray(0);
-
-    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
-    // (void*)offsetof(gl::Vertex, normal)); glEnableVertexAttribArray(1);
-
-    // glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
-    // (void*)offsetof(gl::Vertex, uv)); glEnableVertexAttribArray(2);
 }
 
 void Scene::initTextures()
@@ -530,15 +522,15 @@ void Scene::Render(float deltaTime, float heightScale)
     std::vector<gl::TransparentDraw> sorted;
     updateTransparentInstances(sorted);
 
-    renderShadowPasses();          // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
-    updateMatricesUBO();           // [2] view / projection を UBO へ。以降の全パスが参照する
-    renderGeometryPass();          // [3] 不透明物の幾何情報を G-Buffer へ
-    renderSSAOPass();              // [4] G-Buffer から遮蔽率を求めてブラーまで
-    blitGeometryDepth();           // [5] G-Buffer の深度を framebuffer_ へ複製（前方描画の深度テスト用）
-    renderDeferredLightingPass();  // [6] G-Buffer + 影 + AO を合成
-    renderForwardPass(sorted);     // [7] G-Buffer に入れられないもの（ライトキューブ・空・ガラス）
-    renderBloomBlur();             // [8] 明るい部分をぼかして Bloom の素材を作る
-    renderToScreen();              // [9] トーンマッピングとガンマ補正をしてデフォルトFBOへ
+    renderShadowPasses();         // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
+    updateMatricesUBO();          // [2] view / projection を UBO へ。以降の全パスが参照する
+    renderGeometryPass();         // [3] 不透明物の幾何情報を G-Buffer へ
+    renderSSAOPass();             // [4] G-Buffer から遮蔽率を求めてブラーまで
+    blitGeometryDepth();          // [5] G-Buffer の深度を framebuffer_ へ複製（前方描画の深度テスト用）
+    renderDeferredLightingPass(); // [6] G-Buffer + 影 + AO を合成
+    renderForwardPass(sorted);    // [7] G-Buffer に入れられないもの（ライトキューブ・空・ガラス）
+    renderBloomBlur();            // [8] 明るい部分をぼかして Bloom の素材を作る
+    renderToScreen();             // [9] トーンマッピングとガンマ補正をしてデフォルトFBOへ
 }
 
 // 現在のガラスは乗算／加算ブレンドなので、この並べ替えは正しさには影響しない
@@ -786,7 +778,8 @@ void Scene::renderBloomBlur()
         glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[horizontal_]);
         blurShader_->setInt("horizontal", horizontal_);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, first_iteration ? brightColorBuffer_.get() : pingpongColorbuffers_[!horizontal_].get());
+        glBindTexture(GL_TEXTURE_2D,
+                      first_iteration ? brightColorBuffer_.get() : pingpongColorbuffers_[!horizontal_].get());
         glBindVertexArray(quadVAO_);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         horizontal_ = !horizontal_;
@@ -924,4 +917,3 @@ void Scene::renderWalls(gl::Shader &shader)
     shader.setMat4("model", glm::mat4(1.0f));
     glDrawElements(GL_TRIANGLES, gl::wallIndices.size(), GL_UNSIGNED_INT, 0);
 }
-

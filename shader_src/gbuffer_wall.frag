@@ -1,7 +1,7 @@
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;
-layout (location = 1) out vec3 gNormal;
+layout (location = 1) out vec4 gNormal; // a = metallic
 layout (location = 2) out vec4 gAlbedoSpec;
 
 in vec3 FragPos;
@@ -20,7 +20,7 @@ void main()
       vec4 diffuseColor = texture(diffuseMap, TexCoords);
 
       gPosition = FragPos;
-      gNormal = normal;
+      gNormal = vec4(normal, 0.75); // TODO: 配線確認用の仮値。確認後 0.0 に戻す
       gAlbedoSpec.rgb = diffuseColor.rgb;
       gAlbedoSpec.a = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
 }

@@ -11,35 +11,28 @@
 #include <memory>
 #include <vector>
 
-class Scene
-{
+class Scene {
   public:
     Scene(std::shared_ptr<Camera> camera, int srcWindow, int scrHeight);
     void Render(float deltaTime, float heightScale);
 
     // ImGui のパネルから直接編集するためのアクセサ
-    int &DebugMode()
-    {
+    int &DebugMode() {
         return debugMode_;
     }
-    bool &DebugRawOutput()
-    {
+    bool &DebugRawOutput() {
         return debugRawOutput_;
     }
-    float &SsaoStrength()
-    {
+    float &SsaoStrength() {
         return ssaoStrength_;
     }
-    float &Exposure()
-    {
+    float &Exposure() {
         return exposure_;
     }
-    float &AmbientStrength()
-    {
+    float &AmbientStrength() {
         return ambientStrength_;
     }
-    float &BloomStrength()
-    {
+    float &BloomStrength() {
         return bloomStrength_;
     }
 
@@ -100,7 +93,7 @@ class Scene
     /* G-Buffer */
     gl::FramebufferHandle gBuffer_;
     gl::TextureHandle gPosition_, gNormal_,
-        gAlbedoSpec_;              // gBuffer_にアタッチする3枚のテクスチャ
+        gAlbedoSpec_;                  // gBuffer_にアタッチする3枚のテクスチャ
     gl::RenderbufferHandle gDepthRBO_; // gBuffer_ 用の深度バッファ
 
     Material material_;
@@ -164,22 +157,17 @@ class Scene
     std::unique_ptr<gl::Shader> ssaoShader_;
     std::unique_ptr<gl::Shader> ssaoBlurShader_;
 
-    static constexpr unsigned int SSAO_KERNEL_SIZE =
-        64;                                    // 遮蔽物とみなす近傍の半径。暗くなる帯の幅を決める。目安は物体サイズの
-                                               // 0.2〜1.0 倍
-    static constexpr float SSAO_RADIUS = 0.6f; // 自己遮蔽によるアクネ対策。radius を変えたら比例させること
-    static constexpr float SSAO_BIAS = 0.03f;  // AO のコントラスト。pow(ao, SSAO_POWER)。実用範囲は 1.5〜3.0
-    static constexpr float SSAO_POWER = 2.0f;  // シーン全体の環境光。SSAO が掛かるのはこの項だけなので、0 にすると
-                                               // AO も見えなくなる
-    float ambientStrength_ = 0.3f;
-    // Bloom の合成強度。0.0 で完全に無効化できる
+    static constexpr unsigned int SSAO_KERNEL_SIZE = 64;
+    static constexpr float SSAO_RADIUS = 0.6f; // 遮蔽を探す半径。目安は物体サイズの 0.2〜1.0 倍
+    static constexpr float SSAO_BIAS = 0.03f;  // 自己遮蔽によるアクネ対策。RADIUS に比例させる
+    static constexpr float SSAO_POWER = 2.0f;  // AO のコントラスト。実用範囲は 1.5〜3.0
+    float ambientStrength_ = 0.5f;             // SSAO が掛かるのはこの項だけ
     float bloomStrength_ = 1.0f;
 
     float elapsedTime_ = 0.0f;
-    float heightScale_ = 0.0f; // HDR tone mapping の明るさ調整。HDR値自体は変えないので、Bloom
-                               // の閾値や飽和に影響せず、AO
-                               // や影のコントラストを保ったまま明るくできる
-    float exposure_ = 0.5f;
+    float heightScale_ = 0.0f;
+    float exposure_ = 1.0f; // HDR 値自体は変えないので Bloom の閾値や AO のコントラストに影響しない
+
     int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
     bool blurEnable_ = true;
     bool horizontal_ = true;
@@ -190,11 +178,13 @@ class Scene
 
     /* シーン固有の配置データ */
     const std::vector<glm::vec3> cube_pos_ = {
-        glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(2.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 2.5f),                                  // 近接配置（中心間 1.2 = 隙間 0.2）
-        glm::vec3(1.2f, 0.0f, 2.5f),   glm::vec3(-1.0f, 1.0f, -1.0f), // 積み重ね
-        glm::vec3(0.0f, 0.0f, -20.0f),                                // z=-25 壁の前
-        glm::vec3(0.0f, 0.0f, 20.0f),                                 // z=+25 壁の前
+        glm::vec3(-1.0f, 0.0f, -1.0f),
+        glm::vec3(2.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 2.5f), // 近接配置（中心間 1.2 = 隙間 0.2）
+        glm::vec3(1.2f, 0.0f, 2.5f),
+        glm::vec3(-1.0f, 1.0f, -1.0f), // 積み重ね
+        glm::vec3(0.0f, 0.0f, -20.0f), // z=-25 壁の前
+        glm::vec3(0.0f, 0.0f, 20.0f),  // z=+25 壁の前
     };
 
     const std::array<gl::PointLight, 4> pointLights_ = {
@@ -208,9 +198,6 @@ class Scene
          {glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f), glm::vec3(0.35f, 1.8f, 0.5f), glm::vec3(0.18f, 0.9f, 0.25f),
           1.0f, 0.14f, 0.07f}}};
 
-    // 透過オブジェクトの位置
-    // 板ポリは局所座標 x[0,1] y[-0.5,0.5] z=0、法線 +Z。
-    // y = 0.0 にすると床（y = -0.5）にちょうど接する
     const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
                                                  glm::vec3(0.0f, 0.0f, 0.7f), glm::vec3(-0.3f, 0.0f, -2.3f),
                                                  glm::vec3(0.5f, 0.0f, -0.6f)};

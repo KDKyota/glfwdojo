@@ -166,6 +166,11 @@ void main() {
   vec3 dir0 = FragPos - pointLights[0].position;
   FragColor = vec4(texture(shadowColor[0], dir0).rgb, 1.0);
 
+  } else if (debugMode == 9) {
+  // オブジェクトごとに一様な明るさで見えれば gNormal.a への書き込みは正しい
+  float metallic = texture(gNormal, TexCoords).a;
+  FragColor = vec4(vec3(metallic), 1.0);
+
   } else {
   FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）
   }

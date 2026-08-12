@@ -2,12 +2,10 @@
 
 struct GLFWwindow;
 
-// Dear ImGui のラッパー。ImGui は GLFW のコールバック・OpenGL の描画・
-// フレームの開始/終了にまたがるので、ここに閉じ込めて切り離せるようにしている
+// ImGui は GLFW・OpenGL・フレーム管理にまたがるので、ここに閉じ込めて切り離せるようにする
 class Gui {
 public:
-	// GLFW のコールバック登録がすべて済んだ「後」に呼ぶこと。
-	// ImGui は既存のコールバックを保存して連鎖呼び出しするため、順序が逆だと入力を拾えない
+	// 既存のコールバックを保存して連鎖させるので、登録がすべて済んだ「後」に呼ぶこと
 	explicit Gui(GLFWwindow* window);
 	~Gui();
 

@@ -26,8 +26,7 @@ void main()
 	vec3 worldPos    = texture(gPosition, TexCoords).xyz;
 	vec3 worldNormal = texture(gNormal,   TexCoords).xyz;
 
-	// 背景は G-Buffer がクリア値のまま。normalize(vec3(0)) は 0/0 で NaN になり、
-	// その NaN が後段の 4x4 ブラーで周囲へ伝播してシーン側まで壊すので早期に打ち切る
+	// 背景の normalize(vec3(0)) が NaN になり、後段のブラーで周囲へ伝播して壊す
 	if (dot(worldNormal, worldNormal) < 0.001)
 	{
 		FragColor = 1.0;
@@ -38,8 +37,7 @@ void main()
 	vec3 fragPos = (view * vec4(worldPos, 1.0)).xyz;
 	vec3 normal  = normalize(mat3(view) * worldNormal);
 
-	// 全ピクセルで同じカーネルを使うと縞（バンディング）が出るので、
-	// 4x4 のノイズをタイル状に敷いて法線まわりにランダム回転させる
+	// 全ピクセルで同じカーネルを使うと縞が出るので法線まわりにランダム回転させる
 	vec2 noiseScale = vec2(textureSize(gPosition, 0)) / 4.0;
 	vec3 randomVec  = normalize(texture(texNoise, TexCoords * noiseScale).xyz);
 
@@ -48,8 +46,7 @@ void main()
 	vec3 bitangent = cross(normal, tangent);
 	mat3 TBN       = mat3(tangent, bitangent, normal);
 
-	// view 行列の3行目。GLSL の view[i] は「列」なので各列の .z を集める。
-	// ループ内でビュー空間 z だけを内積1回で得るために使う（必ずループの外で作る）
+	// view 行列の3行目。GLSL の view[i] は「列」なので各列の .z を集める
 	vec4 viewRowZ = vec4(view[0].z, view[1].z, view[2].z, view[3].z);
 
 	float occlusion = 0.0;
@@ -57,12 +54,10 @@ void main()
 	{
 		vec3 samplePos = fragPos + TBN * samples[i] * radius;
 
-		// スクリーン座標へ投影する
 		vec4 offset = projection * vec4(samplePos, 1.0);
 		offset.xyz /= offset.w;              // 透視除算
 		offset.xyz = offset.xyz * 0.5 + 0.5; // [-1,1] -> [0,1]
 
-		// その画面位置に実際に写っている面のビュー空間 z。
 		// w = 1.0 を忘れると平行移動が消え、カメラを動かしたときだけずれる
 		vec3  sampleWorld = texture(gPosition, offset.xy).xyz;
 		float sampleDepth = dot(viewRowZ, vec4(sampleWorld, 1.0));
@@ -70,7 +65,6 @@ void main()
 		// 遠くの面による誤判定を防ぐ。無いと物体の輪郭に黒い縁取り（ハロー）が出る
 		float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
 
-		// ビュー空間はカメラ前方が -Z なので手前ほど z が大きい。
 		// 不等号を逆にすると AO が反転する（隅が明るく、平坦面が暗くなる）
 		occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
 	}

@@ -8,8 +8,7 @@ uniform float exposure;
 
 out vec4 FragColor;
 
-// Bloom合成・トーンマッピング・ガンマ補正を全て飛ばす。
-// これらは値を大きく持ち上げるため、G-Buffer や AO を可視化するときは必ず有効にすること
+// Bloom・トーンマッピング・ガンマ補正を飛ばす。G-Buffer の可視化には必須
 uniform bool debugRawOutput;
 
 // Bloom の合成強度。0.0 で完全に無効化できる
@@ -31,8 +30,6 @@ void main() {
 
   hdrColor += bloomColor * bloomStrength; // 合成処理
 
-  // exposure tone mapping (Reinhardなら hdrColor / (hdrColor +
-  // vec3(1.0))でもいい）
   vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
 
   // ガンマ補正

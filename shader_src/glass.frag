@@ -1,18 +1,16 @@
 // 透過窓のガラス部分を前方描画するシェーダー。
 // 窓枠は gbuffer_window.frag が Deferred 側で描くので、ここでは alpha >= 0.5 を discard する。
 //
-// サンプラー配列をループ変数で添字する（shadowMap[i]）ため 4.60 が必要。
-// GLSL 3.30 以前ではサンプラー配列は定数式でしか添字できず、Mesa など仕様に厳密な
-// ドライバではコンパイルエラーになる（NVIDIA/AMD は 330 でも黙って通してしまう）。
+// サンプラー配列をループ変数で添字するため 4.60 が必要。330 以前は定数式のみ許され、
+// Mesa などではコンパイルエラーになる（NVIDIA/AMD は黙って通してしまう）
 #version 460 core
 
 out vec4 FragColor;
 layout(location = 1) out vec4 BrightColor;
 
 // 元は sampler2D diffuse / sampler2D specular をメンバに持っていたが、
-// WSL の Mesa d3d12 ドライバは「struct のメンバに sampler がある」だけで
-// シェーダーのDXIL変換時に segfault する（実際に使っていなくても落ちる）。
-// texture1 を直接サンプルする形にして、struct からは sampler を外している。
+// WSL の Mesa d3d12 は struct のメンバに sampler があるだけで DXIL 変換時に
+// segfault する（使っていなくても落ちる）ので、struct から sampler を外している
 struct Material
 {
     vec3 ambient;    // 環境光の影響

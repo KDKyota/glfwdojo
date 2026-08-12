@@ -19,9 +19,7 @@ int main(void) {
     auto window = std::make_unique<Window>(SCR_WIDTH, SCR_HEIGHT, "learnopengl");
     auto scene =
         std::make_unique<Scene>(camera, window->GetWidth(), window->GetHeight());
-    // Window のコンストラクタで glfwSet*Callback がすべて済んだ後に生成すること。
-    // ImGui は既存のコールバックを保存して連鎖呼び出しするため、順序が逆だと
-    // UI がマウス入力を受け取れなくなる。
+    // ImGui は既存のコールバックを保存して連鎖させるので、必ず登録がすべて済んだ後に生成する
     auto gui = std::make_unique<Gui>(window->Get());
 
     struct {
@@ -64,8 +62,7 @@ int main(void) {
             ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
             ImGui::Separator();
 
-            // metallic は物理的には 0 か 1 の二択。中間はピクセル内で
-            // 金属と非金属が混ざる場合（錆びた鉄など）にしか意味を持たない
+            // metallic は物理的には 0 か 1 の二択。中間は錆びた鉄のような混在時のみ
             ImGui::SliderFloat("Metallic: cube", &scene->CubeMaterial().metallic, 0.0f, 1.0f);
             ImGui::SliderFloat("Metallic: floor", &scene->FloorMaterial().metallic, 0.0f, 1.0f);
             ImGui::SliderFloat("Metallic: wall", &scene->WallMaterial().metallic, 0.0f, 1.0f);
@@ -75,8 +72,7 @@ int main(void) {
 
         scene->Render(frametime.delta, heightScale);
 
-        // Scene::Render() の中に入れると、SSAO やライティングのパスの途中で
-        // UI を描くことになり順序管理が破綻する。
+        // Scene::Render() に入れるとパスの途中で UI を描くことになる
         gui->Render();
 
         window->SwapBuffers();

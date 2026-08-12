@@ -33,8 +33,7 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 
 	glViewport(0, 0, width, height);
 
-	// glEnable(GL_FRAMEBUFFER_SRGB) は使わない。hdr.frag の手動ガンマ補正と
-	// 二重になり、暗部が持ち上がって画面全体が白っぽくなる（DEVELOPMENT.md 参照）
+	// GL_FRAMEBUFFER_SRGB は使わない。hdr.frag のガンマ補正と二重になり白っぽくなる
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -52,8 +51,6 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 			<< std::dec << (encoding == 0x8C40 ? "  (GL_SRGB)" : "  (GL_LINEAR)")
 			<< std::endl;
 	}
-	// コールマック関数を登録
-	// ふつうは第一引数がwindowだが、今回はスマートポインタにhandle_代入しているのでその先頭ポインタという意味でhandle_.get()
 	glfwSetFramebufferSizeCallback(handle_.get(), framebuffer_size_callback);
     glfwSetMouseButtonCallback(handle_.get(), mouse_button_callback);
     glfwSetCursorPosCallback(handle_.get(), mouse_callback);

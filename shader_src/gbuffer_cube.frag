@@ -13,16 +13,13 @@ in vec3 TangentViewPos;
 in vec3 TangentFragPos;
 in mat3 TBNtoWorld;
 
-uniform sampler2D diffuseMap; // 画像テクスチャ
-// point shadow 用のデプスキューブマップ（各テクセルには光源からの正規化距離 [0,1] が入っている）
+uniform sampler2D diffuseMap;
 uniform sampler2D normalMap;
 uniform sampler2D heightMap;
-// shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 
 uniform float heightScale;
 uniform float metallic;
 
-//function
 vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir);
 
 void main()
@@ -47,13 +44,10 @@ void main()
 }
 
 
-// Steep Parallax Mapping
-// 視線レイを numLayers 個の深度レイヤーに分割し、手前から奥へ1層ずつ進めながら
-// 「レイヤーの深さ」と「ハイトマップが示す深さ」を比較し、レイが表面にぶつかった層のテクスチャ座標を返す
+// 視線レイを層に分割し、ハイトマップの深さを追い越した層の座標を返す
 vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-	// 視線が面に対して斜めになるほどレイヤー数を増やす
-	// （真上から見るときは少ないレイヤーでも破綻しにくいが、斜めから見るほど階段状の見た目が目立ちやすいため）
+	// 斜めから見るほど階段状のアーティファクトが目立つのでレイヤー数を増やす
 	const float minLayers = 8.0;
 	const float maxLayers = 32.0;
 	float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
@@ -62,8 +56,7 @@ vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 	float layerDepth = 1.0 / numLayers;
 	float currentLayerDepth = 0.0;
 
-	// 視線を1レイヤー分進めるごとに、テクスチャ座標をどれだけずらすか
-	// （viewDir.xy / viewDir.z で「奥に1進んだときの横方向の移動量」を求め、heightScaleで強さを調整する）
+	// viewDir.xy / viewDir.z が「奥に1進んだときの横方向の移動量」
 	vec2 P = viewDir.xy / viewDir.z * heightScale;
 	vec2 deltaTexCoords = P / numLayers;
 
@@ -82,9 +75,7 @@ vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 	return currentTexCoords;
 }
 
-// Parallax Occlusion Mapping (POM)
-// Steep Parallax Mapping で見つけた「衝突した層」と、その1つ手前の層の間を線形補間することで、
-// レイヤーの粗さによる階段状のアーティファクトをさらに滑らかにする
+// 衝突した層と1つ手前の層を線形補間し、階段状のアーティファクトを滑らかにする
 vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir)
 {
 	const float minLayers = 8.0;
@@ -111,8 +102,7 @@ vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir)
 	// 衝突が検出される直前（1つ手前）のテクスチャ座標を復元する
 	vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
 
-	// 衝突後・衝突前それぞれについて「ハイトマップの深さ」と「レイヤーの深さ」の差を求める
-	// （負なら表面より奥、正なら表面より手前を表す）
+	// ハイトマップの深さとレイヤーの深さの差。負なら表面より奥
 	float afterDepth = currentDepthMapValue - currentLayerDepth;
 	float beforeDepth = texture(heightMap, prevTexCoords).r - currentLayerDepth + layerDepth;
 

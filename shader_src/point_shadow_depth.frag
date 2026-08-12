@@ -17,7 +17,6 @@ void main()
         discard;
     // 光源からフラグメントまでの実際のユークリッド距離
     float lightDistance = length(FragPos.xyz - lightPos);
-    // 線形深度として [0,1] に正規化して書き込む
-    // （投影のzではなく実距離を使うことで、cubemapの面の継ぎ目でも深度が連続になる）
+    // 投影の z ではなく実距離を使うと、cubemap の面の継ぎ目でも深度が連続になる
     gl_FragDepth = lightDistance / farPlane;
 }

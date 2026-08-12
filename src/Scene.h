@@ -207,14 +207,15 @@ class Scene {
     };
 
     const std::array<gl::PointLight, 4> pointLights_ = {
+        // constant / linear / quadratic は逆二乗減衰に移行して未使用（構造体には残置）
         {// position, ambient, diffuse, specular, constant, linear, quadratic
-         {glm::vec3(0.0f, 2.0f, 2.2f), glm::vec3(0.0f), glm::vec3(4.0f, 4.0f, 4.0f), glm::vec3(2.0f, 2.0f, 2.0f), 1.0f,
-          0.14f, 0.07f},
-         {glm::vec3(-5.0f, 0.8f, -4.0f), glm::vec3(0.0f), glm::vec3(2.2f, 0.4f, 0.25f), glm::vec3(1.1f, 0.2f, 0.12f),
+         {glm::vec3(0.0f, 2.0f, 2.2f), glm::vec3(0.0f), glm::vec3(20.0f, 20.0f, 20.0f),
+          glm::vec3(10.0f, 10.0f, 10.0f), 1.0f, 0.14f, 0.07f},
+         {glm::vec3(-5.0f, 0.8f, -4.0f), glm::vec3(0.0f), glm::vec3(11.0f, 2.0f, 1.25f), glm::vec3(5.5f, 1.0f, 0.6f),
           1.0f, 0.14f, 0.07f},
-         {glm::vec3(4.2f, 3.0f, 1.8f), glm::vec3(0.0f), glm::vec3(0.4f, 0.6f, 2.2f), glm::vec3(0.2f, 0.3f, 1.1f), 1.0f,
-          0.14f, 0.07f},
-         {glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f), glm::vec3(0.35f, 1.8f, 0.5f), glm::vec3(0.18f, 0.9f, 0.25f),
+         {glm::vec3(4.2f, 3.0f, 1.8f), glm::vec3(0.0f), glm::vec3(2.0f, 3.0f, 11.0f), glm::vec3(1.0f, 1.5f, 5.5f),
+          1.0f, 0.14f, 0.07f},
+         {glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f), glm::vec3(1.75f, 9.0f, 2.5f), glm::vec3(0.9f, 4.5f, 1.25f),
           1.0f, 0.14f, 0.07f}}};
 
     const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),

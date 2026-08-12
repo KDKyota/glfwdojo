@@ -5,11 +5,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <map>
 #include <random>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
-    : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight)
-{
+    : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight) {
     shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
     // cubeShader_ = std::make_unique<gl::Shader>("cube.vert", "cube.frag");
     lightcubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
@@ -51,8 +51,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     initSSAO();
 }
 
-void Scene::initMesh()
-{
+void Scene::initMesh() {
     int stride = sizeof(gl::Vertex);
 
     /* cube */
@@ -172,8 +171,7 @@ void Scene::initMesh()
     glBindVertexArray(0);
 }
 
-void Scene::initTextures()
-{
+void Scene::initTextures() {
     // material_.diffuse = cache_.get("resources\\textures\\container2.png",
     // false); material_.specular =
     // cache_.get("resources\\textures\\container2_specular.png", true);
@@ -184,7 +182,7 @@ void Scene::initTextures()
     floorTexture_ = cache_.get("resources/textures/wood.png", true, ColorSpace::SRGB);
     transparentTexture_ = cache_.get("resources/textures/window.png", true, ColorSpace::SRGB);
     std::vector<std::string> faces{"resources/textures/skybox/right.jpg", "resources/textures/skybox/left.jpg",
-                                   "resources/textures/skybox/top.jpg",   "resources/textures/skybox/bottom.jpg",
+                                   "resources/textures/skybox/top.jpg", "resources/textures/skybox/bottom.jpg",
                                    "resources/textures/skybox/front.jpg", "resources/textures/skybox/back.jpg"};
     cubemapTexture_.reset(cache_.loadCubemap(faces, false, ColorSpace::SRGB));
 
@@ -251,8 +249,7 @@ void Scene::initTextures()
     // ssaoShader_ / ssaoBlurShader_ の uniform は initSSAO() 側で設定する。
 }
 
-void Scene::initFramebuffer()
-{
+void Scene::initFramebuffer() {
     /* framebuffer configuration */
     framebuffer_.create(); // フレームバッファ（通常は *FBO とかに命名するけど…）
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
@@ -336,8 +333,7 @@ void Scene::initFramebuffer()
 
     /* ぼかし処理を書き込むFBO */
     // 縦方向と横方向にガウシアンブラーをかけるのでそのために二回のループ
-    for (unsigned int i = 0; i < 2; i++)
-    {
+    for (unsigned int i = 0; i < 2; i++) {
         pingpongFBO_[i].create();
         pingpongColorbuffers_[i].create();
         glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[i]);
@@ -356,8 +352,7 @@ void Scene::initFramebuffer()
     }
 }
 
-void Scene::initUBO()
-{
+void Scene::initUBO() {
     matricesUBO_.create();
     glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO_);
     glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), nullptr, GL_STATIC_DRAW);
@@ -365,8 +360,7 @@ void Scene::initUBO()
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Scene::initGBuffer()
-{
+void Scene::initGBuffer() {
     // gBuffer_にバインド
     gBuffer_.create();
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
@@ -423,16 +417,14 @@ void Scene::initGBuffer()
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // フレームバッファをデフォルトに戻す
 }
 
-void Scene::initSSAO()
-{
+void Scene::initSSAO() {
     std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
     std::default_random_engine generator;
 
     /* --- サンプルカーネル --- */
     // 接空間（+Z が法線方向）における、半球内のサンプル点のテンプレート。
     ssaoKernel_.reserve(SSAO_KERNEL_SIZE);
-    for (unsigned int i = 0; i < SSAO_KERNEL_SIZE; ++i)
-    {
+    for (unsigned int i = 0; i < SSAO_KERNEL_SIZE; ++i) {
         glm::vec3 sample(randomFloats(generator) * 2.0f - 1.0f, randomFloats(generator) * 2.0f - 1.0f,
                          randomFloats(generator));
         sample = glm::normalize(sample);
@@ -448,8 +440,7 @@ void Scene::initSSAO()
     /* --- ノイズテクスチャ --- */
     std::vector<glm::vec3> ssaoNoise;
     ssaoNoise.reserve(16);
-    for (unsigned int i = 0; i < 16; ++i)
-    {
+    for (unsigned int i = 0; i < 16; ++i) {
         // z = 0 にするのは「Z軸まわりの回転」にしたいから
         ssaoNoise.emplace_back(randomFloats(generator) * 2.0f - 1.0f, randomFloats(generator) * 2.0f - 1.0f, 0.0f);
     }
@@ -513,8 +504,7 @@ void Scene::initSSAO()
     ssaoBlurShader_->setFloat("power", SSAO_POWER);
 }
 
-void Scene::Render(float deltaTime, float heightScale)
-{
+void Scene::Render(float deltaTime, float heightScale) {
     elapsedTime_ += deltaTime;
     heightScale_ = heightScale;
 
@@ -534,8 +524,7 @@ void Scene::Render(float deltaTime, float heightScale)
 }
 
 // 現在のガラスは乗算／加算ブレンドなので、この並べ替えは正しさには影響しない
-void Scene::updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted)
-{
+void Scene::updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted) {
     for (unsigned int i = 0; i < windows_pos_.size(); ++i)
         sorted.push_back({glm::length(camera_->GetViewPosition() - windows_pos_[i]), i});
     std::sort(sorted.begin(), sorted.end(),
@@ -550,8 +539,7 @@ void Scene::updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void Scene::updateMatricesUBO()
-{
+void Scene::updateMatricesUBO() {
     glm::mat4 view = camera_->GetViewMatrix();
     glm::mat4 projection =
         glm::perspective(glm::radians(camera_->GetZoomValue()), (float)scrWidth_ / (float)scrHeight_, 0.1f, 100.0f);
@@ -562,12 +550,10 @@ void Scene::updateMatricesUBO()
 }
 
 // 深度とガラスの透過色を同じ FBO へ、glDrawBuffer で書き込み先を切り替えて作る
-void Scene::renderShadowPasses()
-{
+void Scene::renderShadowPasses() {
     glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
     glEnable(GL_DEPTH_TEST);
-    for (unsigned int j = 0; j < 4; ++j)
-    {
+    for (unsigned int j = 0; j < 4; ++j) {
         glm::vec3 lightPos = pointLights_[j].position;
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT,
                                                 shadowNearPlane_, shadowFarPlane_);
@@ -626,8 +612,7 @@ void Scene::renderShadowPasses()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Scene::renderGeometryPass()
-{
+void Scene::renderGeometryPass() {
     glViewport(0, 0, scrWidth_, scrHeight_); // シャドウ用に変えた viewport を元に戻す
     glEnable(GL_DEPTH_TEST);
     // G-Buffer
@@ -674,8 +659,7 @@ void Scene::renderGeometryPass()
     renderWindow(*gbufferWindowShader_);
 }
 
-void Scene::renderSSAOPass()
-{
+void Scene::renderSSAOPass() {
     glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO_);
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
@@ -705,8 +689,7 @@ void Scene::renderSSAOPass()
 }
 
 // これがないと後続の前方描画が不透明物と前後判定できない
-void Scene::blitGeometryDepth()
-{
+void Scene::blitGeometryDepth() {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer_);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer_);
     glBlitFramebuffer(0, 0, scrWidth_, scrHeight_, 0, 0, scrWidth_, scrHeight_, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -714,8 +697,7 @@ void Scene::blitGeometryDepth()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Scene::renderDeferredLightingPass()
-{
+void Scene::renderDeferredLightingPass() {
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
     glClear(GL_COLOR_BUFFER_BIT); // 深度は blitGeometryDepth() でコピー済みなのでクリアしない
     glDisable(GL_DEPTH_TEST);     // フルスクリーンクワッドなので深度テスト不要
@@ -725,16 +707,14 @@ void Scene::renderDeferredLightingPass()
     glBindTexture(GL_TEXTURE_2D, gNormal_);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, gAlbedoSpec_);
-    for (unsigned int j = 0; j < 4; ++j)
-    {
+    for (unsigned int j = 0; j < 4; ++j) {
         glActiveTexture(GL_TEXTURE3 + j);
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_[j]);
     }
     // ブラー後のAOをユニット7へ（3〜6は shadowMap が使っている）
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur_);
-    for (unsigned int j = 0; j < 4; ++j)
-    {
+    for (unsigned int j = 0; j < 4; ++j) {
         glActiveTexture(GL_TEXTURE8 + j);
         glBindTexture(GL_TEXTURE_CUBE_MAP, shadowColorCubemap_[j]);
     }
@@ -752,8 +732,7 @@ void Scene::renderDeferredLightingPass()
 }
 
 // G-Buffer に載せられないものだけを描く
-void Scene::renderForwardPass(const std::vector<gl::TransparentDraw> &sorted)
-{
+void Scene::renderForwardPass(const std::vector<gl::TransparentDraw> &sorted) {
     glViewport(0, 0, scrWidth_, scrHeight_);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
     glEnable(GL_DEPTH_TEST);
@@ -767,14 +746,12 @@ void Scene::renderForwardPass(const std::vector<gl::TransparentDraw> &sorted)
     glDisable(GL_BLEND);
 }
 
-void Scene::renderBloomBlur()
-{
+void Scene::renderBloomBlur() {
     glDisable(GL_DEPTH_TEST);
     bool first_iteration = true;
     unsigned int amount = 10;
     blurShader_->use();
-    for (unsigned int i = 0; i < amount; ++i)
-    {
+    for (unsigned int i = 0; i < amount; ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[horizontal_]);
         blurShader_->setInt("horizontal", horizontal_);
         glActiveTexture(GL_TEXTURE0);
@@ -788,8 +765,7 @@ void Scene::renderBloomBlur()
     }
 }
 
-void Scene::renderToScreen()
-{
+void Scene::renderToScreen() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -814,14 +790,12 @@ void Scene::renderToScreen()
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-void Scene::applyPointLights(gl::Shader &shader)
-{
+void Scene::applyPointLights(gl::Shader &shader) {
     for (const auto &pointLight : pointLights_)
         pointLight.applyToShader(shader, "pointLights[" + std::to_string(&pointLight - pointLights_.data()) + "]");
 }
 
-void Scene::renderCubes(gl::Shader &shader)
-{
+void Scene::renderCubes(gl::Shader &shader) {
     cubeTexture_->bind(0);
     cubeNormalMap_->bind(1);
     cubeHeightMap_->bind(2);
@@ -830,20 +804,17 @@ void Scene::renderCubes(gl::Shader &shader)
     glDrawElementsInstanced(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0, cube_pos_.size());
 }
 
-void Scene::renderFloor(gl::Shader &shader)
-{
+void Scene::renderFloor(gl::Shader &shader) {
     floorTexture_->bind(0);
     glBindVertexArray(planeVAO_);
     shader.setMat4("model", glm::mat4(1.0f));
     glDrawElements(GL_TRIANGLES, gl::planeIndices.size(), GL_UNSIGNED_INT, 0);
 }
 
-void Scene::renderLightCubes()
-{
+void Scene::renderLightCubes() {
     lightcubeShader_->use();
     glBindVertexArray(cubeVAO_);
-    for (const auto &pointLight : pointLights_)
-    {
+    for (const auto &pointLight : pointLights_) {
         lightcubeShader_->setVec3("lightColor", pointLight.diffuse);
         glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
         lightModel = glm::scale(lightModel, glm::vec3(0.2f));
@@ -852,8 +823,7 @@ void Scene::renderLightCubes()
     }
 }
 
-void Scene::renderSkybox()
-{
+void Scene::renderSkybox() {
     glDepthFunc(GL_LEQUAL);
     skyboxShader_->use();
     glBindVertexArray(skyboxVAO_);
@@ -864,8 +834,7 @@ void Scene::renderSkybox()
     glDepthFunc(GL_LESS);
 }
 
-void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sorted)
-{
+void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sorted) {
     transparentwindowShader_->use();
     transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentwindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
@@ -875,8 +844,7 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sor
     transparentwindowShader_->setFloat("ambientStrength", ambientStrength_);
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur_);
-    for (unsigned int j = 0; j < 4; ++j)
-    {
+    for (unsigned int j = 0; j < 4; ++j) {
         glActiveTexture(GL_TEXTURE8 + j);
         glBindTexture(GL_TEXTURE_CUBE_MAP, shadowColorCubemap_[j]);
     }
@@ -895,8 +863,7 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sor
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void Scene::renderWindow(gl::Shader &shader)
-{
+void Scene::renderWindow(gl::Shader &shader) {
     shader.setMat4("model", glm::mat4(1.0f));
     shader.setMat3("normalMatrix", glm::mat3(1.0f));
 
@@ -906,8 +873,7 @@ void Scene::renderWindow(gl::Shader &shader)
                             transparent_positions_.size());
 }
 
-void Scene::renderWalls(gl::Shader &shader)
-{
+void Scene::renderWalls(gl::Shader &shader) {
     brickwallTexture_->bind(0);
     brickwallNormalTexture_->bind(1);
     // shadowMap(白ライト用)はPass

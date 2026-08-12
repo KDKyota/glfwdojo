@@ -49,8 +49,7 @@ void processInput(GLFWwindow* window, float deltaTime)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
-	// UI のテキスト入力中に WASD でカメラが動かないようにする。
-	// Esc は UI に関わらず効かせたいので、このガードより前に置いている。
+	// UI 入力中に WASD でカメラが動かないようにする。Esc は前に置いて常に効かせる
 	if (Gui::WantCaptureKeyboard()) return;
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)

@@ -159,8 +159,7 @@ class Scene {
     std::array<gl::TextureHandle, 4> shadowColorCubemap_;
 
     /* ==== UI から実行時に変更する設定（毎フレーム送る） ==== */
-    // 0=通常 / 1=ライト0のシャドウ / 2=shadowMap[0]の生値 / 3=Albedo
-    // 4=Normal / 5=Position / 6=4分割 / 7=SSAO / 8=shadowColor[0]の生値
+    // 対応表は main.cpp の kDebugModes
     int debugMode_ = 0;
     // Bloom・トーンマッピング・ガンマ補正を飛ばす。デバッグ表示には必須
     bool debugRawOutput_ = false;

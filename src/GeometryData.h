@@ -91,8 +91,7 @@ namespace gl {
          1.0f,  1.0f,  1.0f, 1.0f
     };
 
-	// EBO(IBO)用に重複を除いた頂点配列(1面 = 4頂点 x 6面 = 24頂点)
-	// cubeのローカル座標
+	// EBO 用に重複を除いた頂点配列（1面 = 4頂点 x 6面 = 24頂点）
 	inline const std::array<Vertex, 24> rawVertices =
 	{ {
 		// back face (z = -0.5)
@@ -174,8 +173,7 @@ namespace gl {
 	std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2
 		, const glm::vec2& uv0, const glm::vec2 uv1, const glm::vec2 uv2);
 
-	// 頂点配列が「1面 = 4頂点」の並びである前提で、面ごとに法線を計算して4頂点に割り当てる関数
-	// (EBOで頂点を共有するため、三角形単位ではなく面単位でまとめて処理する)
+	// 「1面 = 4頂点」の並びを前提に、面ごとに法線を計算して4頂点へ割り当てる
 	template <std::size_t N> // Nは頂点数（インデックス数）
 	std::array<Vertex, N> calculateFaceNormals(std::array<Vertex, N> vertices)
 	{
@@ -228,8 +226,7 @@ namespace gl {
 	inline const std::array<Vertex, 4> planeVertices = calculateFaceNormals(rawplaneVertices);
 	inline const std::array<Vertex, 4> transparentVertices = calculateFaceNormals(rawtransparentVertices);
 
-	// 壁の頂点データ（z=-25 と z=+25 の2枚）
-	// Normal, Tangent, Bitangent は解析的に設定（T×B = N が成立）
+	// 壁（z=-25 と z=+25 の2枚）。T×B = N が成立するよう解析的に設定
 	inline const std::array<Vertex, 8> wallVertices = { {
 		// z=-25 の壁 (法線: +z,  T: +x, B: +y)
 		{{ -25.0f, -0.5f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 0.0f, 0.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},

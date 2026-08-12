@@ -38,8 +38,7 @@ public:
 	Texture(const Texture&) = delete; // コピーコントラクタ禁止
 	Texture& operator=(const Texture&) = delete; // コピー演算禁止
 
-	// ムーブ・右辺値代入は許可（shared_ptr内部で利用される）
-	// 例外処理を投げない
+	// ムーブは許可（shared_ptr 内部で利用される）
 	Texture(Texture&& other) noexcept;
 	Texture& operator=(Texture&&) noexcept;
 

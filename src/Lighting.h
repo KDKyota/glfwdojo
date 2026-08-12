@@ -14,10 +14,7 @@ namespace gl {
 		float linear = 0.02f;
 		float quadratic = 0.001f;
 
-		// このライトが実質的に届かなくなる距離（ライトボリュームの半径）を減衰式から逆算する。
-		// 減衰後の明るさが 5/256 未満（8bit カラーで1階調に満たない）になる距離を求めている。
-		// メンバとして持たず都度計算しているのは、position などと違って
-		// constant / linear / quadratic / diffuse から一意に決まる派生値だから。
+		// 明るさが 5/256 未満になる距離。diffuse から一意に決まる派生値なので都度計算する
 		float calcRadius() const;
 
 		void applyToShader(const Shader& shader, const std::string& name) const;
@@ -44,13 +41,5 @@ namespace gl {
 		float quadratic = 0.032f;
 		void applyToShader(const Shader& shader, const std::string& name, const Camera& camera) const;
 	};
-
-	//std::vector<glm::vec3> pointLightPositions = {
-	//	glm::vec3(0.7f,  0.2f,  2.0f),
-	//	glm::vec3(2.3f, -3.3f, -4.0f),
-	//	glm::vec3(-4.0f,  2.0f, -12.0f),
-	//	glm::vec3(0.0f,  0.0f, -3.0f)
-	//};
-
 
 }

@@ -11,7 +11,7 @@ uniform float power;
 void main()
 {
 	// ssao.frag が 4x4 のノイズを敷いた代償の格子模様を、ちょうど 4x4 の平均で打ち消す。
-	// ループが -2..1 の「4回」である点に注意（5回だと周期が割り切れず消えない）
+	// -2..1 の4回。5回だとノイズの周期が割り切れず格子模様が消えない
 	vec2 texelSize = 1.0 / vec2(textureSize(ssaoInput, 0));
 
 	float result = 0.0;
@@ -26,7 +26,6 @@ void main()
 
 	float ao = result / 16.0; // 4 x 4 = 16 サンプル
 
-	// コントラスト調整はブラーの後に行う。前だと pow(平均) != 平均(pow) で
-	// ノイズまで増幅されてしまう
+	// ブラーの前だと pow(平均) != 平均(pow) でノイズまで増幅される
 	FragColor = pow(ao, power);
 }

@@ -18,6 +18,9 @@ CMakeUserPresets.json
 
 # IDEのキャッシュとワークスペース設定（マシン固有のため除外）
 .vs/
+.vscode/
+
+.launch.vs.json
 
 # ユーザーごとのローカルデバッグ設定
 *.user

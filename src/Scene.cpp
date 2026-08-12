@@ -642,20 +642,24 @@ void Scene::renderGeometryPass() {
     gbufferCubeShader_->setVec3("viewPos", camera_->GetViewPosition());
     gbufferCubeShader_->setMat3("normalMatrix", glm::mat3(1.0f));
     gbufferCubeShader_->setFloat("heightScale", heightScale_);
+    cubeMaterial_.applyToShader(*gbufferCubeShader_);
     renderCubes(*gbufferCubeShader_);
     glDisable(GL_CULL_FACE);
 
     /* floor */
     gbufferFloorShader_->use();
     gbufferFloorShader_->setMat3("normalMatrix", glm::mat3(1.0f));
+    floorMaterial_.applyToShader(*gbufferFloorShader_);
     renderFloor(*gbufferFloorShader_);
 
     /* wall */
     gbufferWallShader_->use();
+    wallMaterial_.applyToShader(*gbufferWallShader_);
     renderWalls(*gbufferWallShader_);
 
     /* Transparent window's fisical frame */
     gbufferWindowShader_->use();
+    windowMaterial_.applyToShader(*gbufferWindowShader_);
     renderWindow(*gbufferWindowShader_);
 }
 

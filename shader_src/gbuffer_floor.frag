@@ -9,6 +9,7 @@ in vec3 Normal;
 in vec2 TexCoords;
 
 uniform sampler2D diffuseMap;
+uniform float metallic;
 
 // ==== G-Buffer 書き込みテスト ====
 // 1 にすると、床の描画時に G-Buffer の3枚へ「位置や法線とは無関係な固定色」を書き込む。
@@ -32,7 +33,7 @@ void main()
       vec4 diffuseColor = texture(diffuseMap, TexCoords);
 
       gPosition = FragPos;
-      gNormal = vec4(normalize(Normal), 0.5); // TODO: 配線確認用の仮値。確認後 0.0 に戻す
+      gNormal = vec4(normalize(Normal), metallic);
       gAlbedoSpec.rgb = diffuseColor.rgb;
       // 専用specularテクスチャが無いのでdiffuseの輝度を代用
       gAlbedoSpec.a = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));

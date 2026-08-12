@@ -19,6 +19,7 @@ CMakeUserPresets.json
 # IDEのキャッシュとワークスペース設定（マシン固有のため除外）
 .vs/
 .vscode/
+.zed/
 
 .launch.vs.json
 

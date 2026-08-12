@@ -62,6 +62,14 @@ int main(void) {
             ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 1.0f);
             ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);
             ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
+            ImGui::Separator();
+
+            // metallic は物理的には 0 か 1 の二択。中間はピクセル内で
+            // 金属と非金属が混ざる場合（錆びた鉄など）にしか意味を持たない
+            ImGui::SliderFloat("Metallic: cube", &scene->CubeMaterial().metallic, 0.0f, 1.0f);
+            ImGui::SliderFloat("Metallic: floor", &scene->FloorMaterial().metallic, 0.0f, 1.0f);
+            ImGui::SliderFloat("Metallic: wall", &scene->WallMaterial().metallic, 0.0f, 1.0f);
+            ImGui::SliderFloat("Metallic: window", &scene->WindowMaterial().metallic, 0.0f, 1.0f);
         }
         ImGui::End();
 

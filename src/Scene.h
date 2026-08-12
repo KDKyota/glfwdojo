@@ -5,6 +5,7 @@
 #include "Lighting.h"
 #include "Material.h"
 #include "Model.h"
+#include "PbrMaterial.h"
 #include "Shader.h"
 #include "TextureCache.h"
 #include <array>
@@ -34,6 +35,18 @@ class Scene {
     }
     float &BloomStrength() {
         return bloomStrength_;
+    }
+    gl::PbrMaterial &CubeMaterial() {
+        return cubeMaterial_;
+    }
+    gl::PbrMaterial &FloorMaterial() {
+        return floorMaterial_;
+    }
+    gl::PbrMaterial &WallMaterial() {
+        return wallMaterial_;
+    }
+    gl::PbrMaterial &WindowMaterial() {
+        return windowMaterial_;
     }
 
   private:
@@ -98,6 +111,12 @@ class Scene {
 
     Material material_;
     TextureCache cache_;
+
+    /* PBR マテリアル（G-Buffer を書く4種類のオブジェクトに対応） */
+    gl::PbrMaterial cubeMaterial_;
+    gl::PbrMaterial floorMaterial_;
+    gl::PbrMaterial wallMaterial_;
+    gl::PbrMaterial windowMaterial_;
 
     /* Shaders */
     std::unique_ptr<gl::Shader> shader_;

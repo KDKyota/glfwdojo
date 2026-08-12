@@ -10,6 +10,7 @@ in mat3 TBN;
 
 uniform sampler2D diffuseMap;
 uniform sampler2D normalMap;
+uniform float metallic;
 
 void main()
 {
@@ -20,7 +21,7 @@ void main()
       vec4 diffuseColor = texture(diffuseMap, TexCoords);
 
       gPosition = FragPos;
-      gNormal = vec4(normal, 0.75); // TODO: 配線確認用の仮値。確認後 0.0 に戻す
+      gNormal = vec4(normal, metallic);
       gAlbedoSpec.rgb = diffuseColor.rgb;
       gAlbedoSpec.a = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
 }

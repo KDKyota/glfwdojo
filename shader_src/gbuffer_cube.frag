@@ -20,6 +20,7 @@ uniform sampler2D heightMap;
 // shadowMap に書き込まれた正規化距離を実距離スケールに戻すための基準値
 
 uniform float heightScale;
+uniform float metallic;
 
 //function
 vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir);
@@ -38,7 +39,7 @@ void main()
 	vec4 diffuseColor = texture(diffuseMap, texCoords);
 
 	gPosition = FragPos;
-	gNormal = vec4(normal, 0.25); // TODO: 配線確認用の仮値。確認後 0.0 に戻す
+	gNormal = vec4(normal, metallic);
 
 	gAlbedoSpec.rgb = texture(diffuseMap, texCoords).rgb;
 	// 専用のspecularテクスチャが無いので、diffuseの輝度をスペキュラ強度の代用値にする

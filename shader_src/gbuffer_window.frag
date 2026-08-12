@@ -9,6 +9,7 @@ in vec3 Normal;
 in vec2 TexCoords;
 
 uniform sampler2D diffuseMap;
+uniform float metallic;
 
 void main()
 {
@@ -22,7 +23,7 @@ void main()
         normal = -normal;
 
     gPosition = FragPos;
-    gNormal = vec4(normal, 1.0); // TODO: 配線確認用の仮値。確認後 0.0 に戻す
+    gNormal = vec4(normal, metallic);
     gAlbedoSpec.rgb = texColor.rgb;
     gAlbedoSpec.a = dot(texColor.rgb, vec3(0.2126, 0.7152, 0.0722));
 }

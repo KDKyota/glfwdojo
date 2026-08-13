@@ -76,7 +76,10 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao_blur.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_window.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/glass.frag)
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/glass.frag
+    # #include される共通ファイル。exe と同じ場所に無いと展開に失敗する
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/pbr_common.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_common.glsl)
 
 add_custom_command(
   TARGET glfwdojo

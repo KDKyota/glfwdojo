@@ -67,6 +67,13 @@ int main(void) {
             ImGui::SliderFloat("Metallic: floor", &scene->FloorMaterial().metallic, 0.0f, 1.0f);
             ImGui::SliderFloat("Metallic: wall", &scene->WallMaterial().metallic, 0.0f, 1.0f);
             ImGui::SliderFloat("Metallic: window", &scene->WindowMaterial().metallic, 0.0f, 1.0f);
+            ImGui::Separator();
+
+            // 下限を 0 にしない。GGX の分布が発散して真っ白な点が出る
+            ImGui::SliderFloat("Roughness: cube", &scene->CubeMaterial().roughness, 0.05f, 1.0f);
+            ImGui::SliderFloat("Roughness: floor", &scene->FloorMaterial().roughness, 0.05f, 1.0f);
+            ImGui::SliderFloat("Roughness: wall", &scene->WallMaterial().roughness, 0.05f, 1.0f);
+            ImGui::SliderFloat("Roughness: window", &scene->WindowMaterial().roughness, 0.05f, 1.0f);
         }
         ImGui::End();
 

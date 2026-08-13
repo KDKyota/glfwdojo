@@ -4,34 +4,16 @@ layout(location = 1) out vec4 BrightColor;
 
 in vec2 TexCoords;
 
+#include "shadow_common.glsl"
+#include "pbr_common.glsl"
+
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
 // 1.0=遮蔽なし, 0.0=完全遮蔽
 uniform sampler2D ssao;
 
-struct PointLight {
-    vec3 position;
-
-    float constant;
-    float linear;
-    float quadratic;
-
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-
-    // PointLight::calcRadius() が減衰式から逆算して送ってくる
-    float radius;
-};
-
-const int NR_LIGHTS = 4;
-uniform PointLight pointLights[NR_LIGHTS];
 uniform vec3 viewPos;
-uniform samplerCube shadowMap[NR_LIGHTS];
-// ガラスを透過した光の色。ガラスを通らない方向は白
-uniform samplerCube shadowColor[NR_LIGHTS];
-uniform float farPlane;
 
 // ライトごとに持たせると光源から離れるほど AO を掛ける対象が消えるため定数に一本化
 uniform float ambientStrength;
@@ -41,14 +23,10 @@ uniform int debugMode;
 
 uniform float ssaoStrength;
 
-const float PI = 3.14159265359;
-
 // ambient は扱わない。この関数が返すのはこの光源からの直接光だけ
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
     vec3 albedo, float roughness, float metallic, vec3 F0,
     float shadow);
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos,
-    samplerCube shadowMap);
 
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
@@ -162,35 +140,6 @@ void main() {
     }
 }
 
-float DistributionGGX(vec3 N, vec3 H, float roughness) {
-    // 式中の α は roughness そのものではなく roughness の二乗
-    float a = roughness * roughness;
-    float a2 = a * a;
-    float NdotH = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH * NdotH;
-
-    float denom = NdotH2 * (a2 - 1.0) + 1.0;
-    return a2 / (PI * denom * denom);
-}
-
-float GeometrySchlickGGX(float NdotV, float roughness) {
-    float r = roughness + 1.0;
-    float k = (r * r) / 8.0;
-    return NdotV / (NdotV * (1.0 - k) + k);
-}
-
-// 光が届く確率と、反射光が見える確率の積
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    return GeometrySchlickGGX(NdotL, roughness) *
-        GeometrySchlickGGX(NdotV, roughness);
-}
-
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}
-
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
     vec3 albedo, float roughness, float metallic, vec3 F0,
     float shadow) {
@@ -219,35 +168,4 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
 
     // 直接光の遮蔽はシャドウマップが担当する（SSAO ではない）
     return (1.0 - shadow) * (kD * albedo / PI + specular) * radiance * NdotL;
-}
-
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos,
-    samplerCube shadowMap) {
-    // samplerCube は方向でテクセルを解決するので正規化しない
-    vec3 fragToLight = fragPos - lightPos;
-    float currentDepth = length(fragToLight);
-    // 角度に応じて可変にするスロープバイアス（shadow acne 対策）
-    float bias = max(0.15 * (1.0 - dot(normal, lightDir)), 0.05);
-
-    // PCF: 26方向サンプリング
-    float shadow = 0.0;
-    // UV空間ではなく方向ベクトル空間でのオフセット量なので固定値
-    float offset = 0.05;
-
-    vec3 sampleOffsetDirections[26] =
-        vec3[](vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1),
-            vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
-            vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0),
-            vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
-            vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1),
-            vec3(1, 0, 0), vec3(-1, 0, 0), vec3(0, 1, 0), vec3(0, -1, 0),
-            vec3(0, 0, 1), vec3(0, 0, -1));
-    for (int i = 0; i < 26; ++i) {
-        float closestDepth =
-            texture(shadowMap, fragToLight + sampleOffsetDirections[i] * offset).r;
-        closestDepth *= farPlane;
-        if (currentDepth - bias > closestDepth)
-            shadow += 1.0;
-    }
-    return shadow / 26.0;
 }

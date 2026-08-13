@@ -10,6 +10,7 @@ in vec2 TexCoords;
 
 uniform sampler2D diffuseMap;
 uniform float metallic;
+uniform float roughness;
 
 // 1 にすると床が固定色を書く。debugMode 6 でマゼンタだけなら 0/1 に届いていない
 #define GBUFFER_WRITE_TEST 0
@@ -26,7 +27,6 @@ void main()
       gPosition = FragPos;
       gNormal = vec4(normalize(Normal), metallic);
       gAlbedoSpec.rgb = diffuseColor.rgb;
-      // 専用specularテクスチャが無いのでdiffuseの輝度を代用
-      gAlbedoSpec.a = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+      gAlbedoSpec.a = roughness;
 #endif
 }

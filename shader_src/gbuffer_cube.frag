@@ -19,6 +19,7 @@ uniform sampler2D heightMap;
 
 uniform float heightScale;
 uniform float metallic;
+uniform float roughness;
 
 vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir);
 
@@ -38,9 +39,8 @@ void main()
 	gPosition = FragPos;
 	gNormal = vec4(normal, metallic);
 
-	gAlbedoSpec.rgb = texture(diffuseMap, texCoords).rgb;
-	// 専用のspecularテクスチャが無いので、diffuseの輝度をスペキュラ強度の代用値にする
-	gAlbedoSpec.a = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+	gAlbedoSpec.rgb = diffuseColor.rgb;
+	gAlbedoSpec.a = roughness;
 }
 
 

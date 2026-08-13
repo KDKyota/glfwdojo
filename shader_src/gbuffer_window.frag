@@ -10,6 +10,7 @@ in vec2 TexCoords;
 
 uniform sampler2D diffuseMap;
 uniform float metallic;
+uniform float roughness;
 
 void main()
 {
@@ -25,5 +26,5 @@ void main()
     gPosition = FragPos;
     gNormal = vec4(normal, metallic);
     gAlbedoSpec.rgb = texColor.rgb;
-    gAlbedoSpec.a = dot(texColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    gAlbedoSpec.a = roughness;
 }

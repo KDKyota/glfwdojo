@@ -11,6 +11,7 @@ in mat3 TBN;
 uniform sampler2D diffuseMap;
 uniform sampler2D normalMap;
 uniform float metallic;
+uniform float roughness;
 
 void main()
 {
@@ -23,5 +24,5 @@ void main()
       gPosition = FragPos;
       gNormal = vec4(normal, metallic);
       gAlbedoSpec.rgb = diffuseColor.rgb;
-      gAlbedoSpec.a = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+      gAlbedoSpec.a = roughness;
 }

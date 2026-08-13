@@ -8,33 +8,63 @@
 
 namespace gl {
 
+namespace {
+
+// GLSL に #include は無いので、読み込み時に自前で展開する
+std::string expandIncludes(const std::string &path, int depth = 0) {
+  if (depth > 8) {
+    std::cout << "ERROR::SHADER::INCLUDE_TOO_DEEP: " << path << std::endl;
+    return {};
+  }
+  std::ifstream file(path);
+  if (!file) {
+    std::cout << "ERROR::SHADER::FILE_NOT_FOUND: " << path << std::endl;
+    return {};
+  }
+
+  // include されるファイルは include する側と同じフォルダに置く前提
+  const std::size_t slash = path.find_last_of("/\\");
+  const std::string dir =
+      (slash == std::string::npos) ? std::string{} : path.substr(0, slash + 1);
+
+  std::ostringstream out;
+  std::string line;
+  int lineNo = 0;
+  while (std::getline(file, line)) {
+    ++lineNo;
+    const std::size_t head = line.find_first_not_of(" \t");
+    if (head == std::string::npos || line.compare(head, 8, "#include") != 0) {
+      out << line << '\n';
+      continue;
+    }
+
+    const std::size_t open = line.find('"', head + 8);
+    const std::size_t close =
+        (open == std::string::npos) ? std::string::npos : line.find('"', open + 1);
+    if (close == std::string::npos) {
+      std::cout << "ERROR::SHADER::BAD_INCLUDE: " << path << ":" << lineNo
+                << std::endl;
+      continue;
+    }
+
+    out << expandIncludes(dir + line.substr(open + 1, close - open - 1),
+                          depth + 1);
+    // 展開後に行番号を戻さないと、以降のコンパイルエラーの行が全部ずれる
+    out << "#line " << (lineNo + 1) << '\n';
+  }
+  return out.str();
+}
+
+} // namespace
+
 Shader::~Shader() { glDeleteProgram(ID); }
 
 Shader::Shader(const char *vertexPath, const char *geometryPath,
                const char *fragmentPath) {
-  std::string vertexCode, geometryCode, fragmentCode;
-  std::ifstream vShaderFile, gShaderFile, fShaderFile;
-  vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  gShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  try {
-    vShaderFile.open(vertexPath);
-    gShaderFile.open(geometryPath);
-    fShaderFile.open(fragmentPath);
-    std::stringstream vss, gss, fss;
-    vss << vShaderFile.rdbuf();
-    gss << gShaderFile.rdbuf();
-    fss << fShaderFile.rdbuf();
-    vShaderFile.close();
-    gShaderFile.close();
-    fShaderFile.close();
-    vertexCode = vss.str();
-    geometryCode = gss.str();
-    fragmentCode = fss.str();
-  } catch (std::ifstream::failure &e) {
-    std::cout << "ERROR::SHADER::FILE_SUCCESSFULY_READ: " << e.what()
-              << std::endl;
-  }
+  const std::string vertexCode = expandIncludes(vertexPath);
+  const std::string geometryCode = expandIncludes(geometryPath);
+  const std::string fragmentCode = expandIncludes(fragmentPath);
+
   const char *vCode = vertexCode.c_str();
   const char *gCode = geometryCode.c_str();
   const char *fCode = fragmentCode.c_str();
@@ -67,32 +97,9 @@ Shader::Shader(const char *vertexPath, const char *geometryPath,
 }
 
 Shader::Shader(const char *vertexPath, const char *fragmentPath) {
-  // 1. retrieve the vertex/fragment source code from filePath
-  std::string vertexCode;
-  std::string fragmentCode;
-  std::ifstream vShaderFile;
-  std::ifstream fShaderFile;
-  // ensure ifstream objects can throw exceptions;
-  vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  try {
-    // open files
-    vShaderFile.open(vertexPath);
-    fShaderFile.open(fragmentPath);
-    std::stringstream vShaderStream, fShaderStream;
-    // read file's buffer contents into streams
-    vShaderStream << vShaderFile.rdbuf();
-    fShaderStream << fShaderFile.rdbuf();
-    // close file handlers
-    vShaderFile.close();
-    fShaderFile.close();
-    // convert stream into string
-    vertexCode = vShaderStream.str();
-    fragmentCode = fShaderStream.str();
-  } catch (std::ifstream::failure &e) {
-    std::cout << "ERROR::SHADER::FILE_SUCCESSFULY_READ: " << e.what()
-              << std::endl;
-  }
+  const std::string vertexCode = expandIncludes(vertexPath);
+  const std::string fragmentCode = expandIncludes(fragmentPath);
+
   const char *vShaderCode = vertexCode.c_str();
   const char *fShaderCode = fragmentCode.c_str();
   // compile shaders

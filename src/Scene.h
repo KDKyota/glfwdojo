@@ -48,6 +48,9 @@ class Scene {
     gl::PbrMaterial &WindowMaterial() {
         return windowMaterial_;
     }
+    gl::PbrMaterial &GlassMaterial() {
+        return glassMaterial_;
+    }
 
   private:
     void initMesh();
@@ -117,6 +120,8 @@ class Scene {
     gl::PbrMaterial floorMaterial_;
     gl::PbrMaterial wallMaterial_;
     gl::PbrMaterial windowMaterial_;
+    // ガラスは誘電体なので metallic は 0 のまま（UI にも出さない）
+    gl::PbrMaterial glassMaterial_;
 
     /* Shaders */
     std::unique_ptr<gl::Shader> shader_;

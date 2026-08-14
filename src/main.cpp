@@ -74,6 +74,7 @@ int main(void) {
             ImGui::SliderFloat("Roughness: floor", &scene->FloorMaterial().roughness, 0.05f, 1.0f);
             ImGui::SliderFloat("Roughness: wall", &scene->WallMaterial().roughness, 0.05f, 1.0f);
             ImGui::SliderFloat("Roughness: window", &scene->WindowMaterial().roughness, 0.05f, 1.0f);
+            ImGui::SliderFloat("Roughness: glass", &scene->GlassMaterial().roughness, 0.05f, 1.0f);
         }
         ImGui::End();
 

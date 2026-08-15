@@ -10,7 +10,6 @@
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight) {
-    shader_ = std::make_unique<gl::Shader>("shader.vert", "shader.frag");
     lightcubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
     screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "hdr.frag");
     skyboxShader_ = std::make_unique<gl::Shader>("skybox.vert", "skybox.frag");
@@ -21,7 +20,6 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     pointColorShader_ =
         std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_color.frag");
     debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");
-    // wallShader_ = std::make_unique<gl::Shader>("wall.vert", "wall.frag");
     blurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "blur.frag");
 
     /* G-Buffer */

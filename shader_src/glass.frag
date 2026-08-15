@@ -8,8 +8,7 @@
 out vec4 FragColor;
 layout(location = 1) out vec4 BrightColor;
 
-#include "shadow_common.glsl"
-#include "pbr_common.glsl"
+#include "lighting_common.glsl"
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -26,10 +25,6 @@ uniform bool reflectionPass; // 透過と反射を切り替えられるように
 
 uniform float metallic;
 uniform float roughness;
-
-// ambient は扱わない。この関数が返すのはこの光源からの直接光だけ
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
-    vec3 albedo, float roughness, float metallic, vec3 F0, float shadow);
 
 void main()
 {
@@ -50,8 +45,8 @@ void main()
         discard;
 
     const vec3 F0 = vec3(0.04);
-    float cosTheta = max(dot(normal, viewDir), 0.0);
-    vec3 fresnel = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+    // 面全体として何割を反射に回すか。透過パスの (1.0 - fresnel) と対になっている
+    vec3 fresnel = fresnelSchlick(max(dot(normal, viewDir), 0.0), F0);
     // 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
     // vec3 result = ambientStrength * texColor.rgb * ao;
 
@@ -90,35 +85,3 @@ void main()
         FragColor = vec4(transmittance, 1.0);
     }
 }
-
-// deferred_lighting.frag と同じ式。違うのは albedo に 0 を渡して拡散を殺す点だけ
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
-    vec3 albedo, float roughness, float metallic, vec3 F0, float shadow)
-{
-    vec3 lightDir = normalize(light.position - fragPos);
-    vec3 halfwayDir = normalize(viewDir + lightDir);
-
-    // 逆二乗減衰。変更したら PointLight::calcRadius() も必ず合わせる
-    float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (distance * distance);
-    vec3 radiance = light.diffuse * attenuation;
-
-    float NDF = DistributionGGX(normal, halfwayDir, roughness);
-    float G = GeometrySmith(normal, viewDir, lightDir, roughness);
-    vec3 F = fresnelSchlick(max(dot(halfwayDir, viewDir), 0.0), F0);
-
-    // 真横から見たときのゼロ除算を避ける
-    float denominator = 4.0 * max(dot(normal, viewDir), 0.0) *
-            max(dot(normal, lightDir), 0.0) +
-            0.0001;
-    vec3 specular = (NDF * G * F) / denominator;
-
-    // 反射に回らなかったぶんが拡散へ。金属は拡散反射を持たない
-    vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
-
-    float NdotL = max(dot(normal, lightDir), 0.0);
-
-    // 直接光の遮蔽はシャドウマップが担当する
-    return (1.0 - shadow) * (kD * albedo / PI + specular) * radiance * NdotL;
-}
-

@@ -1,5 +1,7 @@
 // #include される側なので #version は書かない
 // ライト関連の uniform はここが唯一の宣言場所。include する側では宣言しないこと
+#ifndef SHADOW_COMMON_GLSL
+#define SHADOW_COMMON_GLSL
 
 const int NR_LIGHTS = 4;
 
@@ -54,3 +56,5 @@ float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos,
     }
     return shadow / 26.0;
 }
+
+#endif

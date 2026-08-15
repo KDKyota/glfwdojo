@@ -4,8 +4,7 @@ layout(location = 1) out vec4 BrightColor;
 
 in vec2 TexCoords;
 
-#include "shadow_common.glsl"
-#include "pbr_common.glsl"
+#include "lighting_common.glsl"
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
@@ -22,11 +21,6 @@ uniform float ambientStrength;
 uniform int debugMode;
 
 uniform float ssaoStrength;
-
-// ambient は扱わない。この関数が返すのはこの光源からの直接光だけ
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
-    vec3 albedo, float roughness, float metallic, vec3 F0,
-    float shadow);
 
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
@@ -140,32 +134,3 @@ void main() {
     }
 }
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
-    vec3 albedo, float roughness, float metallic, vec3 F0,
-    float shadow) {
-    vec3 lightDir = normalize(light.position - fragPos);
-    vec3 halfwayDir = normalize(viewDir + lightDir);
-
-    // 逆二乗減衰。変更したら PointLight::calcRadius() も必ず合わせる
-    float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (distance * distance);
-    vec3 radiance = light.diffuse * attenuation;
-
-    float NDF = DistributionGGX(normal, halfwayDir, roughness);
-    float G = GeometrySmith(normal, viewDir, lightDir, roughness);
-    vec3 F = fresnelSchlick(max(dot(halfwayDir, viewDir), 0.0), F0);
-
-    // 真横から見たときのゼロ除算を避ける
-    float denominator = 4.0 * max(dot(normal, viewDir), 0.0) *
-            max(dot(normal, lightDir), 0.0) +
-            0.0001;
-    vec3 specular = (NDF * G * F) / denominator;
-
-    // 反射に回らなかったぶんが拡散へ。金属は拡散反射を持たない
-    vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
-
-    float NdotL = max(dot(normal, lightDir), 0.0);
-
-    // 直接光の遮蔽はシャドウマップが担当する（SSAO ではない）
-    return (1.0 - shadow) * (kD * albedo / PI + specular) * radiance * NdotL;
-}

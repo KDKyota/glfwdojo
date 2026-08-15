@@ -124,7 +124,6 @@ class Scene {
     gl::PbrMaterial glassMaterial_;
 
     /* Shaders */
-    std::unique_ptr<gl::Shader> shader_;
     std::unique_ptr<gl::Shader> cubeShader_;
     std::unique_ptr<gl::Shader> transparentwindowShader_;
     std::unique_ptr<gl::Shader> lightcubeShader_;
@@ -215,14 +214,17 @@ class Scene {
         {// position, ambient, diffuse, specular, constant, linear, quadratic
          {glm::vec3(0.0f, 2.0f, 2.2f), glm::vec3(0.0f), glm::vec3(20.0f, 20.0f, 20.0f),
           glm::vec3(10.0f, 10.0f, 10.0f), 1.0f, 0.14f, 0.07f},
-         {glm::vec3(-5.0f, 0.8f, -4.0f), glm::vec3(0.0f), glm::vec3(11.0f, 2.0f, 1.25f), glm::vec3(5.5f, 1.0f, 0.6f),
-          1.0f, 0.14f, 0.07f},
+         // TODO: 裏面ライティングの検証中のみ移動。元の位置は (-5.0f, 0.8f, -4.0f)
+         {glm::vec3(-14.5f, 1.5f, -11.0f), glm::vec3(0.0f), glm::vec3(11.0f, 2.0f, 1.25f),
+          glm::vec3(5.5f, 1.0f, 0.6f), 1.0f, 0.14f, 0.07f},
          {glm::vec3(4.2f, 3.0f, 1.8f), glm::vec3(0.0f), glm::vec3(2.0f, 3.0f, 11.0f), glm::vec3(1.0f, 1.5f, 5.5f),
           1.0f, 0.14f, 0.07f},
          {glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f), glm::vec3(1.75f, 9.0f, 2.5f), glm::vec3(0.9f, 4.5f, 1.25f),
           1.0f, 0.14f, 0.07f}}};
 
+    // 末尾は裏面ライティングの検証用。light0（白）から十分離し、-Z 側に置いた
+    // light1（赤）だけが当たるようにしてある
     const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
-                                                 glm::vec3(0.0f, 0.0f, 0.7f), glm::vec3(-0.3f, 0.0f, -2.3f),
-                                                 glm::vec3(0.5f, 0.0f, -0.6f)};
+                                                 glm::vec3(0.0f, 0.0f, 0.7f),   glm::vec3(-0.3f, 0.0f, -2.3f),
+                                                 glm::vec3(0.5f, 0.0f, -0.6f),  glm::vec3(-15.0f, 0.0f, -8.0f)};
 };

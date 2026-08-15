@@ -47,22 +47,17 @@ target_link_libraries(glfwdojo PRIVATE OpenGL::GL glfw glm::glm glad::glad
 
 set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/stencil_single_color.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/fragment_quad.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/fragment_quad.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/wall.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/wall.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.geom
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.frag
@@ -79,7 +74,8 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/glass.frag
     # #include される共通ファイル。exe と同じ場所に無いと展開に失敗する
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/pbr_common.glsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_common.glsl)
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_common.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting_common.glsl)
 
 add_custom_command(
   TARGET glfwdojo

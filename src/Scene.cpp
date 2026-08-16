@@ -5,8 +5,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include <map>
 #include <random>
+#include <stb_image.h>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight) {
@@ -33,6 +33,13 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     ssaoShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "ssao.frag");
     ssaoBlurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "ssao_blur.frag");
 
+    /* IBL */
+    equirectToCubemapShader_ =
+        std::make_unique<gl::Shader>("cubemap_capture.vert", "equirectangular_to_cubemap.frag");
+    irradianceShader_ = std::make_unique<gl::Shader>("cubemap_capture.vert", "irradiance_convolution.frag");
+    prefilterShader_ = std::make_unique<gl::Shader>("cubemap_capture.vert", "prefilter.frag");
+    brdfLUTShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "brdf_lut.frag");
+
     // cubePositions_ = std::move(cubePositions);
 
     initMesh();
@@ -41,6 +48,181 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     initUBO();
     initGBuffer();
     initSSAO();
+    initIBL(); // skyboxVAO_ が必要なので初期化の最後
+}
+
+void Scene::initIBL() {
+    /* --- 正距円筒図法の HDR を読み込む --- */
+    stbi_set_flip_vertically_on_load(true);
+    int width, height, nrComponents;
+    float *data = stbi_loadf("resources/textures/skybox/studio_small_03_4k.hdr", &width, &height, &nrComponents, 0);
+    if (!data) {
+        std::cout << "ERROR::IBL:: Failed to load HDR environment map" << std::endl;
+        return;
+    }
+    hdrTexture_.create();
+    glBindTexture(GL_TEXTURE_2D, hdrTexture_);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    stbi_image_free(data);
+
+    /* --- 6面ぶんの共通設定 --- */
+    const glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+    const glm::mat4 captureViews[6] = {
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))};
+
+    captureFBO_.create();
+    captureRBO_.create();
+    /* 事前計算中だけ変える GL 状態 末尾のベース状態への復帰と対にすること */
+    // 立方体の内側から見るので、通常のカリングでは面が消える
+    glDisable(GL_CULL_FACE);
+    // BRDF LUT は out vec2 でアルファが未定義。切らないと GL_SRC_ALPHA が 0 になり書き込みが消える
+    glDisable(GL_BLEND);
+    glBindVertexArray(skyboxVAO_);
+
+    /* --- equirectangular -> cubemap --- */
+    // こちらは描き込み先なので、3成分フォーマットを選んではいけない
+    envCubemap_.create();
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap_);
+    for (unsigned int i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA16F, ENV_CUBEMAP_SIZE, ENV_CUBEMAP_SIZE, 0, GL_RGBA,
+                     GL_FLOAT, nullptr);
+    // prefilter がサンプルの粗密に応じてミップを引くので、ミップ付きにしておく
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO_);
+    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO_);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, ENV_CUBEMAP_SIZE, ENV_CUBEMAP_SIZE);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO_);
+
+    equirectToCubemapShader_->use();
+    equirectToCubemapShader_->setInt("equirectangularMap", 0);
+    equirectToCubemapShader_->setMat4("projection", captureProjection);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, hdrTexture_);
+
+    glViewport(0, 0, ENV_CUBEMAP_SIZE, ENV_CUBEMAP_SIZE);
+    for (unsigned int i = 0; i < 6; ++i) {
+        equirectToCubemapShader_->setMat4("view", captureViews[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap_,
+                               0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
+    // ミップの中身を埋める。prefilter がこれを引く
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap_);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    /* --- cubemap -> irradiance --- */
+    irradianceMap_.create();
+    glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap_);
+    for (unsigned int i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA16F, IRRADIANCE_SIZE, IRRADIANCE_SIZE, 0, GL_RGBA,
+                     GL_FLOAT, nullptr);
+    // 面の継ぎ目で色が飛ばないよう線形補間とエッジクランプにする
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, IRRADIANCE_SIZE, IRRADIANCE_SIZE);
+
+    irradianceShader_->use();
+    irradianceShader_->setInt("environmentMap", 0);
+    irradianceShader_->setMat4("projection", captureProjection);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap_);
+
+    glViewport(0, 0, IRRADIANCE_SIZE, IRRADIANCE_SIZE);
+    for (unsigned int i = 0; i < 6; ++i) {
+        irradianceShader_->setMat4("view", captureViews[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                               irradianceMap_, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
+    /* --- cubemap -> prefilter（roughness ごとにミップへ焼く） --- */
+    prefilterMap_.create();
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap_);
+    for (unsigned int i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA16F, PREFILTER_SIZE, PREFILTER_SIZE, 0, GL_RGBA,
+                     GL_FLOAT, nullptr);
+    // roughness の連続変化をミップ間の補間で表現するので TRILINEAR が必須
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP); // 各レベルの領域だけ確保させる
+
+    prefilterShader_->use();
+    prefilterShader_->setInt("environmentMap", 0);
+    prefilterShader_->setMat4("projection", captureProjection);
+    prefilterShader_->setFloat("envResolution", static_cast<float>(ENV_CUBEMAP_SIZE));
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap_);
+
+    for (unsigned int mip = 0; mip < PREFILTER_MIP_LEVELS; ++mip) {
+        const unsigned int mipSize = PREFILTER_SIZE >> mip;
+        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO_);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipSize, mipSize);
+        glViewport(0, 0, mipSize, mipSize);
+
+        const float roughness = static_cast<float>(mip) / static_cast<float>(PREFILTER_MIP_LEVELS - 1);
+        prefilterShader_->setFloat("roughness", roughness);
+        for (unsigned int i = 0; i < 6; ++i) {
+            prefilterShader_->setMat4("view", captureViews[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                                   prefilterMap_, mip);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+    }
+    glBindVertexArray(0);
+
+    /* --- BRDF LUT（環境にも材質の色にも依存しない普遍的な表） --- */
+    brdfLUT_.create();
+    glBindTexture(GL_TEXTURE_2D, brdfLUT_);
+    // 返すのはスケールとバイアスの2値なので2成分で足りる
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, BRDF_LUT_SIZE, BRDF_LUT_SIZE, 0, GL_RG, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO_);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, BRDF_LUT_SIZE, BRDF_LUT_SIZE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUT_, 0);
+    glViewport(0, 0, BRDF_LUT_SIZE, BRDF_LUT_SIZE);
+    brdfLUTShader_->use();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBindVertexArray(quadVAO_);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::IBL:: Framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, scrWidth_, scrHeight_);
+
+    /* 冒頭で変えた GL 状態を戻す */
+    glEnable(GL_BLEND);
+    // カリングのベース状態は無効。ここで有効にすると床・壁・空が消える
 }
 
 void Scene::initMesh() {
@@ -170,11 +352,6 @@ void Scene::initTextures() {
 
     floorTexture_ = cache_.get("resources/textures/wood.png", true, ColorSpace::SRGB);
     transparentTexture_ = cache_.get("resources/textures/window.png", true, ColorSpace::SRGB);
-    std::vector<std::string> faces{"resources/textures/skybox/right.jpg", "resources/textures/skybox/left.jpg",
-                                   "resources/textures/skybox/top.jpg", "resources/textures/skybox/bottom.jpg",
-                                   "resources/textures/skybox/front.jpg", "resources/textures/skybox/back.jpg"};
-    cubemapTexture_.reset(cache_.loadCubemap(faces, false, ColorSpace::SRGB));
-
     brickwallTexture_ = cache_.get("resources/textures/brickwall.jpg", true, ColorSpace::SRGB);
     brickwallNormalTexture_ = cache_.get("resources/textures/brickwall_normal.jpg", true, ColorSpace::Linear);
 
@@ -233,6 +410,9 @@ void Scene::initTextures() {
     deferredLightingShader_->setInt("ssao", 7);
     for (unsigned int i = 0; i < 4; ++i)
         deferredLightingShader_->setInt("shadowColor[" + std::to_string(i) + "]", 8 + i);
+    deferredLightingShader_->setInt("irradianceMap", 12);
+    deferredLightingShader_->setInt("prefilterMap", 13);
+    deferredLightingShader_->setInt("brdfLUT", 14);
     // ambientStrength は Render() 側、SSAO 系の uniform は initSSAO() 側で送る
 }
 
@@ -664,6 +844,12 @@ void Scene::renderDeferredLightingPass() {
         glActiveTexture(GL_TEXTURE8 + j);
         glBindTexture(GL_TEXTURE_CUBE_MAP, shadowColorCubemap_[j]);
     }
+    glActiveTexture(GL_TEXTURE12);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap_);
+    glActiveTexture(GL_TEXTURE13);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap_);
+    glActiveTexture(GL_TEXTURE14);
+    glBindTexture(GL_TEXTURE_2D, brdfLUT_);
     deferredLightingShader_->use();
     deferredLightingShader_->setVec3("viewPos", camera_->GetViewPosition());
     // UI から変わる値なので毎フレーム送る
@@ -773,7 +959,7 @@ void Scene::renderSkybox() {
     skyboxShader_->use();
     glBindVertexArray(skyboxVAO_);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture_);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap_);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
     glDepthFunc(GL_LESS);

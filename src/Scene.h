@@ -58,6 +58,7 @@ class Scene {
     void initFramebuffer();
     void initGBuffer();
     void initSSAO();
+    void initIBL();
     unsigned int loadTexture(const char *path, bool hasAlpha);
     void initUBO();
 
@@ -156,11 +157,30 @@ class Scene {
     std::shared_ptr<Texture> transparentTexture_;
     std::shared_ptr<Texture> brickwallTexture_;
     std::shared_ptr<Texture> brickwallNormalTexture_;
-    gl::TextureHandle cubemapTexture_;
     // 各テクセルは光源からの正規化距離
     std::array<gl::TextureHandle, 4> depthCubemap_;
     // 各テクセルはガラスを透過した光の色。ガラスを通らない方向は白
     std::array<gl::TextureHandle, 4> shadowColorCubemap_;
+
+    /* IBL */
+    static constexpr unsigned int ENV_CUBEMAP_SIZE = 512;
+    // 畳み込み後は極めて低周波なので、解像度を上げても情報が増えない
+    static constexpr unsigned int IRRADIANCE_SIZE = 32;
+    gl::TextureHandle hdrTexture_;  // 正距円筒図法のまま読み込んだ元画像
+    gl::TextureHandle envCubemap_;  // 上を6面へ焼き直したもの。背景と IBL の共通ソース
+    gl::TextureHandle irradianceMap_;
+    // ミップの各レベルが roughness 0.0 / 0.25 / 0.5 / 0.75 / 1.0 に対応する
+    static constexpr unsigned int PREFILTER_SIZE = 128;
+    static constexpr unsigned int PREFILTER_MIP_LEVELS = 5;
+    static constexpr unsigned int BRDF_LUT_SIZE = 512;
+    gl::TextureHandle prefilterMap_;
+    gl::TextureHandle brdfLUT_;
+    gl::FramebufferHandle captureFBO_;
+    gl::RenderbufferHandle captureRBO_;
+    std::unique_ptr<gl::Shader> equirectToCubemapShader_;
+    std::unique_ptr<gl::Shader> irradianceShader_;
+    std::unique_ptr<gl::Shader> prefilterShader_;
+    std::unique_ptr<gl::Shader> brdfLUTShader_;
 
     /* ==== UI から実行時に変更する設定（毎フレーム送る） ==== */
     // 対応表は main.cpp の kDebugModes

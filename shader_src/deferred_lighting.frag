@@ -11,6 +11,13 @@ uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
 // 1.0=遮蔽なし, 0.0=完全遮蔽
 uniform sampler2D ssao;
+// スカイボックスを半球で畳み込んだ拡散反射用の環境光
+uniform samplerCube irradianceMap;
+// ミップの各レベルが roughness に対応する鏡面反射用の環境光
+uniform samplerCube prefilterMap;
+// (dot(N,V), roughness) -> F0 に掛けるスケールとバイアス
+uniform sampler2D brdfLUT;
+const float MAX_REFLECTION_LOD = 4.0;
 
 uniform vec3 viewPos;
 
@@ -129,8 +136,17 @@ void main() {
         FragColor = vec4(vec3(Metallic), 1.0);
     } else if (debugMode == 10) {
         FragColor = vec4(vec3(Roughness), 1.0);
+    } else if (debugMode == 11) {
+        // 上向きの面が空色、下向きが地面色になっていれば畳み込みは成功
+        FragColor = vec4(texture(irradianceMap, Normal).rgb, 1.0);
+    } else if (debugMode == 12) {
+        // roughness を上げるほど映り込みがぼけていけば正常
+        vec3 R = reflect(-normalize(viewPos - FragPos), Normal);
+        FragColor = vec4(textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb, 1.0);
+    } else if (debugMode == 13) {
+        // 画面全体に LUT を貼る。左下が暗く右上が明るい赤緑のグラデーションが正解
+        FragColor = vec4(texture(brdfLUT, TexCoords).rg, 0.0, 1.0);
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）
     }
 }
-

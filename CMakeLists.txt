@@ -75,7 +75,12 @@ set(SHADER_SOURCES
     # #include される共通ファイル。exe と同じ場所に無いと展開に失敗する
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/pbr_common.glsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_common.glsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting_common.glsl)
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting_common.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cubemap_capture.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/irradiance_convolution.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/equirectangular_to_cubemap.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/prefilter.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/brdf_lut.frag)
 
 add_custom_command(
   TARGET glfwdojo

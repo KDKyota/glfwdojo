@@ -485,7 +485,7 @@ void Scene::initFramebuffer() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     /* ぼかし処理を書き込むFBO */
-    // 縦方向と横方向にガウシアンブラーをかけるのでそのために二回のループ
+    // 縦方向と横方向にガウシアンブラーをかけるので二回のループ
     for (unsigned int i = 0; i < 2; i++) {
         pingpongFBO_[i].create();
         pingpongColorbuffers_[i].create();
@@ -515,7 +515,7 @@ void Scene::initGBuffer() {
     gBuffer_.create();
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
 
-    // GL_RGB16F は禁止。生成も完全性チェックも通るのに書き込みだけ壊れる環境がある
+    // GL_RGB16F は禁止 こうしないと GPU によっては書き込めない
     gPosition_.create();
     glBindTexture(GL_TEXTURE_2D, gPosition_);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);

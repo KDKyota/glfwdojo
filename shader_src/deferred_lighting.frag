@@ -46,8 +46,21 @@ void main() {
         // 非金属は一律 0.04、金属は鏡面反射がアルベドの色を持つ
         vec3 F0 = mix(vec3(0.04), Albedo, Metallic);
 
-        // 環境光はループの外で1回だけ。距離減衰を掛けないので遠くでも AO が効く
-        vec3 result = ambientStrength * Albedo * AmbientOcclusion;
+        // 環境光は IBL から。ループの外で1回だけ求める
+        float NdotV = max(dot(Normal, viewDir), 0.0);
+        vec3 kS = fresnelSchlickRoughness(NdotV, F0, Roughness);
+        vec3 kD = (1.0 - kS) * (1.0 - Metallic);
+
+        vec3 diffuseIBL = texture(irradianceMap, Normal).rgb * Albedo;
+
+        // 反射方向の環境光を roughness に応じたミップから引き、LUT で反射率を補正する
+        vec3 R = reflect(-viewDir, Normal);
+        vec3 prefiltered = textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
+        vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
+        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y);
+
+        // kD が掛かるのは拡散だけ。鏡面は LUT 経由で kS を内包している
+        vec3 result = (kD * diffuseIBL + specularIBL) * AmbientOcclusion * ambientStrength;
 
         for (int i = 0; i < NR_LIGHTS; ++i) {
             // 26回サンプリングする ShadowCalculation() の手前で弾く

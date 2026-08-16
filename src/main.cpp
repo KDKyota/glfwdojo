@@ -59,7 +59,8 @@ int main(void) {
             ImGui::Separator();
 
             ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
-            ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 1.0f);
+            // IBL 化で基準が「空の平均輝度」に変わり、1.0 では足りなくなった
+            ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 5.0f);
             ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);
             ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
             ImGui::Separator();

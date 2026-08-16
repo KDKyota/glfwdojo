@@ -8,7 +8,7 @@ in vec2 TexCoords;
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
-uniform sampler2D gAlbedoSpec;
+uniform sampler2D gAlbedoRoughness;
 // 1.0=遮蔽なし, 0.0=完全遮蔽
 uniform sampler2D ssao;
 // スカイボックスを半球で畳み込んだ拡散反射用の環境光
@@ -32,8 +32,8 @@ uniform float ssaoStrength;
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb;
-    vec3 Albedo = texture(gAlbedoSpec, TexCoords).rgb;
-    float Roughness = texture(gAlbedoSpec, TexCoords).a;
+    vec3 Albedo = texture(gAlbedoRoughness, TexCoords).rgb;
+    float Roughness = texture(gAlbedoRoughness, TexCoords).a;
     float Metallic = texture(gNormal, TexCoords).a;
 
     if (debugMode == 0) {
@@ -117,7 +117,7 @@ void main() {
 
         vec3 qPos = texture(gPosition, localUV).rgb;
         vec3 qNormal = texture(gNormal, localUV).rgb;
-        vec4 qAlbedo = texture(gAlbedoSpec, localUV);
+        vec4 qAlbedo = texture(gAlbedoRoughness, localUV);
 
         vec3 debugColor;
         if (quad.y > 0.5 && quad.x < 0.5)

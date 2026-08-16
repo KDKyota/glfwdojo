@@ -29,7 +29,7 @@
 
 | 症状 | 原因 |
 | --- | --- |
-| `gPosition` と `gNormal` だけクリア値のまま。`gAlbedoSpec` は正常 | [`GL_BLEND` が有効なまま Geometry パスを実行している](#g-buffer-への書き込みがブレンドで消える最重要) |
+| `gPosition` と `gNormal` だけクリア値のまま。`gAlbedoRoughness` は正常 | [`GL_BLEND` が有効なまま Geometry パスを実行している](#g-buffer-への書き込みがブレンドで消える最重要) |
 | G-Buffer の Position が画面一様 | [`model` uniform の設定漏れでゼロ行列になっている](#未設定の-uniform-は-0-になる単位行列ではない) |
 | 出力にピクセルごとの変化が全く無い | [入力のどれかが定数になっている](#原則3-一様な色は入力が定数であることを意味する) |
 | デバッグ表示が正常な値でも真っ白で判定できない | [トーンマッピングを切っていない](#原則2-デバッグ表示のときはトーンマッピングを必ず切る) |
@@ -134,7 +134,7 @@ updateMatricesUBO()           UBO に view / projection を書き込む
 renderGeometryPass()          [Pass 2] Geometry パス
    glDisable(GL_BLEND)  ← 必須。理由は「よくある落とし穴」参照
    gBuffer_ にバインド → gbuffer_*.frag で cube / floor / wall / 窓枠 を描画
-   → gPosition_ / gNormal_ / gAlbedoSpec_ の3枚に「幾何情報」だけを書き込む
+   → gPosition_ / gNormal_ / gAlbedoRoughness_ の3枚に「幾何情報」だけを書き込む
       （この時点ではライティングもシャドウ判定も一切しない）
  ↓
 renderSSAOPass()              G-Buffer から遮蔽率を計算し、4x4 ブラーまでかける
@@ -672,14 +672,14 @@ Deferred Shading は処理を2段階に分けます。
 | アタッチメント    | 変数           | 内部フォーマット | 中身                                 |
 | ----------------- | -------------- | ---------------- | ------------------------------------ |
 | COLOR_ATTACHMENT0 | `gPosition_`   | `GL_RGBA16F`     | ワールド座標                         |
-| COLOR_ATTACHMENT1 | `gNormal_`     | `GL_RGBA16F`     | ワールド法線（ノーマルマップ適用後） |
-| COLOR_ATTACHMENT2 | `gAlbedoSpec_` | `GL_RGBA8`       | rgb=アルベド, a=スペキュラ強度       |
+| COLOR_ATTACHMENT1 | `gNormal_`     | `GL_RGBA16F`     | rgb=ワールド法線（ノーマルマップ適用後）, a=metallic |
+| COLOR_ATTACHMENT2 | `gAlbedoRoughness_` | `GL_RGBA8`  | rgb=アルベド, a=roughness            |
 
 **位置と法線に浮動小数点フォーマット（16F）が必須な理由**は、どちらも `[0,1]` に収まらない値だからです。
 座標は 20 のような大きな値を取り、法線は `-1` のような負の値を取ります。
 `GL_RGBA8` は `[0,1]` に丸められる固定小数点なので、ここに入れると情報が壊れます。
 
-一方アルベドとスペキュラ強度はどちらも `[0,1]` なので `GL_RGBA8` で十分です。
+一方アルベドと roughness はどちらも `[0,1]` なので `GL_RGBA8` で十分です。
 
 > **`GL_RGB16F` ではなく `GL_RGBA16F` を使うこと。**
 > OpenGL の必須フォーマット表では、RGB16F は「テクスチャとしては必須／レンダーターゲットとしては非必須」に
@@ -1214,7 +1214,7 @@ while ((err = glGetError()) != GL_NO_ERROR)
 
 ### G-Buffer への書き込みがブレンドで消える（最重要）
 
-**症状:** G-Buffer の `gPosition` と `gNormal` だけが常にクリア値のまま。`gAlbedoSpec` は正常。
+**症状:** G-Buffer の `gPosition` と `gNormal` だけが常にクリア値のまま。`gAlbedoRoughness` は正常。
 エラーもFBOの不完全も一切出ない。結果としてライティングもシャドウも全く効かない。
 
 **原因:** `GL_BLEND` が有効なまま Geometry パスを実行していること。
@@ -1232,12 +1232,12 @@ glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 ```glsl
 layout (location = 0) out vec3 gPosition;   // vec3 → アルファ成分が「未定義」
 layout (location = 1) out vec3 gNormal;     // vec3 → 同上
-layout (location = 2) out vec4 gAlbedoSpec; // vec4 → アルファを明示的に書いている
+layout (location = 2) out vec4 gAlbedoRoughness; // vec4 → アルファを明示的に書いている
 ```
 
 **`vec3` で宣言した出力のアルファ成分は未定義**（実際には 0）です。したがって前2枚は
 `src.rgb * 0 + dst.rgb * 1` となり、**書き込みが毎フレーム完全に消えます。**
-`gAlbedoSpec` だけ生き残るのでアルベドは正常に見え、原因が非常に見つけにくくなります。
+`gAlbedoRoughness` だけ生き残るのでアルベドは正常に見え、原因が非常に見つけにくくなります。
 
 **対処:** Geometry パスの冒頭で `glDisable(GL_BLEND)`、透過窓の描画前後だけ有効化する。
 

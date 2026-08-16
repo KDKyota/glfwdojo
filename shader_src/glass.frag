@@ -15,12 +15,15 @@ in vec3 Normal;
 in vec2 TexCoords;
 
 uniform sampler2D texture1;
-uniform sampler2D ssao;
+
+// ミップの各レベルが roughness に対応する鏡面反射用の環境光
+uniform samplerCube prefilterMap;
+// (dot(N,V), roughness) -> F0 に掛けるスケールとバイアス
+uniform sampler2D brdfLUT;
+const float MAX_REFLECTION_LOD = 4.0;
 
 uniform vec3 viewPos;
 
-// deferred_lighting.frag と同じ値を受け取り、不透明面と透過窓で扱いを揃える
-uniform float ambientStrength;
 uniform bool reflectionPass; // 透過と反射を切り替えられるようにする
 
 uniform float metallic;
@@ -28,14 +31,10 @@ uniform float roughness;
 
 void main()
 {
-    // Diffuse
+    // 板ポリなので裏面が実際に見える。反転しないと裏から見たとき直接光が 0 になる
     vec3 normal = normalize(Normal);
-
     if (!gl_FrontFacing)
         normal = -normal;
-
-    vec2 screenUV = gl_FragCoord.xy / vec2(textureSize(ssao, 0));
-    float ao = texture(ssao, screenUV).r;
 
     vec3 viewDir = normalize(viewPos - FragPos);
 
@@ -45,10 +44,9 @@ void main()
         discard;
 
     const vec3 F0 = vec3(0.04);
+    float NdotV = max(dot(normal, viewDir), 0.0);
     // 面全体として何割を反射に回すか。透過パスの (1.0 - fresnel) と対になっている
-    vec3 fresnel = fresnelSchlick(max(dot(normal, viewDir), 0.0), F0);
-    // 環境光はループの外で1回だけ。距離減衰を掛けないので光源から遠くても効く
-    // vec3 result = ambientStrength * texColor.rgb * ao;
+    vec3 fresnel = fresnelSchlick(NdotV, F0);
 
     if (reflectionPass) // 反射(足し算)
     {
@@ -64,8 +62,15 @@ void main()
                     vec3(0.0), roughness, metallic, F0, shadow);
         }
 
+        // 環境の映り込み。反射に回したエネルギーの行き先はここ
+        vec3 kS = fresnelSchlickRoughness(NdotV, F0, roughness);
+        vec3 R = reflect(-viewDir, normal);
+        vec3 prefiltered = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
+        vec2 brdf = texture(brdfLUT, vec2(NdotV, roughness)).rg;
+        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y);
+
         // BRDF 内の fresnelSchlick が既にフレネルを含むので、ここでは掛けない
-        vec3 result = reflected;
+        vec3 result = reflected + specularIBL;
 
         float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
         if (brightness > 1.0)

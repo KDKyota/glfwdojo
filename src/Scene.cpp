@@ -374,10 +374,11 @@ void Scene::initTextures() {
     transparentwindowShader_->setInt("texture1", 0);
     for (unsigned int i = 0; i < 4; ++i)
         transparentwindowShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
-    transparentwindowShader_->setInt("ssao", 7);
-    // 0=texture1, 3〜6=shadowMap, 7=ssao が埋まっているので 8〜11
+    // deferredLightingShader_ と割り当てを揃える
     for (unsigned int i = 0; i < 4; ++i)
         transparentwindowShader_->setInt("shadowColor[" + std::to_string(i) + "]", 8 + i);
+    transparentwindowShader_->setInt("prefilterMap", 13);
+    transparentwindowShader_->setInt("brdfLUT", 14);
     transparentwindowShader_->setFloat("farPlane", shadowFarPlane_);
     /* screen */
     screenshader_->use();
@@ -970,14 +971,14 @@ void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sor
     transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentwindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
     glassMaterial_.applyToShader(*transparentwindowShader_);
-    // 不透明面（Deferred）と環境光の扱いを揃える
-    transparentwindowShader_->setFloat("ambientStrength", ambientStrength_);
-    glActiveTexture(GL_TEXTURE7);
-    glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur_);
     for (unsigned int j = 0; j < 4; ++j) {
         glActiveTexture(GL_TEXTURE8 + j);
         glBindTexture(GL_TEXTURE_CUBE_MAP, shadowColorCubemap_[j]);
     }
+    glActiveTexture(GL_TEXTURE13);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap_);
+    glActiveTexture(GL_TEXTURE14);
+    glBindTexture(GL_TEXTURE_2D, brdfLUT_);
     applyPointLights(*transparentwindowShader_);
 
     glDepthMask(GL_FALSE);

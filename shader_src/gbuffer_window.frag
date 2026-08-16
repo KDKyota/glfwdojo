@@ -2,7 +2,7 @@
 
 layout(location = 0) out vec3 gPosition;
 layout(location = 1) out vec4 gNormal; // a = metallic
-layout(location = 2) out vec4 gAlbedoSpec;
+layout(location = 2) out vec4 gAlbedoRoughness;
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -25,6 +25,6 @@ void main()
 
     gPosition = FragPos;
     gNormal = vec4(normal, metallic);
-    gAlbedoSpec.rgb = texColor.rgb;
-    gAlbedoSpec.a = roughness;
+    gAlbedoRoughness.rgb = texColor.rgb;
+    gAlbedoRoughness.a = roughness;
 }

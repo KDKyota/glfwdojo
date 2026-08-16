@@ -110,7 +110,7 @@ class Scene {
     /* G-Buffer */
     gl::FramebufferHandle gBuffer_;
     gl::TextureHandle gPosition_, gNormal_,
-        gAlbedoSpec_;                  // gBuffer_にアタッチする3枚のテクスチャ
+        gAlbedoRoughness_;             // gBuffer_にアタッチする3枚のテクスチャ
     gl::RenderbufferHandle gDepthRBO_; // gBuffer_ 用の深度バッファ
 
     Material material_;

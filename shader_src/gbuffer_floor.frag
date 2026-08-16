@@ -2,7 +2,7 @@
 
 layout (location = 0) out vec3 gPosition;
 layout (location = 1) out vec4 gNormal; // a = metallic
-layout (location = 2) out vec4 gAlbedoSpec;
+layout (location = 2) out vec4 gAlbedoRoughness;
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -20,13 +20,13 @@ void main()
 #if GBUFFER_WRITE_TEST
       gPosition   = vec3(25.0, 0.0, 0.0);          // Position象限で abs(p)/25.0 → 赤
       gNormal     = vec4(-1.0, -1.0, 1.0, 0.0);    // Normal象限で n*0.5+0.5 → 青
-      gAlbedoSpec = vec4(1.0, 0.0, 1.0, 1.0);      // Albedo象限 → マゼンタ
+      gAlbedoRoughness = vec4(1.0, 0.0, 1.0, 1.0);      // Albedo象限 → マゼンタ
 #else
       vec4 diffuseColor = texture(diffuseMap, TexCoords);
 
       gPosition = FragPos;
       gNormal = vec4(normalize(Normal), metallic);
-      gAlbedoSpec.rgb = diffuseColor.rgb;
-      gAlbedoSpec.a = roughness;
+      gAlbedoRoughness.rgb = diffuseColor.rgb;
+      gAlbedoRoughness.a = roughness;
 #endif
 }

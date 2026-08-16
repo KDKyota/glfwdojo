@@ -403,7 +403,7 @@ void Scene::initTextures() {
     deferredLightingShader_->use();
     deferredLightingShader_->setInt("gPosition", 0);
     deferredLightingShader_->setInt("gNormal", 1);
-    deferredLightingShader_->setInt("gAlbedoSpec", 2);
+    deferredLightingShader_->setInt("gAlbedoRoughness", 2);
     for (unsigned int i = 0; i < 4; ++i)
         deferredLightingShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
     deferredLightingShader_->setFloat("farPlane", shadowFarPlane_);
@@ -534,15 +534,15 @@ void Scene::initGBuffer() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal_, 0);
-    // アルベドもスペキュラ強度も [0,1] なので 8bit で足りる
-    gAlbedoSpec_.create();
-    glBindTexture(GL_TEXTURE_2D, gAlbedoSpec_);
+    // アルベドも roughness も [0,1] なので 8bit で足りる
+    gAlbedoRoughness_.create();
+    glBindTexture(GL_TEXTURE_2D, gAlbedoRoughness_);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, scrWidth_, scrHeight_, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec_, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoRoughness_, 0);
 
     unsigned int attachments[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
     glDrawBuffers(3, attachments);
@@ -833,7 +833,7 @@ void Scene::renderDeferredLightingPass() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, gNormal_);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gAlbedoSpec_);
+    glBindTexture(GL_TEXTURE_2D, gAlbedoRoughness_);
     for (unsigned int j = 0; j < 4; ++j) {
         glActiveTexture(GL_TEXTURE3 + j);
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_[j]);

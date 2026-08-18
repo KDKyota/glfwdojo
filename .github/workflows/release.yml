@@ -1,0 +1,55 @@
+name: Release
+
+# v1.0.0 のようなタグを push したときだけ動く
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg_cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Ensure Ninja is available
+        run: if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { choco install ninja -y }
+
+      - name: Point VCPKG_ROOT at the preinstalled vcpkg
+        run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+
+      - name: Create the vcpkg binary cache directory
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE
+
+      - name: Restore prebuilt vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Package
+        run: |
+          $stage = "glfwdojo-windows-x64"
+          New-Item -ItemType Directory -Force -Path $stage
+          Copy-Item build/Release/*.exe, build/Release/*.dll -Destination $stage
+          Copy-Item build/Release/*.vert, build/Release/*.frag, build/Release/*.geom, build/Release/*.glsl -Destination $stage
+          Copy-Item -Recurse build/Release/resources -Destination $stage/resources
+          Compress-Archive -Path $stage -DestinationPath "$stage.zip"
+
+      - name: Create the GitHub release
+        run: gh release create ${{ github.ref_name }} glfwdojo-windows-x64.zip --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

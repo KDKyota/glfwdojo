@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+# 同じブランチに続けて push したとき、古い実行を打ち切る
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      # vcpkg がビルド済みパッケージを置く場所。ここを丸ごとキャッシュして依存の再ビルドを避ける
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg_cache
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ninja ジェネレータは開発者コマンドプロンプト相当の環境変数が無いと cl.exe を見つけられない
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Ensure Ninja is available
+        run: if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { choco install ninja -y }
+
+      # プリセットが参照する $env{VCPKG_ROOT} はランナー既定では未設定
+      - name: Point VCPKG_ROOT at the preinstalled vcpkg
+        run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+
+      # 出力先が存在しないと vcpkg がエラーで止まるので先に作る
+      - name: Create the vcpkg binary cache directory
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE
+
+      - name: Restore prebuilt vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          # builtin-baseline も vcpkg.json にあるので、依存かバージョンが動けばキーが変わる
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-
+
+      - name: Configure (Debug)
+        run: cmake --preset default
+
+      - name: Build (Debug)
+        run: cmake --build --preset default
+
+      - name: Configure (Release)
+        run: cmake --preset release
+
+      - name: Build (Release)
+        run: cmake --build --preset release
+
+      - name: Upload the Release build
+        uses: actions/upload-artifact@v4
+        with:
+          name: glfwdojo-windows-x64
+          # exe 単体では起動しない。シェーダーと resources/ を同じ階層に揃える
+          path: |
+            build/Release/*.exe
+            build/Release/*.dll
+            build/Release/*.vert
+            build/Release/*.frag
+            build/Release/*.geom
+            build/Release/*.glsl
+            build/Release/resources/
+          retention-days: 7
+
+  # 追加したシェーダーの CMakeLists.txt への登録漏れはビルドが通ってしまい、
+  # 実行時にファイルが見つからず初めて発覚するのでここで潰す
+  check-shader-list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare shader_src/ against SHADER_SOURCES
+        run: |
+          listed=$(grep -oE 'shader_src/[A-Za-z0-9_]+\.(vert|frag|geom|glsl)' CMakeLists.txt | sed 's|shader_src/||' | sort -u)
+          actual=$(ls shader_src | sort -u)
+          missing=$(comm -13 <(echo "$listed") <(echo "$actual"))
+          stale=$(comm -23 <(echo "$listed") <(echo "$actual"))
+          if [ -n "$missing" ]; then
+            echo "::error::CMakeLists.txt の SHADER_SOURCES に未登録:"; echo "$missing"
+          fi
+          if [ -n "$stale" ]; then
+            echo "::error::SHADER_SOURCES にあるが shader_src/ に実体が無い:"; echo "$stale"
+          fi
+          [ -z "$missing" ] && [ -z "$stale" ]

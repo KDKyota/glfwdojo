@@ -56,6 +56,31 @@
     {
       "name": "linux-debug",
       "configurePreset": "linux-debug"
+    },
+    {
+      "name": "run",
+      "displayName": "Build and Run (Debug)",
+      "configurePreset": "default",
+      "targets": ["run"]
+    },
+    {
+      "name": "release-run",
+      "displayName": "Build and Run (Release)",
+      "configurePreset": "release",
+      "targets": ["run"]
+    },
+    {
+      "name": "rebuild",
+      "displayName": "Rebuild (Debug)",
+      "configurePreset": "default",
+      "cleanFirst": true
+    },
+    {
+      "name": "rebuild-run",
+      "displayName": "Rebuild and Run (Debug)",
+      "configurePreset": "default",
+      "targets": ["run"],
+      "cleanFirst": true
     }
   ]
 }

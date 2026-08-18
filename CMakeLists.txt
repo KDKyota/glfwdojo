@@ -92,4 +92,13 @@ add_custom_command(
     $<TARGET_FILE_DIR:glfwdojo>/resources
   COMMENT "Copying shaders and resources")
 
+# シェーダーと resources/ は exe の隣にコピーされ、コード側は相対パスで開くので
+# WORKING_DIRECTORY を exe のフォルダにしないと読み込みに失敗する
+add_custom_target(
+  run
+  COMMAND $<TARGET_FILE:glfwdojo>
+  WORKING_DIRECTORY $<TARGET_FILE_DIR:glfwdojo>
+  USES_TERMINAL)
+add_dependencies(run glfwdojo)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

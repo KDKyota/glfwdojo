@@ -1,31 +1,25 @@
 #pragma once
 #include <vector>
-#include "Material.h"
 #include "GeometryData.h"
-#include "Texture.h"
-
+#include "GlHandle.h"
+#include "PbrMaterial.h"
 
 class Mesh {
 private:
-	unsigned int VAO_, VBO_, EBO_;
+	gl::VertexArrayHandle VAO_;
+	gl::BufferHandle VBO_, EBO_;
 	std::vector<gl::Vertex> vertices_;
 	std::vector<unsigned int> indices_;
-	Material material_;
-	std::vector<Texture> textures_; // textureを持つマテリアル
+	gl::PbrMaterial material_;
 
 	void setupMesh();
 public:
 
-	Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, Material material);
-	~Mesh();
+	Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material);
 
-	// コピー禁止
-	Mesh(const Mesh&) = delete;
-	Mesh& operator=(const Mesh&) = delete;
-
-	// ムーブ・右辺値代入は許可（shared_ptr内部で利用される）
-	Mesh(Mesh&& other) noexcept;
-	Mesh& operator=(Mesh&& other) noexcept;
+	// GlHandle がコピー禁止・ムーブ可なので、Mesh もそれに従う（std::vector<Mesh> で必要）
+	Mesh(Mesh&&) noexcept = default;
+	Mesh& operator=(Mesh&&) noexcept = default;
 
 	void Draw(gl::Shader& shader) const;
 };

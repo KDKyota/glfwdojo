@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <random>
+#include <stdexcept>
 #include <stb_image.h>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
@@ -25,6 +26,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     /* G-Buffer */
     gbufferFloorShader_ = std::make_unique<gl::Shader>("shader.vert", "gbuffer_floor.frag");
     gbufferCubeShader_ = std::make_unique<gl::Shader>("cube.vert", "gbuffer_cube.frag");
+    gbufferModelShader_ = std::make_unique<gl::Shader>("gbuffer_model.vert", "gbuffer_model.frag");
     gbufferWallShader_ = std::make_unique<gl::Shader>("wall.vert", "gbuffer_wall.frag");
     gbufferWindowShader_ = std::make_unique<gl::Shader>("window.vert", "gbuffer_window.frag");
     deferredLightingShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "deferred_lighting.frag");
@@ -44,6 +46,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 
     initMesh();
     initTextures();
+    initModels();
     initFramebuffer();
     initUBO();
     initGBuffer();
@@ -343,6 +346,19 @@ void Scene::initMesh() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     glBindVertexArray(0);
+}
+
+void Scene::initModels() {
+    for (const ModelSpawn &spawn : modelSpawns_) {
+        try {
+            models_.push_back(std::make_unique<Model>(spawn.path, cache_));
+        } catch (const std::exception &e) {
+            std::cout << "Skipped model: " << spawn.path << " (" << e.what() << ")" << std::endl;
+            continue;
+        }
+        const glm::mat4 translated = glm::translate(glm::mat4(1.0f), spawn.position);
+        modelMatrices_.push_back(glm::scale(translated, glm::vec3(spawn.scale)));
+    }
 }
 
 void Scene::initTextures() {
@@ -722,6 +738,7 @@ void Scene::renderShadowPasses() {
         renderFloor(*pointDepthShader_);
         renderCubes(*pointDepthShader_);
         renderWalls(*pointDepthShader_);
+        renderModels(*pointDepthShader_);
         pointDepthShader_->setBool("useAlphaTest", true);
         renderWindow(*pointDepthShader_);
 
@@ -780,6 +797,10 @@ void Scene::renderGeometryPass() {
     gbufferWallShader_->use();
     wallMaterial_.applyToShader(*gbufferWallShader_);
     renderWalls(*gbufferWallShader_);
+
+    /* model */
+    gbufferModelShader_->use();
+    renderModels(*gbufferModelShader_);
 
     /* Transparent window's fisical frame */
     gbufferWindowShader_->use();
@@ -1001,6 +1022,11 @@ void Scene::renderWindow(gl::Shader &shader) {
     transparentTexture_->bind(0);
     glDrawElementsInstanced(GL_TRIANGLES, gl::transparentIndices.size(), GL_UNSIGNED_INT, 0,
                             transparent_positions_.size());
+}
+
+void Scene::renderModels(gl::Shader &shader) {
+    for (size_t i = 0; i < models_.size(); ++i)
+        models_[i]->Draw(shader, modelMatrices_[i]);
 }
 
 void Scene::renderWalls(gl::Shader &shader) {

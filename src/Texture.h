@@ -25,9 +25,18 @@ private:
 	bool flip_;
 	ColorSpace colorSpace_;
 
+	// stbi が返したピクセル列を GL へ送る。ファイル版とメモリ版で共通
+	void uploadPixels(unsigned char* pixels, int width, int height, int channels);
+
 public:
 	// colorSpace にデフォルト値を持たせないのは、色かデータかを呼び出し側に必ず選ばせるため
 	Texture(const char* path, const bool flip, const ColorSpace colorSpace);
+	/*
+	* glb の埋め込みテクスチャ用。data はファイルではなくメモリ上の圧縮画像（PNG / JPEG）を指す。
+	* key はキャッシュとエラー表示のための識別子で、ファイルパスとしては存在しない
+	*/
+	Texture(const std::string& key, const unsigned char* data, int byteSize, const bool flip,
+	        const ColorSpace colorSpace);
 	/*
 	* Textureデストラクタ
 	* id_が0でないとき時だけglDeleteTextureを呼ぶ

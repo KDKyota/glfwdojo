@@ -31,7 +31,12 @@ int main(void) {
         frametime.delta = currentFrame - frametime.last;
         frametime.last = currentFrame;
 
+        // 追従先はシーンが持っているので、カメラの更新より前に渡す
+        if (const glm::vec3 *target = scene->FollowTargetPosition())
+            camera->SetFollowTarget(*target);
+
         processInput(window->Get(), frametime.delta);
+        camera->Update(frametime.delta);
 
         // ImGui:: の呼び出しより前に必ず1回
         gui->NewFrame();
@@ -41,6 +46,8 @@ int main(void) {
         {
             ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate,
                         1000.0f / ImGui::GetIO().Framerate);
+            ImGui::Text("Camera: %s  [F] to toggle",
+                        camera->Mode() == CameraMode::ThirdPerson ? "Third person" : "Free look");
             ImGui::Separator();
 
             static const char *kDebugModes[] = {

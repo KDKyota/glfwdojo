@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "SceneUnits.h"
 
@@ -11,8 +12,13 @@ enum class Camera_Movement {
 	BACKWARD,
 	LEFT,
 	RIGHT,
-	UP, 
+	UP,
 	DOWN
+};
+
+enum class CameraMode {
+	FreeLook,    // 自由視点。シーンの任意の場所を見に行くデバッグ用に残してある
+	ThirdPerson, // 注視点のまわりを周回する追従カメラ
 };
 
 // default camera values
@@ -23,28 +29,43 @@ namespace CameraDefaults {
 	constexpr float SPEED = gl::units::freeCameraSpeed;
 	constexpr float SENSITIVITY = 0.1f;
 	constexpr float ZOOM = 45.0f;
+
+	/* ---- 三人称モード ---- */
+	constexpr float ORBIT_DISTANCE = 4.0f;
+	constexpr float ORBIT_MIN_DISTANCE = 1.5f;
+	constexpr float ORBIT_MAX_DISTANCE = 12.0f;
+	// 注視点は足元ではなく胸のあたりに置く
+	constexpr float TARGET_HEIGHT = gl::units::characterHeight * 0.7f;
+	// 追従の追いつく速さ。大きいほど硬い（0 にすると付いてこない）
+	constexpr float FOLLOW_STIFFNESS = 8.0f;
 }
 
 class Camera
 {
 private:
 	glm::vec3 Position;
+	// 姿勢はクォータニオンで保持し、Front / Right / Up はここから導出する
+	glm::quat Orientation;
 	glm::vec3 Front;
 	glm::vec3 Up;
 	glm::vec3 Right;
 	glm::vec3 WorldUp;
 
-	// euler angles
-	float Yaw;
-	float Pitch;
-	float Roll;
+	CameraMode mode_ = CameraMode::FreeLook;
+	glm::vec3 followTarget_ = glm::vec3(0.0f);
+	bool hasFollowTarget_ = false;
+	float orbitDistance_ = CameraDefaults::ORBIT_DISTANCE;
+
 	// camera position
 	float MovementSpeed;
 	float MouseSensitivity;
 	float Zoom;
 
-	// calculate the front vector from the Camera's Euler Angles
+	// Orientation から Front / Right / Up を作り直す
 	void UpdateCameraVectors();
+
+	// 見上げ角。ピッチの上限を掛けるために Front から逆算する
+	float CurrentPitch() const;
 
 public:
 	// constructor with vectors
@@ -68,7 +89,16 @@ public:
 	// processes input recieved from a mouse scroll-wheel event.
 	void ProcessMouseScroll(float yoffset);
 
+	/* ---- 三人称モード ---- */
 
+	// 追従先は毎フレーム外から与える。三人称のときだけ使われる
+	void SetFollowTarget(const glm::vec3& position);
+	void ClearFollowTarget();
 
+	// 追従先が無いときは三人称へ切り替えない（カメラが動かせなくなるため）
+	void ToggleMode();
+	CameraMode Mode() const;
+
+	// 追従に補間が入るので毎フレーム呼ぶ必要がある
+	void Update(float deltaTime);
 };
-

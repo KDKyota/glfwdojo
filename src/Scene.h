@@ -51,6 +51,10 @@ class Scene {
     gl::PbrMaterial &GlassMaterial() {
         return glassMaterial_;
     }
+    // 三人称カメラの追従先。対象のモデルが読み込めていなければ nullptr
+    const glm::vec3 *FollowTargetPosition() const {
+        return hasFollowTarget_ ? &followTargetPosition_ : nullptr;
+    }
 
   private:
     void initMesh();
@@ -137,6 +141,8 @@ class Scene {
     // std::unique_ptr<gl::Shader> glasscubeShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
     std::vector<std::unique_ptr<Model>> models_;
+    glm::vec3 followTargetPosition_ = glm::vec3(0.0f);
+    bool hasFollowTarget_ = false;
     // models_ と添字が一対一で対応する。読み込みに失敗したモデルは両方に積まれない
     std::vector<glm::mat4> modelMatrices_;
     std::shared_ptr<Camera> camera_;
@@ -242,11 +248,12 @@ class Scene {
         std::string path;
         glm::vec3 position;
         float scale;
+        bool followTarget = false; // 三人称カメラが注視するモデル
     };
     const std::vector<ModelSpawn> modelSpawns_ = {
         {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), 1.0f},
         {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), 1.0f},
-        {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), 1.0f},
+        {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), 1.0f, true},
     };
 
     const std::array<gl::PointLight, 4> pointLights_ = {

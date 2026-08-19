@@ -358,6 +358,10 @@ void Scene::initModels() {
         }
         const glm::mat4 translated = glm::translate(glm::mat4(1.0f), spawn.position);
         modelMatrices_.push_back(glm::scale(translated, glm::vec3(spawn.scale)));
+        if (spawn.followTarget) {
+            followTargetPosition_ = spawn.position;
+            hasFollowTarget_ = true;
+        }
     }
 }
 

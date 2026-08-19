@@ -12,6 +12,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
+
+	// 押しっぱなしで連続切り替えされないよう、processInput ではなくこちらで拾う
+	if (key == GLFW_KEY_F && action == GLFW_PRESS && !Gui::WantCaptureKeyboard())
+		camera->ToggleMode();
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)

@@ -1,19 +1,36 @@
 #include "Camera.h"
 
-Camera::Camera() 
+#include <cmath>
+
+namespace {
+
+// direction を向くクォータニオンを作る（右手系）
+glm::quat lookRotation(const glm::vec3& direction, const glm::vec3& worldUp)
+{
+	const glm::vec3 dir = glm::normalize(direction);
+	const float yaw = std::atan2(-dir.x, -dir.z);
+	const float pitch = std::asin(glm::clamp(dir.y, -1.0f, 1.0f));
+	return glm::angleAxis(yaw, worldUp) * glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+}
+
+} // namespace
+
+Camera::Camera()
 	: Position(glm::vec3(0.0f, 0.0f, 3.0f)),
-	Up(glm::vec3(0.0f, 1.0f, 0.0f)),
-	Yaw(CameraDefaults::YAW),
-	Pitch(CameraDefaults::PITCH),
 	Front(glm::vec3(0.0f, 0.0f, -1.0f)),
+	Up(glm::vec3(0.0f, 1.0f, 0.0f)),
+	WorldUp(glm::vec3(0.0f, 1.0f, 0.0f)),
 	MovementSpeed(CameraDefaults::SPEED),
 	MouseSensitivity(CameraDefaults::SENSITIVITY),
-	Zoom(CameraDefaults::ZOOM),
-	WorldUp(glm::vec3(0.0f, 1.0f, 0.0f))
+	Zoom(CameraDefaults::ZOOM)
 {
+	// 単位クォータニオンが -Z 向き（YAW = -90 度）にあたるので、そこからの差分で初期姿勢を作る
+	Orientation = glm::angleAxis(glm::radians(-(CameraDefaults::YAW + 90.0f)), WorldUp) *
+	              glm::angleAxis(glm::radians(CameraDefaults::PITCH), glm::vec3(1.0f, 0.0f, 0.0f));
 	UpdateCameraVectors();
 };
 
+/* Getter */
 glm::mat4 Camera::GetViewMatrix() const
 {
 	return glm::lookAt(Position, Position + Front, Up);
@@ -33,20 +50,26 @@ const float& Camera::GetZoomValue() const
 {
 	return Zoom;
 };
+/* ここまでGetter */
 
 void Camera::UpdateCameraVectors()
 {
-	glm::vec3 front;
-	front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-	front.y = sin(glm::radians(Pitch));
-	front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-	Front = glm::normalize(front);
+	Front = glm::normalize(Orientation * glm::vec3(0.0f, 0.0f, -1.0f));
+	// Right をワールドの上方向から導くことで、姿勢にロールが残っていても水平線は傾かない
 	Right = glm::normalize(glm::cross(Front, WorldUp));
 	Up = glm::normalize(glm::cross(Right, Front));
 };
 
+float Camera::CurrentPitch() const
+{
+	return std::asin(glm::clamp(Front.y, -1.0f, 1.0f));
+}
+
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {
+	// 三人称ではカメラの位置が注視点に縛られるので、直接の移動は受け付けない
+	if (mode_ == CameraMode::ThirdPerson) return;
+
 	float velocity = MovementSpeed * deltaTime;
 
 	if (direction == Camera_Movement::FORWARD)
@@ -77,18 +100,23 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
 {
-	xoffset *= MouseSensitivity;
-	yoffset *= MouseSensitivity;
+	const float yaw = glm::radians(-xoffset * MouseSensitivity);
+	float pitch = glm::radians(yoffset * MouseSensitivity);
 
-	Yaw += xoffset;
-	Pitch += yoffset;
-
-	// make sure that when pitch is out of bounds, screen doesn't get flipped
 	if (constrainPitch)
 	{
-		if (Pitch > 89.0f) Pitch = 89.0f;
-		if (Pitch < -89.0f) Pitch = -89.0f;
+		// 真上・真下を越えると視界が反転する。回転そのものではなく増分を切り詰める
+		const float limit = glm::radians(89.0f);
+		const float current = CurrentPitch();
+		pitch = glm::clamp(current + pitch, -limit, limit) - current;
 	}
+
+	// ヨーはワールドの上方向まわり（左から）、ピッチはカメラ自身の右方向まわり（右から）に掛ける。
+	// 両方をローカル軸で掛けるとロールが溜まって水平線が傾いていく
+	Orientation = glm::angleAxis(yaw, WorldUp) * Orientation *
+	              glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+	// 掛け続けると数値誤差で長さが 1 からずれるので毎回正規化する
+	Orientation = glm::normalize(Orientation);
 
 	UpdateCameraVectors();
 
@@ -96,9 +124,66 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 
 void Camera::ProcessMouseScroll(float yoffset)
 {
+	// 三人称では画角ではなく注視点までの距離を変える方が自然
+	if (mode_ == CameraMode::ThirdPerson)
+	{
+		orbitDistance_ = glm::clamp(orbitDistance_ - yoffset * 0.5f,
+		                            CameraDefaults::ORBIT_MIN_DISTANCE,
+		                            CameraDefaults::ORBIT_MAX_DISTANCE);
+		return;
+	}
+
 	Zoom -= yoffset;
 	if (Zoom < 1.0f) Zoom = 1.0f;
 	if (Zoom > 45.0f) Zoom = 45.0f;
 };
 
+void Camera::SetFollowTarget(const glm::vec3& position)
+{
+	followTarget_ = position;
+	hasFollowTarget_ = true;
+}
 
+void Camera::ClearFollowTarget()
+{
+	hasFollowTarget_ = false;
+	mode_ = CameraMode::FreeLook;
+}
+
+void Camera::ToggleMode()
+{
+	if (mode_ == CameraMode::ThirdPerson)
+	{
+		mode_ = CameraMode::FreeLook;
+		return;
+	}
+	// 追従先が無いまま切り替えると、移動もできず注視点も無い状態で固まる
+	if (!hasFollowTarget_) return;
+	mode_ = CameraMode::ThirdPerson;
+}
+
+CameraMode Camera::Mode() const
+{
+	return mode_;
+}
+
+void Camera::Update(float deltaTime)
+{
+	if (mode_ != CameraMode::ThirdPerson || !hasFollowTarget_) return;
+
+	const glm::vec3 pivot = followTarget_ + glm::vec3(0.0f, CameraDefaults::TARGET_HEIGHT, 0.0f);
+	// 視線の逆方向へ orbitDistance_ だけ下がった位置が理想の視点
+	const glm::vec3 desiredPosition = pivot - Front * orbitDistance_;
+
+	// 1 フレームで詰める割合を指数で求める。フレームレートが変わっても追従の速さが変わらない
+	const float blend = 1.0f - std::exp(-CameraDefaults::FOLLOW_STIFFNESS * deltaTime);
+	Position = glm::mix(Position, desiredPosition, blend);
+
+	// 位置が遅れている間は注視点が画面中心からずれるので、向きも slerp で追従させる
+	const glm::vec3 toPivot = pivot - Position;
+	if (glm::dot(toPivot, toPivot) > 1e-6f)
+	{
+		Orientation = glm::normalize(glm::slerp(Orientation, lookRotation(toPivot, WorldUp), blend));
+		UpdateCameraVectors();
+	}
+}

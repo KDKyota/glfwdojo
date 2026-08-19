@@ -1,5 +1,7 @@
 # glfwdojo
 
+[![CI](https://github.com/KDKyota/glfwdojo/actions/workflows/ci.yml/badge.svg)](https://github.com/KDKyota/glfwdojo/actions/workflows/ci.yml)
+
 リポジトリ名は気にしないでください．これは元々Publicにする予定ではなかったので，雑に命名したのでこうなっています．
 
 [LearnOpenGL](https://learnopengl.com/) の内容を、モダンな C++（C++17）で一から実装し直しながら OpenGL とリアルタイムグラフィックスを学ぶための個人学習リポジトリです。
@@ -35,8 +37,9 @@ GL ハンドルは CRTP（Curiously Recurring Template Pattern）で実装して
 | 分類           | 機能                                                                        |
 | -------------- | --------------------------------------------------------------------------- |
 | 基礎           | カメラ操作、深度テスト、ステンシルテスト、ブレンディング、フェイスカリング  |
-| ライティング   | Phong 反射モデル、点光源 / 平行光源 / スポットライト                        |
-| モデル         | Assimp による OBJ 読み込み、テクスチャキャッシュ（`weak_ptr` 管理）         |
+| ライティング   | **PBR（Cook-Torrance / GGX）**、点光源 / 平行光源 / スポットライト          |
+| 環境ライティング | **IBL** — HDR 環境マップから irradiance / prefilter / BRDF LUT を事前計算 |
+| モデル         | Assimp による OBJ / **glTF (`.glb`)** 読み込み、ノード階層の保持、埋め込みテクスチャ、glTF の PBR マテリアル、テクスチャキャッシュ（`weak_ptr` 管理） |
 | テクスチャ     | キューブマップ（スカイボックス）、法線マッピング、視差遮蔽マッピング（POM） |
 | 高度な機能     | フレームバッファ、インスタンシング、UBO によるユニフォーム共有              |
 | 影             | ポイントシャドウ（キューブマップ + 26方向サンプリングの PCF）               |
@@ -46,30 +49,41 @@ GL ハンドルは CRTP（Curiously Recurring Template Pattern）で実装して
 | ポストプロセス | HDR + 露出トーンマッピング、Bloom（2パス ガウシアンブラー）                 |
 | デバッグ UI    | Dear ImGui によるパラメータ調整と G-Buffer / SSAO の可視化                  |
 | **描画方式**   | **Deferred Shading（G-Buffer + ライトボリュームによる打ち切り）**           |
+| 単位系         | ワールド座標 **1.0 = 1 メートル**（`src/SceneUnits.h` に寸法の定数を集約）  |
+| CI             | GitHub Actions で Debug / Release のビルドとシェーダー登録漏れを検証        |
 
 ### 今後の予定
 
-- PBR（物理ベースレンダリング）+ IBL — **現在作業中**
-- ライトボリュームのジオメトリ描画による最適化
-- G-Buffer の帯域削減（深度からの位置復元、法線の圧縮）
+PBR + IBL は実装済みです。現在は **キャラクターをボーンで動かし、階段を含む地形の上を歩かせる** ことを目標に進めています。
 
-**未実装の項目は [`docs/plan.md`](./docs/plan.md) に集約しています。** 現在の作業計画（PBR の導入手順）と、それとは独立した長期の積み残しがそちらにあります。
+- モデル描画経路の PBR 復帰（ノード階層の保持・glTF マテリアル・ボーン属性の受け皿） — 完了
+- スキニングとアニメーション
+- 階段を含む地形と接地
+- 三人称追従カメラ（クォータニオン）
+
+そのほか、平面反射 / SSR、環境マップからの平行光源シャドウ、Vulkan への移行とレイトレーシングを積んでいます。
+
+**やることリストは [GitHub Issues](https://github.com/KDKyota/glfwdojo/issues) に集約しています。**
+上のロードマップはマイルストーン [「キャラクターを動かす」](https://github.com/KDKyota/glfwdojo/milestone/1) にまとめてあります。
+Issue には `opengl-now`（OpenGL のまま着手できる）と `needs-vulkan`（Vulkan 移行が前提）のラベルを付けているので、
+どちらの作業かはラベルで区別できます。
 
 ---
 
 ## レンダリングパイプライン
 
-1フレームは以下の順で処理されます。
+起動時に一度だけ、HDR 環境マップから IBL 用の irradiance / prefilter / BRDF LUT を焼きます。
+以降、1フレームは以下の順で処理されます。
 
 ```
 [0] 透過窓の準備         カメラからの距離でソートし、インスタンス VBO を更新
 [1] シャドウデプスパス   点光源4灯 × 6面のデプスキューブマップを生成
      + カラーサブパス    同じ FBO にガラスの透過色を焼き込む（色の付いた影）
 [2] 行列 UBO の更新      view / projection を全シェーダーで共有する
-[3] Geometry パス        G-Buffer に 位置 / 法線 / アルベド+スペキュラ を書き込む
+[3] Geometry パス        G-Buffer に 位置 / 法線+メタリック / アルベド+ラフネス を書き込む
 [4] SSAO パス            G-Buffer から遮蔽率を計算し、4x4 ブラーをかける
 [5] 深度のコピー         G-Buffer の深度を前方描画用のフレームバッファへ blit
-[6] Lighting パス        フルスクリーンクワッド1枚で全ピクセルのライティングを計算
+[6] Lighting パス        フルスクリーンクワッド1枚で全ピクセルの PBR + IBL を計算
 [7] 前方描画             ライトキューブ / スカイボックス / 半透明のガラス
 [8] Bloom                輝度抽出結果をピンポン FBO で10回ブラー
 [9] 合成                 トーンマッピング + ガンマ補正して画面へ
@@ -150,7 +164,14 @@ cmake --build --preset linux-debug
 cd build/linux-debug && GALLIUM_DRIVER=d3d12 ./glfwdojo // 環境によっては異なる可能性があります
 ```
 
-シェーダーと `resources/` は実行ファイルと同じディレクトリに相対パスで読み込まれるため、**実行時はビルドディレクトリに移動してから起動してください。**
+`run` プリセットを使えば、ビルドから作業ディレクトリを合わせた起動までを一度に実行できます。
+
+```bash
+cmake --build --preset run          # Debug でビルドして起動
+cmake --build --preset release-run  # Release でビルドして起動
+```
+
+シェーダーと `resources/` は実行ファイルと同じディレクトリに相対パスで読み込まれるため、**手動で起動するときはビルドディレクトリに移動してから起動してください。**（`run` プリセットは `WORKING_DIRECTORY` を合わせてあるので不要です）
 
 ファイル追加時の CMake の設定方法など、詳しい手順は [`docs/BUILD.md`](./docs/BUILD.md) にあります。
 
@@ -181,12 +202,13 @@ cd build/linux-debug && GALLIUM_DRIVER=d3d12 ./glfwdojo // 環境によっては
 
 | 項目            | 内容                                                                                                                                                         |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `View`          | 表示するものを 9 種から選ぶ。通常のライティング / シャドウ / `shadowMap` の生値 / G-Buffer の Albedo・Normal・Position / 4分割表示 / SSAO / 透過シャドウの色 |
+| `View`          | 表示するものを 14 種から選ぶ。通常のライティング / シャドウ / `shadowMap` の生値 / G-Buffer の Albedo・Normal・Position・Metallic・Roughness / 4分割表示 / SSAO / 透過シャドウの色 / IBL の irradiance・prefilter・BRDF LUT |
 | `Raw output`    | Bloom・トーンマッピング・ガンマ補正を飛ばす。**G-Buffer や SSAO を見るときは必須**（切らないと正常な値でも一律に真っ白く見えて判定できない）                 |
 | `SSAO strength` | 環境光遮蔽の効き具合                                                                                                                                         |
 | `Ambient`       | 環境光の強さ                                                                                                                                                 |
 | `Bloom`         | Bloom の合成量                                                                                                                                               |
 | `Exposure`      | トーンマッピングの露出                                                                                                                                       |
+| `Metallic` / `Roughness` | オブジェクトごとの PBR パラメータ。**roughness の下限は 0.05**（0 にすると GGX の分布が発散して真っ白な点が出る）                                   |
 
 パネルの上にマウスがある間は視点操作が無効になります。視点の回転が右ドラッグなので、ガードしないとスライダーを動かすたびに視界が回ってしまうためです。
 
@@ -196,9 +218,14 @@ cd build/linux-debug && GALLIUM_DRIVER=d3d12 ./glfwdojo // 環境によっては
 
 ```
 glfwdojo/
+├── .github/       GitHub Actions のワークフロー（CI / リリース）
 ├── src/           C++ ソース（Scene が描画処理の中心）
 ├── shader_src/    GLSL シェーダー（ビルド後に実行ファイルの隣へコピーされる）
 ├── resources/     テクスチャ・3Dモデル
+│   ├── textures/            テクスチャと HDR 環境マップ
+│   ├── publishable-objects/ 再配布できる 3D モデル
+│   ├── characters/          リグ付きモデル
+│   └── objects/             LearnOpenGL 由来（.gitignore 済み）
 ├── docs/          ドキュメント
 ├── third_party/   外部ライブラリ（stb_image など）
 ├── CMakeLists.txt
@@ -215,18 +242,25 @@ glfwdojo/
 | ファイル                                             | 内容                                                                                            |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)       | 実装ガイド。冒頭に**症状から原因を引く索引**あり。設計意図、作業手順、踏んだ罠、WSL2 固有の問題 |
-| [`docs/plan.md`](./docs/plan.md)                     | 現在の作業計画と、未実装項目の一覧（**やることリストはここだけ**）                              |
 | [`docs/BUILD.md`](./docs/BUILD.md)                   | ビルド手順、ファイル追加時の CMake 設定                                                         |
 | [`docs/shadow_mapping.md`](./docs/shadow_mapping.md) | シャドウマッピングの学習メモ                                                                    |
 | [`CLAUDE.md`](./CLAUDE.md)                           | Claude Code に作業させる際のルール                                                              |
+
+未実装項目とやることリストは [GitHub Issues](https://github.com/KDKyota/glfwdojo/issues) にあります。ドキュメント側には TODO を置きません（二重管理になって必ずどちらかが古くなるため）。
 
 ---
 
 ## 3D モデルについて
 
-**Assimp による 3D モデルの読み込み・描画機能は実装済みですが、このリポジトリにモデルデータは同梱していません。**
+**再配布できるモデルだけをリポジトリに含めています。**
 
-LearnOpenGL で使われている 3D モデル（backpack / cyborg / nanosuit / planet / rock）は、いずれも再配布が許諾されていない、あるいはライセンスが不明なものです。
+| 置き場所                         | モデル                               | 用途                                                                                   |
+| -------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `resources/publishable-objects/` | `DamagedHelmet.glb`                  | PBR の検証用。正解の見た目が広く出回っているので実装の答え合わせに使える               |
+| `resources/publishable-objects/` | `DragonDispersion.glb`               | 透過・体積減衰・分散を実装するためのモデル（未対応）                                   |
+| `resources/characters/`          | `RiggedSimple.glb` / `CesiumMan.glb` | スキニングの踏み台。Khronos の glTF-Sample-Assets 由来で **CC-BY-4.0**（`*-LICENSE.md` を同梱） |
+
+一方、LearnOpenGL で使われている 3D モデル（backpack / cyborg / nanosuit / planet / rock）は、いずれも再配布が許諾されていない、あるいはライセンスが不明なため **同梱していません**（`resources/objects/` ごと `.gitignore` 済みです）。
 
 | モデル     | 出典                                                                                                                                                     | ライセンス表記                         |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
@@ -236,15 +270,13 @@ LearnOpenGL で使われている 3D モデル（backpack / cyborg / nanosuit / 
 | `nanosuit` | Crysis（Crytek）由来                                                                                                                                     | 記載なし                               |
 | `rock`     | 不明                                                                                                                                                     | 記載なし                               |
 
-そのため、**モデル描画のコードは意図的にコメントアウトしてあります**（`src/Scene.cpp` の `Model` 生成箇所）。現在のシーンはプリミティブ（キューブ・平面）とテクスチャのみで構成されています。
+### モデルを追加したい場合
 
-### モデルを表示したい場合
+シーンに置くモデルは `src/Scene.h` の `modelSpawns_` にパスと配置をまとめてあります。ここへ1行足すだけで読み込まれます。
 
-1. [LearnOpenGL の公式リポジトリ](https://github.com/JoeyDeVries/LearnOpenGL) の `resources/objects/` からモデルを取得する
-2. 本リポジトリの `resources/objects/` に配置する（このディレクトリは `.gitignore` 済みです）
-3. `src/Scene.cpp` の `Model` 生成箇所と、`Render()` 内の描画呼び出しのコメントアウトを解除する
+**ファイルが見つからないモデルは、コンソールに `Skipped model:` と出して読み飛ばします。** ライセンス上コミットできないモデルを各自の環境にだけ置けるようにするための仕様なので、リポジトリに無いパスが並んでいても起動します。
 
-取得したモデルの利用は、各配布元のライセンスに従ってください。
+LearnOpenGL のモデルを使いたい場合は、[公式リポジトリ](https://github.com/JoeyDeVries/LearnOpenGL) の `resources/objects/` から取得して同名のディレクトリに配置してください。取得したモデルの利用は、各配布元のライセンスに従ってください。
 
 > [!NOTE]
 > テクスチャ（`resources/textures/`）にも LearnOpenGL 由来のものが含まれます。こちらは

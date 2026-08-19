@@ -13,5 +13,12 @@ private:
 public:
 	std::shared_ptr<Texture> get(const std::string& path, bool flip, ColorSpace colorSpace);
 
+	/*
+	* glb の埋め込みテクスチャ用。実体がファイルではないので、呼び出し側が一意な key を作って渡す
+	* （同じ glb 内でインデックスが衝突しないよう「モデルのパス + 参照名」にする）
+	*/
+	std::shared_ptr<Texture> getEmbedded(const std::string& key, const unsigned char* data, int byteSize,
+	                                     bool flip, ColorSpace colorSpace);
+
 	unsigned int loadCubemap(const std::vector<std::string>& faces, bool flip, ColorSpace colorSpace);
 };

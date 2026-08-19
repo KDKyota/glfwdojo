@@ -55,6 +55,7 @@ class Scene {
   private:
     void initMesh();
     void initTextures();
+    void initModels();
     void initFramebuffer();
     void initGBuffer();
     void initSSAO();
@@ -82,11 +83,14 @@ class Scene {
     void renderTransparentWindows(const std::vector<gl::TransparentDraw> &sorted);
     void renderWindow(gl::Shader &shader); // 窓枠用
     void renderWalls(gl::Shader &shader);
+    void renderModels(gl::Shader &shader);
 
     static constexpr unsigned int SHADOW_WIDTH = 1024,
                                   SHADOW_HEIGHT = 1024; // depthCubemap_ 各面の解像度
     int scrWidth_, scrHeight_;
-    static constexpr float shadowNearPlane_ = 1.0f; // 光源視点の投影のnear plane（shadowProj計算に使用）
+    // 1.0 だと光源から1m以内の物体が影を落とさなくなる。深度は実距離を farPlane で割って
+    // 書くので、near を小さくしても精度は落ちない
+    static constexpr float shadowNearPlane_ = 0.1f;
     static constexpr float shadowFarPlane_ = 50.0f; // 光源視点の投影のfar plane。シェーダー側の farPlane uniform
 
     /* メッシュのVAO / VBO / EBO */
@@ -132,7 +136,9 @@ class Scene {
     std::unique_ptr<gl::Shader> screenshader_;
     // std::unique_ptr<gl::Shader> glasscubeShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
-    // std::unique_ptr<Model> model_; // 3Dモデル
+    std::vector<std::unique_ptr<Model>> models_;
+    // models_ と添字が一対一で対応する。読み込みに失敗したモデルは両方に積まれない
+    std::vector<glm::mat4> modelMatrices_;
     std::shared_ptr<Camera> camera_;
     std::unique_ptr<gl::Shader> pointDepthShader_;
     std::unique_ptr<gl::Shader> pointColorShader_; // カラー付き透過シャドウ（ガラスの透過色）用
@@ -144,6 +150,7 @@ class Scene {
     std::unique_ptr<gl::Shader> gbufferWallShader_;
     std::unique_ptr<gl::Shader> gbufferWindowShader_;
     std::unique_ptr<gl::Shader> gbufferCubeShader_;
+    std::unique_ptr<gl::Shader> gbufferModelShader_;
     std::unique_ptr<gl::Shader> deferredLightingShader_;
 
     // gl::DirectionalLight directionalLight_;
@@ -227,6 +234,19 @@ class Scene {
         glm::vec3(-1.0f, 1.0f, -1.0f), // 積み重ね
         glm::vec3(0.0f, 0.0f, -20.0f), // z=-25 壁の前
         glm::vec3(0.0f, 0.0f, 20.0f),  // z=+25 壁の前
+    };
+
+    // 見つからないモデルは読み飛ばす。ライセンス上コミットできないモデルを各自の環境にだけ
+    // 置けるようにするため、リポジトリに無いパスが並んでいてもよい設計にしている
+    struct ModelSpawn {
+        std::string path;
+        glm::vec3 position;
+        float scale;
+    };
+    const std::vector<ModelSpawn> modelSpawns_ = {
+        {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), 1.0f},
+        {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), 1.0f},
+        {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), 1.0f},
     };
 
     const std::array<gl::PointLight, 4> pointLights_ = {

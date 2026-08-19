@@ -17,6 +17,21 @@ std::shared_ptr<Texture> TextureCache::get(const std::string& path, bool flip, C
 	}
 }
 
+std::shared_ptr<Texture> TextureCache::getEmbedded(const std::string& key, const unsigned char* data,
+                                                   int byteSize, bool flip, ColorSpace colorSpace)
+{
+	const std::string cacheKey = key + (colorSpace == ColorSpace::SRGB ? "|srgb" : "|linear");
+
+	if (auto tex = cache_[cacheKey].lock()) {
+		return tex;
+	}
+	else {
+		std::shared_ptr<Texture> texture = std::make_shared<Texture>(key, data, byteSize, flip, colorSpace);
+		cache_[cacheKey] = texture;
+		return texture;
+	}
+}
+
 unsigned int TextureCache::loadCubemap(const std::vector<std::string>& faces, bool flip, ColorSpace colorSpace)
 {
     stbi_set_flip_vertically_on_load(flip);

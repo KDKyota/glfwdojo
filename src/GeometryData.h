@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <array>
+#include "SceneUnits.h"
 
 #define MAX_BONE_INFLUENCE 4
 
@@ -142,14 +143,18 @@ namespace gl {
 		20, 21, 22, 22, 23, 20, // top
 	};
 
+	inline constexpr float floorHalf = units::floorHalfExtent;
+	// タイル1枚の実寸から繰り返し回数を導くので、床を広げてもテクセル密度は変わらない
+	inline constexpr float floorUv = 2.0f * units::floorHalfExtent / units::floorTileSize;
+
 	// EBO用に重複を除いた頂点配列(床)
 	inline const std::array<Vertex, 4> rawplaneVertices =
 	{ {
 		// positions // normal vectors // texture Coords
-		{{-25.0f, -0.5f,  25.0f},{}, {0.0f,  0.0f}},
-		{{ 25.0f, -0.5f,  25.0f},{}, {25.0f, 0.0f}},
-		{{ 25.0f, -0.5f, -25.0f},{}, {25.0f, 25.0f}},
-		{{-25.0f, -0.5f, -25.0f},{}, {0.0f,  25.0f}},
+		{{-floorHalf, units::floorY,  floorHalf},{}, {0.0f,    0.0f}},
+		{{ floorHalf, units::floorY,  floorHalf},{}, {floorUv, 0.0f}},
+		{{ floorHalf, units::floorY, -floorHalf},{}, {floorUv, floorUv}},
+		{{-floorHalf, units::floorY, -floorHalf},{}, {0.0f,    floorUv}},
 	} };
 
 	inline const std::array<unsigned int, 6> planeIndices = { 0, 1, 2, 2, 3, 0 };
@@ -226,18 +231,21 @@ namespace gl {
 	inline const std::array<Vertex, 4> planeVertices = calculateFaceNormals(rawplaneVertices);
 	inline const std::array<Vertex, 4> transparentVertices = calculateFaceNormals(rawtransparentVertices);
 
+	inline constexpr float wallUvU = 2.0f * units::floorHalfExtent / units::wallTileSize;
+	inline constexpr float wallUvV = (units::wallTopY - units::floorY) / units::wallTileSize;
+
 	// 壁（z=-25 と z=+25 の2枚）。T×B = N が成立するよう解析的に設定
 	inline const std::array<Vertex, 8> wallVertices = { {
 		// z=-25 の壁 (法線: +z,  T: +x, B: +y)
-		{{ -25.0f, -0.5f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 0.0f, 0.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
-		{{  25.0f, -0.5f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 5.0f, 0.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
-		{{  25.0f, 10.0f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 5.0f, 1.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
-		{{ -25.0f, 10.0f, -25.0f }, { 0.0f, 0.0f,  1.0f }, { 0.0f, 1.0f }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{ -floorHalf, units::floorY,  -floorHalf }, { 0.0f, 0.0f,  1.0f }, { 0.0f,    0.0f    }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{  floorHalf, units::floorY,  -floorHalf }, { 0.0f, 0.0f,  1.0f }, { wallUvU, 0.0f    }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{  floorHalf, units::wallTopY, -floorHalf }, { 0.0f, 0.0f,  1.0f }, { wallUvU, wallUvV }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{ -floorHalf, units::wallTopY, -floorHalf }, { 0.0f, 0.0f,  1.0f }, { 0.0f,    wallUvV }, {  1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
 		// z=+25 の壁 (法線: -z,  T: -x, B: +y)
-		{{  25.0f, -0.5f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
-		{{ -25.0f, -0.5f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 5.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
-		{{ -25.0f, 10.0f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 5.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
-		{{  25.0f, 10.0f,  25.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{  floorHalf, units::floorY,   floorHalf }, { 0.0f, 0.0f, -1.0f }, { 0.0f,    0.0f    }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{ -floorHalf, units::floorY,   floorHalf }, { 0.0f, 0.0f, -1.0f }, { wallUvU, 0.0f    }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{ -floorHalf, units::wallTopY,  floorHalf }, { 0.0f, 0.0f, -1.0f }, { wallUvU, wallUvV }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
+		{{  floorHalf, units::wallTopY,  floorHalf }, { 0.0f, 0.0f, -1.0f }, { 0.0f,    wallUvV }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }},
 	} };
 
 	inline const std::array<unsigned int, 12> wallIndices = {

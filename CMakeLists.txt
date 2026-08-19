@@ -67,6 +67,8 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_floor.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_wall.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_cube.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_model.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_model.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/deferred_lighting.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao_blur.frag

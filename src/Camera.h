@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "SceneUnits.h"
+
 enum class Camera_Movement {
 	FORWARD,
 	BACKWARD,
@@ -17,7 +19,8 @@ enum class Camera_Movement {
 namespace CameraDefaults {
 	constexpr float YAW = -90.0f;
 	constexpr float PITCH = 0.0f;
-	constexpr float SPEED = 2.5f;
+	// メートル毎秒。人の歩行は 1.4、走りは 4.5 前後（gl::units 参照）
+	constexpr float SPEED = gl::units::freeCameraSpeed;
 	constexpr float SENSITIVITY = 0.1f;
 	constexpr float ZOOM = 45.0f;
 }

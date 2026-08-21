@@ -1,6 +1,7 @@
 ﻿#include "Callbacks.h"
 #include "Camera.h"
 #include "Gui.h"
+#include "InputState.h"
 #include "Mouse.h"
 #include "Scene.h"
 #include "Shader.h"
@@ -13,6 +14,7 @@ constexpr int SCR_HEIGHT = 900;
 
 std::shared_ptr<Camera> camera = std::make_shared<Camera>();
 std::shared_ptr<MouseState> mouse = std::make_shared<MouseState>();
+std::shared_ptr<InputState> input = std::make_shared<InputState>();
 float heightScale = 0.1f; // Parallax Mapping の強さ（矢印キー↑↓で調整）
 int main(void) {
     // インスタンスを作成
@@ -31,6 +33,11 @@ int main(void) {
         frametime.delta = currentFrame - frametime.last;
         frametime.last = currentFrame;
 
+        if (input->ConsumeModeChanged()) {
+            window->SetCursorCaptured(input->IsGameplay());
+            mouse->Reset();
+        }
+
         // 追従先はシーンが持っているので、カメラの更新より前に渡す
         if (const glm::vec3 *target = scene->FollowTargetPosition())
             camera->SetFollowTarget(*target);
@@ -41,52 +48,63 @@ int main(void) {
         // ImGui:: の呼び出しより前に必ず1回
         gui->NewFrame();
 
-        // TODO(Phase 4): ライトや SSAO のパラメータもここに追加する
-        ImGui::Begin("Debug");
-        {
-            ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate,
-                        1000.0f / ImGui::GetIO().Framerate);
-            ImGui::Text("Camera: %s  [F] to toggle",
-                        camera->Mode() == CameraMode::ThirdPerson ? "Third person" : "Free look");
-            ImGui::Separator();
+        // ゲームプレイ中は UI を一切組み立てない。NewFrame / Render は毎フレーム呼び続ける
+        if (input->IsPaused()) {
+            ImGui::Begin("Paused");
+            {
+                ImGui::Text("Esc: resume");
+                if (ImGui::Button("Exit"))
+                    glfwSetWindowShouldClose(window->Get(), GLFW_TRUE);
+            }
+            ImGui::End();
 
-            static const char *kDebugModes[] = {
-                "0: Normal lighting", "1: Shadow (light 0)", "2: shadowMap[0] raw",
-                "3: G-Buffer Albedo", "4: G-Buffer Normal", "5: G-Buffer Position",
-                "6: Split view", "7: SSAO", "8: Shadow color[0]",
-                "9: G-Buffer Metallic", "10: G-Buffer Roughness",
-                "11: IBL Irradiance",   "12: IBL Prefilter",
-                "13: IBL BRDF LUT"};
-            ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
-                         IM_ARRAYSIZE(kDebugModes));
+            // TODO(Phase 4): ライトや SSAO のパラメータもここに追加する
+            ImGui::Begin("Debug");
+            {
+                ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate,
+                            1000.0f / ImGui::GetIO().Framerate);
+                ImGui::Text("Camera: %s  [F] to toggle",
+                            camera->Mode() == CameraMode::ThirdPerson ? "Third person" : "Free look");
+                ImGui::Separator();
 
-            // G-Buffer や AO を見るときはトーンマッピングを切らないと階調が潰れる
-            ImGui::Checkbox("Raw output (skip tonemap/bloom)",
-                            &scene->DebugRawOutput());
-            ImGui::Separator();
+                static const char *kDebugModes[] = {
+                    "0: Normal lighting", "1: Shadow (light 0)", "2: shadowMap[0] raw",
+                    "3: G-Buffer Albedo", "4: G-Buffer Normal", "5: G-Buffer Position",
+                    "6: Split view", "7: SSAO", "8: Shadow color[0]",
+                    "9: G-Buffer Metallic", "10: G-Buffer Roughness",
+                    "11: IBL Irradiance",   "12: IBL Prefilter",
+                    "13: IBL BRDF LUT"};
+                ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
+                             IM_ARRAYSIZE(kDebugModes));
 
-            ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
-            // IBL 化で基準が「空の平均輝度」に変わり、1.0 では足りなくなった
-            ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 5.0f);
-            ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);
-            ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
-            ImGui::Separator();
+                // G-Buffer や AO を見るときはトーンマッピングを切らないと階調が潰れる
+                ImGui::Checkbox("Raw output (skip tonemap/bloom)",
+                                &scene->DebugRawOutput());
+                ImGui::Separator();
 
-            // metallic は物理的には 0 か 1 の二択。中間は錆びた鉄のような混在時のみ
-            ImGui::SliderFloat("Metallic: cube", &scene->CubeMaterial().metallic, 0.0f, 1.0f);
-            ImGui::SliderFloat("Metallic: floor", &scene->FloorMaterial().metallic, 0.0f, 1.0f);
-            ImGui::SliderFloat("Metallic: wall", &scene->WallMaterial().metallic, 0.0f, 1.0f);
-            ImGui::SliderFloat("Metallic: window", &scene->WindowMaterial().metallic, 0.0f, 1.0f);
-            ImGui::Separator();
+                ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
+                // IBL 化で基準が「空の平均輝度」に変わり、1.0 では足りなくなった
+                ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 5.0f);
+                ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);
+                ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
+                ImGui::Separator();
 
-            // 下限を 0 にしない。GGX の分布が発散して真っ白な点が出る
-            ImGui::SliderFloat("Roughness: cube", &scene->CubeMaterial().roughness, 0.05f, 1.0f);
-            ImGui::SliderFloat("Roughness: floor", &scene->FloorMaterial().roughness, 0.05f, 1.0f);
-            ImGui::SliderFloat("Roughness: wall", &scene->WallMaterial().roughness, 0.05f, 1.0f);
-            ImGui::SliderFloat("Roughness: window", &scene->WindowMaterial().roughness, 0.05f, 1.0f);
-            ImGui::SliderFloat("Roughness: glass", &scene->GlassMaterial().roughness, 0.05f, 1.0f);
+                // metallic は物理的には 0 か 1 の二択。中間は錆びた鉄のような混在時のみ
+                ImGui::SliderFloat("Metallic: cube", &scene->CubeMaterial().metallic, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic: floor", &scene->FloorMaterial().metallic, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic: wall", &scene->WallMaterial().metallic, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic: window", &scene->WindowMaterial().metallic, 0.0f, 1.0f);
+                ImGui::Separator();
+
+                // 下限を 0 にしない。GGX の分布が発散して真っ白な点が出る
+                ImGui::SliderFloat("Roughness: cube", &scene->CubeMaterial().roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: floor", &scene->FloorMaterial().roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: wall", &scene->WallMaterial().roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: window", &scene->WindowMaterial().roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: glass", &scene->GlassMaterial().roughness, 0.05f, 1.0f);
+            }
+            ImGui::End();
         }
-        ImGui::End();
 
         scene->Render(frametime.delta, heightScale);
 

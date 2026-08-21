@@ -34,9 +34,9 @@ namespace CameraDefaults {
 	constexpr float ORBIT_DISTANCE = 4.0f;
 	constexpr float ORBIT_MIN_DISTANCE = 1.5f;
 	constexpr float ORBIT_MAX_DISTANCE = 12.0f;
-	// 注視点は足元ではなく胸のあたりに置く
+	// 注視点は足元ではなく胸のあたり
 	constexpr float TARGET_HEIGHT = gl::units::characterHeight * 0.7f;
-	// 追従の追いつく速さ。大きいほど硬い（0 にすると付いてこない）
+	// 追従の追いつく速さ
 	constexpr float FOLLOW_STIFFNESS = 8.0f;
 }
 
@@ -64,7 +64,7 @@ private:
 	// Orientation から Front / Right / Up を作り直す
 	void UpdateCameraVectors();
 
-	// 見上げ角。ピッチの上限を掛けるために Front から逆算する
+	// pitch は Front から逆算する
 	float CurrentPitch() const;
 
 public:
@@ -91,7 +91,7 @@ public:
 
 	/* ---- 三人称モード ---- */
 
-	// 追従先は毎フレーム外から与える。三人称のときだけ使われる
+	// 追従先は毎フレーム外から与える
 	void SetFollowTarget(const glm::vec3& position);
 	void ClearFollowTarget();
 
@@ -99,6 +99,5 @@ public:
 	void ToggleMode();
 	CameraMode Mode() const;
 
-	// 追従に補間が入るので毎フレーム呼ぶ必要がある
 	void Update(float deltaTime);
 };

@@ -38,6 +38,7 @@ namespace CameraDefaults {
 	constexpr float TARGET_HEIGHT = gl::units::characterHeight * 0.7f;
 	// 追従の追いつく速さ
 	constexpr float FOLLOW_STIFFNESS = 8.0f;
+	constexpr float PITCH_LIMIT = 89.0f;
 }
 
 class Camera

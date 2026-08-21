@@ -106,7 +106,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 	if (constrainPitch)
 	{
 		// 真上・真下を越えると視界が反転する。回転そのものではなく増分を切り詰める
-		const float limit = glm::radians(89.0f);
+		const float limit = glm::radians(CameraDefaults::PITCH_LIMIT);
 		const float current = CurrentPitch();
 		pitch = glm::clamp(current + pitch, -limit, limit) - current;
 	}

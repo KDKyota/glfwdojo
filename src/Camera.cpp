@@ -1,19 +1,7 @@
 #include "Camera.h"
 
 #include <cmath>
-
-namespace {
-
-// direction を向くクォータニオンを作る（右手系）
-glm::quat lookRotation(const glm::vec3& direction, const glm::vec3& worldUp)
-{
-	const glm::vec3 dir = glm::normalize(direction);
-	const float yaw = std::atan2(-dir.x, -dir.z);
-	const float pitch = std::asin(glm::clamp(dir.y, -1.0f, 1.0f));
-	return glm::angleAxis(yaw, worldUp) * glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
-}
-
-} // namespace
+#include <glm/ext/quaternion_trigonometric.hpp>
 
 Camera::Camera()
 	: Position(glm::vec3(0.0f, 0.0f, 3.0f)),
@@ -102,11 +90,20 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 {
 	const float yaw = glm::radians(-xoffset * MouseSensitivity);
 	float pitch = glm::radians(yoffset * MouseSensitivity);
+	const float limit = glm::radians(CameraDefaults::PITCH_LIMIT);
+
+	if (mode_ == CameraMode::ThirdPerson)
+	{
+		orbitYaw_ += yaw;
+		orbitPitch_ += pitch;
+		if (constrainPitch)
+			orbitPitch_ = glm::clamp(orbitPitch_, -limit, limit);
+		return;
+	}
 
 	if (constrainPitch)
 	{
 		// 真上・真下を越えると視界が反転する。回転そのものではなく増分を切り詰める
-		const float limit = glm::radians(89.0f);
 		const float current = CurrentPitch();
 		pitch = glm::clamp(current + pitch, -limit, limit) - current;
 	}
@@ -119,7 +116,6 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 	Orientation = glm::normalize(Orientation);
 
 	UpdateCameraVectors();
-
 };
 
 void Camera::ProcessMouseScroll(float yoffset)
@@ -144,6 +140,11 @@ void Camera::SetFollowTarget(const glm::vec3& position)
 	hasFollowTarget_ = true;
 }
 
+glm::vec3 Camera::PivotPosition() const
+{
+	return followTarget_ + glm::vec3(0.0f, CameraDefaults::TARGET_HEIGHT, 0.0f);
+}
+
 void Camera::ClearFollowTarget()
 {
 	hasFollowTarget_ = false;
@@ -159,6 +160,15 @@ void Camera::ToggleMode()
 	}
 	// 追従先が無いまま切り替えると、移動もできず注視点も無い状態で固まる
 	if (!hasFollowTarget_) return;
+
+	// 現在の視線を軌道角へ引き継ぐ
+	// こうしないと切り替えた瞬間に画面が飛ぶぞ！（長州力風）
+	orbitYaw_ = std::atan2(-Front.x, -Front.z);
+	orbitPitch_ = std::asin(glm::clamp(Front.y, -1.0f, 1.0f));
+	// 補完の初期化
+	// 合わせておかないとおかしな挙動になる
+	smoothedPivot_ = PivotPosition();
+
 	mode_ = CameraMode::ThirdPerson;
 }
 
@@ -171,19 +181,26 @@ void Camera::Update(float deltaTime)
 {
 	if (mode_ != CameraMode::ThirdPerson || !hasFollowTarget_) return;
 
-	const glm::vec3 pivot = followTarget_ + glm::vec3(0.0f, CameraDefaults::TARGET_HEIGHT, 0.0f);
 	// 視線の逆方向へ orbitDistance_ だけ下がった位置が理想の視点
-	const glm::vec3 desiredPosition = pivot - Front * orbitDistance_;
+	// const glm::vec3 desiredPosition = PivotPosition() - Front * orbitDistance_;
 
-	// 1 フレームで詰める割合を指数で求める。フレームレートが変わっても追従の速さが変わらない
+	// 1 フレームで詰める割合を指数で求める
 	const float blend = 1.0f - std::exp(-CameraDefaults::FOLLOW_STIFFNESS * deltaTime);
-	Position = glm::mix(Position, desiredPosition, blend);
+	// Position = glm::mix(Position, desiredPosition, blend);
+	smoothedPivot_ = glm::mix(smoothedPivot_, PivotPosition(), blend);
+
+	const glm::quat orbit = glm::angleAxis(orbitYaw_, WorldUp) * glm::angleAxis(orbitPitch_, glm::vec3(1.0f, 0.0f, 0.0f));
+
+	Position = smoothedPivot_ + orbit * glm::vec3(0.0f, 0.0f, orbitDistance_);
+	Orientation = orbit;
+
+	UpdateCameraVectors();
 
 	// 位置が遅れている間は注視点が画面中心からずれるので、向きも slerp で追従させる
-	const glm::vec3 toPivot = pivot - Position;
-	if (glm::dot(toPivot, toPivot) > 1e-6f)
-	{
-		Orientation = glm::normalize(glm::slerp(Orientation, lookRotation(toPivot, WorldUp), blend));
-		UpdateCameraVectors();
-	}
+	// const glm::vec3 toPivot = PivotPosition() - Position;
+	// if (glm::dot(toPivot, toPivot) > 1e-6f)
+	// {
+	// 	Orientation = glm::normalize(glm::slerp(Orientation, lookRotation(toPivot, WorldUp), blend));
+	// 	UpdateCameraVectors();
+	// }
 }

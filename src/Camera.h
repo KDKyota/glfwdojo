@@ -56,11 +56,17 @@ private:
 	glm::vec3 followTarget_ = glm::vec3(0.0f);
 	bool hasFollowTarget_ = false;
 	float orbitDistance_ = CameraDefaults::ORBIT_DISTANCE;
+	float orbitYaw_ = 0.0f;
+	float orbitPitch_ = 0.0f;
+	glm::vec3 smoothedPivot_ = glm::vec3(0.0f); // カメラが周回する中心点
 
 	// camera position
 	float MovementSpeed;
 	float MouseSensitivity;
 	float Zoom;
+
+	// 注視点の式を一本化する。Update() と ToggleMode() で食い違うと切り替え時だけ縦にずれる
+	glm::vec3 PivotPosition() const;
 
 	// Orientation から Front / Right / Up を作り直す
 	void UpdateCameraVectors();

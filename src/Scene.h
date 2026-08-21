@@ -242,8 +242,7 @@ class Scene {
         glm::vec3(0.0f, 0.0f, 20.0f),  // z=+25 壁の前
     };
 
-    // 見つからないモデルは読み飛ばす。ライセンス上コミットできないモデルを各自の環境にだけ
-    // 置けるようにするため、リポジトリに無いパスが並んでいてもよい設計にしている
+    // 見つからないモデルは読み飛ばす
     struct ModelSpawn {
         std::string path;
         glm::vec3 position;
@@ -269,8 +268,7 @@ class Scene {
          {glm::vec3(-1.5f, 3.0f, -2.2f), glm::vec3(0.0f), glm::vec3(1.75f, 9.0f, 2.5f), glm::vec3(0.9f, 4.5f, 1.25f),
           1.0f, 0.14f, 0.07f}}};
 
-    // 末尾は裏面ライティングの検証用。light0（白）から十分離し、-Z 側に置いた
-    // light1（赤）だけが当たるようにしてある
+    // これは検証用なので後々消してもいい
     const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
                                                  glm::vec3(0.0f, 0.0f, 0.7f),   glm::vec3(-0.3f, 0.0f, -2.3f),
                                                  glm::vec3(0.5f, 0.0f, -0.6f),  glm::vec3(-15.0f, 0.0f, -8.0f)};

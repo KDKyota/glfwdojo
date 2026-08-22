@@ -5,14 +5,13 @@ class MouseState
 {
 private:
 	bool FirstMouse = true;
-	bool RightPressed = false;
 	float LastX = 800.0f / 2.0f;
 	float LastY = 600.0f / 2.0f;
 
 public:
 	std::pair<float, float> ComputeOffset(double xpos, double ypos);
-	void SetRightPressed(bool pressed);
-	bool IsRightPressed() const;
 
+	// 次の1回を差分0にする
+	// カーソル捕捉の切り替えで座標が飛ぶため、その後に呼ぶ
+	void Reset();
 };
-

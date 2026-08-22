@@ -49,7 +49,25 @@ int main(void) {
         // ImGui:: の呼び出しより前に必ず1回
         gui->NewFrame();
 
-        // ゲームプレイ中は UI を一切組み立てない。NewFrame / Render は毎フレーム呼び続ける
+        // FPS だけは常時表示する。NoInputs なのでカーソルを掴んだままでも掴まれない
+        {
+            const ImGuiViewport *viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(
+                ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 10.0f,
+                       viewport->WorkPos.y + 10.0f),
+                ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+            ImGui::SetNextWindowBgAlpha(0.35f);
+            ImGui::Begin("FPS", nullptr,
+                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                             ImGuiWindowFlags_NoInputs |
+                             ImGuiWindowFlags_NoSavedSettings |
+                             ImGuiWindowFlags_AlwaysAutoResize);
+            ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate,
+                        1000.0f / ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+
+        // 操作を伴う UI はポーズ中だけ。NewFrame / Render は毎フレーム呼び続ける
         if (input->IsPaused()) {
             ImGui::Begin("Paused");
             {
@@ -62,8 +80,6 @@ int main(void) {
             // TODO(Phase 4): ライトや SSAO のパラメータもここに追加する
             ImGui::Begin("Debug");
             {
-                ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate,
-                            1000.0f / ImGui::GetIO().Framerate);
                 ImGui::Text("Camera: %s  [F] to toggle",
                             camera->Mode() == CameraMode::ThirdPerson ? "Third person" : "Free look");
                 ImGui::Separator();

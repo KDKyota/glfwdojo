@@ -23,6 +23,9 @@ public:
 	int GetWidth() const;
 	int GetHeight() const;
 
+	// ゲームプレイ中はカーソルを掴んで、ボタンを押さなくても視点が回るようにする
+	void SetCursorCaptured(bool captured);
+
 private:
 	std::unique_ptr<GLFWwindow, GLFWwindowDeleter> handle_;
 	int width_, height_;

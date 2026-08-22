@@ -16,8 +16,4 @@ public:
 	void NewFrame();
 	// Scene の描画がすべて終わった後に1回（デフォルトFBOに描画される）
 	void Render();
-
-	// UI が入力を掴んでいるか。カメラ操作の抑止に使う
-	static bool WantCaptureMouse();
-	static bool WantCaptureKeyboard();
 };

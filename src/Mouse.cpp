@@ -1,13 +1,7 @@
 #include "Mouse.h"
 
-void MouseState::SetRightPressed(bool pressed) {
-	this->RightPressed = pressed;
-	// 押した時もリセットする。ドラッグ開始の1回目を差分0にして視点の飛びを防ぐ
+void MouseState::Reset() {
 	FirstMouse = true;
-}
-
-bool MouseState::IsRightPressed() const {
-	return this->RightPressed;
 }
 
 std::pair<float, float> MouseState::ComputeOffset(double xpos, double ypos) {

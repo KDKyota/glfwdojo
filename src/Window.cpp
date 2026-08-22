@@ -25,7 +25,7 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 
 	glfwMakeContextCurrent(handle_.get());
 	glfwSwapInterval(1); // fpsをフレームレートに合わせて固定
-	
+
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 		throw std::runtime_error("Failed to initialize GLAD");
 
@@ -52,16 +52,16 @@ Window::Window(int width, int height, const std::string& title) : width_(width),
 			<< std::endl;
 	}
 	glfwSetFramebufferSizeCallback(handle_.get(), framebuffer_size_callback);
-    glfwSetMouseButtonCallback(handle_.get(), mouse_button_callback);
-    glfwSetCursorPosCallback(handle_.get(), mouse_callback);
-    glfwSetScrollCallback(handle_.get(), scroll_callback);
-    glfwSetKeyCallback(handle_.get(), key_callback);
+	glfwSetCursorPosCallback(handle_.get(), mouse_callback);
+	glfwSetScrollCallback(handle_.get(), scroll_callback);
+	glfwSetKeyCallback(handle_.get(), key_callback);
+	glfwSetWindowFocusCallback(handle_.get(), window_focus_callback);
 }
 
-Window::~Window() 
-{ 
+Window::~Window()
+{
 	handle_.reset();
-	glfwTerminate(); 
+	glfwTerminate();
 }
 
 bool Window::ShouldClose() const
@@ -90,4 +90,15 @@ int Window::GetWidth() const
 int Window::GetHeight() const
 {
 	return height_;
+}
+
+void Window::SetCursorCaptured(bool captured)
+{
+	glfwSetInputMode(handle_.get(), GLFW_CURSOR,
+		captured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+
+	// カーソル捕捉中しか指定できない
+	if (glfwRawMouseMotionSupported())
+		glfwSetInputMode(handle_.get(), GLFW_RAW_MOUSE_MOTION,
+			captured ? GLFW_TRUE : GLFW_FALSE);
 }

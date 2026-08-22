@@ -25,12 +25,13 @@ int main(void) {
     auto gui = std::make_unique<Gui>(window->Get());
 
     struct {
-        float delta = 0.0f, last = 0.0f, targetFrameTime = 1.0f / 60.0f;
+        float delta = 0.0f, last = 0.0f;
     } frametime; // ループごとの経過時間を確認する構造体
 
     while (!window->ShouldClose()) {
         float currentFrame = static_cast<float>(glfwGetTime());
-        frametime.delta = currentFrame - frametime.last;
+        // ポーズ中は経過時間を止める。last の更新は止めないこと（復帰の1フレームに全時間が乗る）
+        frametime.delta = input->IsPaused() ? 0.0f : currentFrame - frametime.last;
         frametime.last = currentFrame;
 
         if (input->ConsumeModeChanged()) {
@@ -106,6 +107,7 @@ int main(void) {
             ImGui::End();
         }
 
+        // ポーズ中も描画を続ける。飛ばすと SwapBuffers() の待ちが消えてループが全力で回る
         scene->Render(frametime.delta, heightScale);
 
         // Scene::Render() に入れるとパスの途中で UI を描くことになる

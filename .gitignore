@@ -33,7 +33,8 @@ CMakeUserPresets.json
 *.aps
 
 # obsidianの設定ディレクトリ
-docs/.obsidian/
+docs/.obsidian/*
+docs/blog/
 
 # clangd が生成するインデックスのキャッシュ
 .cache/

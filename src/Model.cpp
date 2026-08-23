@@ -50,7 +50,25 @@ void Model::loadModel(const std::string& path)
 	directory_ = (slash == std::string::npos) ? "" : path.substr(0, slash);
 
 	globalInverseTransform_ = glm::inverse(toGlm(scene->mRootNode->mTransformation));
+
+	// NOTE: 後で消す
+	const glm::mat4 rootT = toGlm(scene->mRootNode->mTransformation);
+	std::cout << "[" << path << "]root=" << scene->mRootNode->mName.C_Str() << std::endl;
+	for (int r = 0; r < 4; ++r) {
+	    std::cout << " " << rootT[0][r] << " " << rootT[1][r] << " " << rootT[2][r] << " " << rootT[3][r] << std::endl;
+	}
 	root_ = processNode(scene->mRootNode, scene);
+	std::cout << " bones=" << bones_.size() << std::endl;
+
+	// NOTE: 後で消す
+	const auto boneIt = bones_.find("Bone");
+	if (boneIt != bones_.end()) {
+    	const glm::mat4& off = boneIt->second.offset;
+        std::cout << "offset[Bone] index = " << boneIt->second.index << std::endl;
+        for (int r = 0; r < 4; ++r) {
+            std::cout << " " << off[0][r] << " " << off[1][r] << " " << off[2][r] << " " << off[3][r] << std::endl;
+        }
+	}
 }
 
 ModelNode Model::processNode(const aiNode* node, const aiScene* scene)
@@ -228,6 +246,13 @@ std::shared_ptr<Texture> Model::loadTexture(const aiMaterial* mat, aiTextureType
 
 void Model::Draw(gl::Shader& shader, const glm::mat4& modelMatrix) const
 {
+	if (!bones_.empty()) {
+       shader.setMat4("model", modelMatrix * root_.localTransform);
+       for (const Mesh& mesh : meshes_) {
+           mesh.Draw(shader);
+       }
+       return;
+	}
 	drawNode(root_, modelMatrix, shader);
 }
 
@@ -245,4 +270,24 @@ void Model::drawNode(const ModelNode& node, const glm::mat4& parentTransform, gl
 	for (const ModelNode& child : node.children) {
 		drawNode(child, worldTransform, shader);
 	}
+}
+
+void Model::UpdateBonePalette() {
+    if (bones_.empty()) return;
+    palette_.assign(bones_.size(), glm::mat4(1.0f));
+    accumulatePalette(root_, glm::mat4(1.0f));
+}
+
+void Model::accumulatePalette(const ModelNode& node, const glm::mat4& parentTransform) {
+    const glm::mat4 globalTransform = parentTransform * node.localTransform;
+
+    const auto found = bones_.find(node.name);
+    if(found != bones_.end()) {
+        const BoneInfo& info = found->second;
+        palette_[info.index] = globalInverseTransform_ * globalTransform * info.offset;
+    }
+
+    for (const ModelNode& child : node.children){
+        accumulatePalette(child, globalTransform);
+    }
 }

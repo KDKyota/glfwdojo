@@ -179,8 +179,8 @@ class Scene {
     static constexpr unsigned int ENV_CUBEMAP_SIZE = 512;
     // 畳み込み後は極めて低周波なので、解像度を上げても情報が増えない
     static constexpr unsigned int IRRADIANCE_SIZE = 32;
-    gl::TextureHandle hdrTexture_;  // 正距円筒図法のまま読み込んだ元画像
-    gl::TextureHandle envCubemap_;  // 上を6面へ焼き直したもの。背景と IBL の共通ソース
+    gl::TextureHandle hdrTexture_; // 正距円筒図法のまま読み込んだ元画像
+    gl::TextureHandle envCubemap_; // 上を6面へ焼き直したもの。背景と IBL の共通ソース
     gl::TextureHandle irradianceMap_;
     // ミップの各レベルが roughness 0.0 / 0.25 / 0.5 / 0.75 / 1.0 に対応する
     static constexpr unsigned int PREFILTER_SIZE = 128;
@@ -270,6 +270,6 @@ class Scene {
 
     // これは検証用なので後々消してもいい
     const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
-                                                 glm::vec3(0.0f, 0.0f, 0.7f),   glm::vec3(-0.3f, 0.0f, -2.3f),
-                                                 glm::vec3(0.5f, 0.0f, -0.6f),  glm::vec3(-15.0f, 0.0f, -8.0f)};
+                                                 glm::vec3(0.0f, 0.0f, 0.7f), glm::vec3(-0.3f, 0.0f, -2.3f),
+                                                 glm::vec3(0.5f, 0.0f, -0.6f), glm::vec3(-15.0f, 0.0f, -8.0f)};
 };

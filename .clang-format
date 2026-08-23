@@ -9,3 +9,6 @@ AllowShortBlocksOnASingleLine: Always
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AllowShortLoopsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
+# include の自動ソートを無効にする。glad は他の OpenGL ヘッダより先に
+# 展開されないとコンパイルが通らず、アルファベット順では GLFW が先に来てしまう
+SortIncludes: Never

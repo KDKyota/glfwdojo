@@ -7,6 +7,8 @@
 #include <iostream>
 #include <random>
 #include <stdexcept>
+#include <algorithm>
+#include <cmath>
 #include <stb_image.h>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
@@ -362,6 +364,23 @@ void Scene::initModels() {
             followTargetPosition_ = spawn.position;
             hasFollowTarget_ = true;
         }
+    }
+    // NOTE: 後で消す
+    for (const std::unique_ptr<Model> &model : models_) {
+        if (!model->HasBones()) {
+            continue;
+        }
+        model->UpdateBonePalette();
+        float maxDeviation = 0.0f;
+        for (const glm::mat4 &m : model->BonePalette()) {
+            for (int c = 0; c < 4; ++c) {
+                for (int r = 0; r < 4; ++r) {
+                    const float expected = (c == r) ? 1.0f : 0.0f;
+                    maxDeviation = std::max(maxDeviation, std::abs(m[c][r] - expected));
+                }
+            }
+        }
+        std::cout << "palette deviation = " << maxDeviation << std::endl;
     }
 }
 

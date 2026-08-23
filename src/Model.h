@@ -37,6 +37,10 @@ public:
 	const glm::mat4& GlobalInverseTransform() const { return globalInverseTransform_; }
 	const std::unordered_map<std::string, BoneInfo>& Bones() const { return bones_; }
 
+	bool HasBones() const { return !bones_.empty(); }
+	const std::vector<glm::mat4>& BonePalette() const { return palette_; }
+	void UpdateBonePalette();
+
 private:
 	std::vector<Mesh> meshes_;
 	ModelNode root_;
@@ -47,6 +51,9 @@ private:
 	std::string path_;
 	std::string directory_;
 	TextureCache& cache_;
+
+	std::vector<glm::mat4> palette_;
+	void accumulatePalette(const ModelNode& node, const glm::mat4& parentTransform);
 
 	void loadModel(const std::string& path);
 	ModelNode processNode(const aiNode* node, const aiScene* scene);

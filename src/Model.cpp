@@ -108,7 +108,7 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     loadBones(mesh, vertices);
 
     gl::PbrMaterial material = loadMaterial(scene->mMaterials[mesh->mMaterialIndex], scene);
-    return Mesh(std::move(vertices), std::move(indices), std::move(material));
+    return Mesh(std::move(vertices), std::move(indices), std::move(material), mesh->mNumBones > 0);
 }
 
 void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {

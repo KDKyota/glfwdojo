@@ -16,7 +16,7 @@ class Mesh {
     void setupMesh();
 
   public:
-    Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material);
+    Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material, bool isSkinned);
 
     bool IsSkinned() const { return isSkinned_; }
 

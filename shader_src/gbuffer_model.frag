@@ -37,9 +37,9 @@ void main()
     float metallicValue = metallic;
     float roughnessValue = roughness;
     if (hasMetallicRoughnessMap) {
-        vec3 packed = texture(metallicRoughnessMap, TexCoords).rgb;
-        roughnessValue *= packed.g;
-        metallicValue *= packed.b;
+        vec3 metallicRoughnessSample = texture(metallicRoughnessMap, TexCoords).rgb;
+        roughnessValue *= metallicRoughnessSample.g;
+        metallicValue *= metallicRoughnessSample.b;
     }
 
     vec3 normal = normalize(Normal);

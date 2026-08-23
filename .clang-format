@@ -3,3 +3,9 @@ BasedOnStyle: Microsoft
 ColumnLimit: 0
 # 開き括弧を改行せず同じ行に置く (K&R風: void func() { ... })
 BreakBeforeBraces: Attach
+# 1行で書いた短いブロックを展開せずそのまま残す (中の空白は自動で補われる)
+AllowShortFunctionsOnASingleLine: All
+AllowShortBlocksOnASingleLine: Always
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true

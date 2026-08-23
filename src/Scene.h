@@ -12,9 +12,25 @@
 #include <memory>
 #include <vector>
 
+/**
+ * @brief シーンのジオメトリ・ライト・レンダーパイプライン全体を所有し、1フレームの描画を統括する。
+ */
 class Scene {
   public:
+    /**
+     * @brief シーンを初期化する。
+     *
+     * @param camera 描画に使うカメラ。
+     * @param srcWindow,scrHeight 画面解像度。
+     */
     Scene(std::shared_ptr<Camera> camera, int srcWindow, int scrHeight);
+
+    /**
+     * @brief 1フレーム分の描画を行う。
+     *
+     * @param deltaTime 前フレームからの経過時間。
+     * @param heightScale Parallax Mapping の強さ。
+     */
     void Render(float deltaTime, float heightScale);
 
     // ImGui のパネルから直接編集するためのアクセサ
@@ -68,15 +84,25 @@ class Scene {
     void initUBO();
 
     // Render() から順に呼ばれるパス。FBO とテクスチャで繋がっているので順序に意味がある
+    /// 透明オブジェクトをカメラ距離でソートする。
     void updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted);
+    /// View/Projection 行列を UBO へ書き込む。
     void updateMatricesUBO();
+    /// Point Light のシャドウマップを描く。
     void renderShadowPasses();
+    /// 不透明オブジェクトを G-Buffer へ描く。
     void renderGeometryPass();
+    /// SSAO を計算する。
     void renderSSAOPass();
+    /// G-Buffer の深度をデフォルト FBO へコピーする。
     void blitGeometryDepth();
+    /// Deferred Shading のライティングを合成する。
     void renderDeferredLightingPass();
+    /// G-Buffer に書けないオブジェクトを Forward Shading で描画する。
     void renderForwardPass(const std::vector<gl::TransparentDraw> &sorted);
+    /// Bloom 用のぼかしを作る。
     void renderBloomBlur();
+    /// トーンマッピングとガンマ補正をかけて画面へ出力する。
     void renderToScreen();
 
     void applyPointLights(gl::Shader &shader);

@@ -1,3 +1,4 @@
+// Bloom 用の1次元ガウシアンブラー。横・縦を交互に呼んで2次元ブラーを近似する。
 #version 330 core
 out vec4 FragColor;
 

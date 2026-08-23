@@ -5,6 +5,7 @@ Mesh::Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, 
     setupMesh();
 }
 
+/// VAO を組み立て、頂点属性 location を設定する。
 void Mesh::setupMesh() {
     VAO_.create();
     VBO_.create();

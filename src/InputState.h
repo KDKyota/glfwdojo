@@ -6,6 +6,9 @@ enum class InputMode {
     Paused,   // カーソルを解放して UI へ ゲーム側の入力は止める
 };
 
+/**
+ * @brief 入力とカーソルの捕捉状態を Gameplay/Paused の2値で管理する。
+ */
 class InputState {
   private:
     InputMode mode_ = InputMode::Gameplay;

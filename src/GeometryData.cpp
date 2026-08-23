@@ -12,6 +12,7 @@ std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3 &v0, const glm::ve
     glm::vec2 deltaUV1 = uv1 - uv0;
     glm::vec2 deltaUV2 = uv2 - uv0;
 
+    // edge = deltaUV.x * T + deltaUV.y * B という連立方程式を解くための逆行列の係数
     float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
     glm::vec3 tangent, bitangent;
@@ -25,6 +26,7 @@ std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3 &v0, const glm::ve
     bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
     bitangent = glm::normalize(bitangent);
 
+    // 右手系になっていなければ反転する（法線マッピングの結果が反転してしまうため）
     if (glm::dot(glm::cross(tangent, bitangent), calcNormal(v0, v1, v2)) < 0.0f) {
         tangent = -tangent;
         bitangent = -bitangent;

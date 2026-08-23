@@ -1,3 +1,4 @@
+// gbuffer_cube.frag 用の頂点シェーダー。Tangent Space の各種ベクトルも出力する。
 #version 460 core
 //#extension GL_ARB_shading_language_420pack : enable
 layout (location = 0) in vec3 aPos;

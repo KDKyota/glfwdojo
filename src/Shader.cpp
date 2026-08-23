@@ -10,7 +10,7 @@ namespace gl {
 
 namespace {
 
-// GLSL に #include は無いので、読み込み時に自前で展開する
+/// GLSL の #include を再帰的に展開する（GLSL 自体には #include が無いため）。
 std::string expandIncludes(const std::string &path, int depth = 0) {
     if (depth > 8) {
         std::cout << "ERROR::SHADER::INCLUDE_TOO_DEEP: " << path << std::endl;
@@ -176,6 +176,7 @@ void Shader::setMat4(const std::string &name, const glm::mat4 &mat) const {
                        glm::value_ptr(mat));
 }
 
+/// shader/program のコンパイル・リンク結果を確認し、失敗していればログを標準出力へ書く。
 void Shader::checkCompileErrors(unsigned int shader, std::string type) {
     int success;
     char infoLog[512];

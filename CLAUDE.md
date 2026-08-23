@@ -54,7 +54,7 @@
 
 ## 実行環境と Claude の制約
 
-- Claude の動作環境は **Linux (WSL2)** だが、プログラムのビルドと実行は **Windows 側（Visual Studio）** でユーザーが行う。
+- Claude は基本的にはアプリケーションの実行をしない
 - Claude は `cmake --build` や実行ファイルの起動など、**ビルド・実行コマンドを自分では実行しない**。
 - シェーダーはビルド後に `add_custom_command` で exe フォルダへコピーされるため、新しいシェーダーを追加した場合は **CMakeLists.txt の `SHADER_SOURCES`** への追記も必要。
 
@@ -97,7 +97,13 @@
 - OpenGL・Vulkan・DirectXなど一般的なAPI呼び出し
 - 名前だけで意味が分かる変数・関数
 
-### コメントの長さ
+## Comments
 
-- 通常のコメントは1行以内にする。
-- 長文で処理内容を説明しない。
+* Keep comments concise and readable. Do not over-document the code.
+* Prefer `///` comments for public classes/functions and keep them to **one sentence on one line**.
+* Explain **what the code means or why it is necessary**, not obvious implementation details.
+* Avoid multi-line comments unless the explanation is genuinely important and cannot be expressed in one line.
+* Do not duplicate detailed explanations from `docs/` in source comments.
+* Function/class summaries should generally use a verb-ending sentence such as `/// カメラの位置を取得する。`
+* Use `。` for Japanese sentences; omit punctuation for labels such as `// World Space`.
+* Do not change code behavior just to improve comments.

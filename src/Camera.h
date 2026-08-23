@@ -41,6 +41,9 @@ constexpr float FOLLOW_STIFFNESS = 8.0f;
 constexpr float PITCH_LIMIT = 89.0f;
 } // namespace CameraDefaults
 
+/**
+ * @brief View Matrix を生成するカメラ。FreeLook（自由視点）と ThirdPerson（追従）の2モードを持つ。
+ */
 class Camera {
   private:
     glm::vec3 Position;
@@ -77,11 +80,19 @@ class Camera {
     // constructor with vectors
     Camera();
 
-    // return the view matrix calculated using Eular Angles and the LookAt Matrix
+    /**
+     * @brief View Matrix を返す。
+     */
     glm::mat4 GetViewMatrix() const;
 
+    /**
+     * @brief カメラの位置を返す。
+     */
     glm::vec3 GetViewPosition() const;
 
+    /**
+     * @brief カメラの視線方向を返す。
+     */
     glm::vec3 GetViewFront() const;
 
     const float &GetZoomValue() const;
@@ -105,5 +116,10 @@ class Camera {
     void ToggleMode();
     CameraMode Mode() const;
 
+    /**
+     * @brief ThirdPerson モードのカメラ追従と軌道回転を更新する。
+     *
+     * @param deltaTime 前フレームからの経過時間。
+     */
     void Update(float deltaTime);
 };

@@ -18,6 +18,9 @@ struct Vertex {
 };
 
 // 透過色入りのテクスチャ用
+/**
+ * @brief 透明オブジェクトを奥から手前へ描くための、カメラ距離によるソート用情報。
+ */
 struct TransparentDraw {
     float distance;
     unsigned int index;
@@ -200,7 +203,12 @@ inline const std::array<unsigned int, 6> transparentIndices = {0, 1, 2, 2, 3, 0}
 // 3頂点の座標(v0, v1, v2)から法線ベクトルを計算する関数
 glm::vec3 calcNormal(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 
-// 3頂点の座標とUVから接線・従法線ベクトルを計算する関数
+/**
+ * @brief 法線マッピング用の Tangent/Bitangent を求める。
+ *
+ * @param v0,v1,v2 三角形の頂点座標。
+ * @param uv0,uv1,uv2 対応する UV 座標。
+ */
 std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec2 &uv0, const glm::vec2 uv1, const glm::vec2 uv2);
 
 // 「1面 = 4頂点」の並びを前提に、面ごとに法線を計算して4頂点へ割り当てる

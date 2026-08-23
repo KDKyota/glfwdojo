@@ -1,3 +1,4 @@
+// 単一方向の光源向けの2D シャドウマップ深度パス。現在は未使用（C++側からロードされていない）。
 #version 330 core
 layout(location = 0) in vec3 aPos;
 layout(location = 3) in vec3 aOffset; // インスタンスごとの位置オフセット（床など非インスタンスは 0,0,0）

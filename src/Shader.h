@@ -11,17 +11,34 @@
 
 namespace gl {
 
+/**
+ * @brief シェーダーのコンパイル・リンクと uniform 設定を行うクラス。
+ */
 class Shader {
   public:
     unsigned int ID;
     ~Shader();
 
-    // ジオメトリシェーダーあり版コンストラクタ
+    /**
+     * @brief Vertex/Geometry/Fragment シェーダーからプログラムを生成する。
+     *
+     * @param vertexPath Vertex Shader のパス。
+     * @param geometryPath Geometry Shader のパス。
+     * @param fragmentPath Fragment Shader のパス。
+     */
     Shader(const char *vertexPath, const char *geometryPath, const char *fragmentPath);
 
-    // constructor generates the shader on the fly
+    /**
+     * @brief Vertex/Fragment シェーダーからプログラムを生成する。
+     *
+     * @param vertexPath Vertex Shader のパス。
+     * @param fragmentPath Fragment Shader のパス。
+     */
     Shader(const char *vertexPath, const char *fragmentPath);
 
+    /**
+     * @brief このプログラムをバインドする。
+     */
     void use() const;
 
     void setBool(const std::string &name, bool value) const;

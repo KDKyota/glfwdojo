@@ -1,3 +1,4 @@
+// Point Light 用シャドウマップの深度パス。光源からの正規化距離を書き込む。
 #version 330 core
 
 // geometry shader から中継されたフラグメントのワールド座標

@@ -1,3 +1,4 @@
+// ライティング計算はせず、PointLight::diffuse をそのまま塗るだけ（光源自体を発光体として見せる）。
 #version 460 core
 out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;

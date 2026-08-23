@@ -13,6 +13,7 @@ glm::mat4 toGlm(const aiMatrix4x4 &m) {
                      m.a4, m.b4, m.c4, m.d4);
 }
 
+/// 空いているボーンスロットへ影響を1件追加する。
 void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
     if (weight <= 0.0f) {
         return;
@@ -49,6 +50,7 @@ void Model::loadModel(const std::string &path) {
     root_ = processNode(scene->mRootNode, scene);
 }
 
+/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。
 ModelNode Model::processNode(const aiNode *node, const aiScene *scene) {
     ModelNode result;
     result.name = node->mName.C_Str();
@@ -73,6 +75,7 @@ ModelNode Model::processNode(const aiNode *node, const aiScene *scene) {
     return result;
 }
 
+/// aiMesh から頂点・インデックス・マテリアルを組み立て、Mesh を作る。
 Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     std::vector<gl::Vertex> vertices;
     vertices.reserve(mesh->mNumVertices);
@@ -111,6 +114,7 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     return Mesh(std::move(vertices), std::move(indices), std::move(material), mesh->mNumBones > 0);
 }
 
+/// ボーン情報を集め、各頂点にボーンの影響を書き込む。
 void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
     for (unsigned int i = 0; i < mesh->mNumBones; ++i) {
         const aiBone *bone = mesh->mBones[i];
@@ -133,6 +137,7 @@ void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
     }
 }
 
+/// aiMaterial から PBR テクスチャと factor を読み取る。
 gl::PbrMaterial Model::loadMaterial(const aiMaterial *mat, const aiScene *scene) {
     gl::PbrMaterial material;
 
@@ -183,6 +188,7 @@ gl::PbrMaterial Model::loadMaterial(const aiMaterial *mat, const aiScene *scene)
     return material;
 }
 
+/// type のテクスチャを TextureCache 経由でロードする。無ければ nullptr。
 std::shared_ptr<Texture> Model::loadTexture(const aiMaterial *mat, aiTextureType type, ColorSpace colorSpace,
                                             const aiScene *scene) {
     if (mat->GetTextureCount(type) == 0) {

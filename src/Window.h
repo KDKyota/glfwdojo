@@ -11,14 +11,26 @@ struct GLFWwindowDeleter {
     }
 };
 
+/**
+ * @brief GLFW ウィンドウと OpenGL コンテキストを管理する RAII ラッパー。
+ */
 class Window {
   public:
+    /**
+     * @brief ウィンドウと OpenGL コンテキストを生成する。
+     *
+     * @param width,height ウィンドウの初期サイズ。
+     * @param title タイトルバーの文字列。
+     */
     Window(int width, int height, const std::string &title);
     ~Window(); // glfwTerminal関数を呼び出す
 
     bool ShouldClose() const;
     void SwapBuffers();
     void PolleEvents();
+    /**
+     * @brief GLFWwindow の生ポインタを返す。
+     */
     GLFWwindow *Get() const;
     int GetWidth() const;
     int GetHeight() const;

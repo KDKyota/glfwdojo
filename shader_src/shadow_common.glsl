@@ -26,6 +26,7 @@ uniform samplerCube shadowMap[NR_LIGHTS];
 uniform samplerCube shadowColor[NR_LIGHTS];
 uniform float farPlane;
 
+// fragPos が影の中にあるかを [0, 1] で返す（0=完全に照らされる, 1=完全な影）。
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos,
     samplerCube shadowMap) {
     // samplerCube は方向でテクセルを解決するので正規化しない

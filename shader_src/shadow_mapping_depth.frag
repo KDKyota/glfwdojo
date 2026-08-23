@@ -1,3 +1,4 @@
+// shadow_mapping_depth.vert と対の frag。C++ 側から未ロードのため現在は使われていない。
 #version 330 core
 
 void main()

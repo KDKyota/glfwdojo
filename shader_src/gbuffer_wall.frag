@@ -1,3 +1,4 @@
+// レンガ壁用の G-Buffer 書き込みシェーダー。法線マッピングのみ（POM は使わない）。
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;

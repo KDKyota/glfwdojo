@@ -1,3 +1,4 @@
+// ガラス窓用の頂点シェーダー。glass.frag と gbuffer_window.frag で共用する。
 #version 460 core
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal;

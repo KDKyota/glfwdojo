@@ -13,6 +13,9 @@ void Material::setShininess(const float shi) {
     shininess = shi;
 }
 
+/**
+ * @brief material.* の uniform を設定する。
+ */
 void Material::setUniforms(gl::Shader &shader) const {
     shader.setInt("material.diffuse", 0);
     shader.setInt("material.specular", 1);

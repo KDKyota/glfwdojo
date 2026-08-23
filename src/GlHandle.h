@@ -3,7 +3,11 @@
 
 namespace gl {
 
-// 派生の static gen() / del() を CRTP で呼ぶ。デストラクタからは仮想関数が派生へ届かないため
+/**
+ * @brief OpenGL オブジェクトの ID を RAII 管理する基底クラス。
+ *
+ * CRTP で派生の static gen()/del() を呼ぶ。
+ */
 template <typename Derived>
 class HandleBase {
   public:
@@ -27,6 +31,9 @@ class HandleBase {
         return *this;
     }
 
+    /**
+     * @brief 新しい OpenGL オブジェクトを生成する。
+     */
     void create() {
         reset(Derived::gen());
     }
@@ -50,6 +57,9 @@ class HandleBase {
     GLuint id_ = 0;
 };
 
+/**
+ * @brief VAO を管理する。
+ */
 class VertexArrayHandle : public HandleBase<VertexArrayHandle> {
   public:
     static GLuint gen() {
@@ -62,6 +72,9 @@ class VertexArrayHandle : public HandleBase<VertexArrayHandle> {
     }
 };
 
+/**
+ * @brief VBO・EBO・UBO などのバッファを管理する。
+ */
 class BufferHandle : public HandleBase<BufferHandle> {
   public:
     static GLuint gen() {
@@ -74,6 +87,9 @@ class BufferHandle : public HandleBase<BufferHandle> {
     }
 };
 
+/**
+ * @brief テクスチャを管理する。
+ */
 class TextureHandle : public HandleBase<TextureHandle> {
   public:
     static GLuint gen() {
@@ -86,6 +102,9 @@ class TextureHandle : public HandleBase<TextureHandle> {
     }
 };
 
+/**
+ * @brief FBO を管理する。
+ */
 class FramebufferHandle : public HandleBase<FramebufferHandle> {
   public:
     static GLuint gen() {
@@ -98,6 +117,9 @@ class FramebufferHandle : public HandleBase<FramebufferHandle> {
     }
 };
 
+/**
+ * @brief RBO を管理する。
+ */
 class RenderbufferHandle : public HandleBase<RenderbufferHandle> {
   public:
     static GLuint gen() {

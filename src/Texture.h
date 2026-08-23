@@ -2,11 +2,17 @@
 #include <string>
 
 // bool を並べると flip と取り違えるため enum にしている
+/**
+ * @brief ピクセル値が sRGB エンコードされているか、リニアなデータかを表す。
+ */
 enum class ColorSpace {
     Linear,
     SRGB
 };
 
+/**
+ * @brief 画像を読み込み、2D テクスチャとして GPU へアップロードするクラス。
+ */
 class Texture {
   private:
     unsigned int id_; // OpenGLテスクチャのID

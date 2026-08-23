@@ -6,6 +6,7 @@
 #include "InputState.h"
 #include "Mouse.h"
 
+// GLFW コールバックは C 関数ポインタのため、main.cpp のグローバル状態を参照する
 extern std::shared_ptr<Camera> camera;
 extern std::shared_ptr<MouseState> mouse;
 extern std::shared_ptr<InputState> input;

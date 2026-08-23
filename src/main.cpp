@@ -28,6 +28,7 @@ int main(void) {
         float delta = 0.0f, last = 0.0f;
     } frametime; // ループごとの経過時間を確認する構造体
 
+    // UI は Scene の描画結果に重ねるため、gui->Render() は最後に呼ぶ
     while (!window->ShouldClose()) {
         float currentFrame = static_cast<float>(glfwGetTime());
         // ポーズ中は経過時間を止める。last の更新は止めないこと（復帰の1フレームに全時間が乗る）

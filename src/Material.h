@@ -3,6 +3,9 @@
 #include "Texture.h"
 #include "Shader.h"
 
+/**
+ * @brief Blinn-Phong 用の旧マテリアル。gl::PbrMaterial への移行後は未使用。
+ */
 struct Material {
   private:
     float shininess = 32.0f;

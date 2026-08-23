@@ -25,10 +25,27 @@ struct BoneInfo {
     glm::mat4 offset{1.0f}; // メッシュ空間からボーン空間への変換（aiBone::mOffsetMatrix）
 };
 
+inline constexpr int kMaxBones = 128; // uniform 配列で送るので上限を決めておく
+
+/**
+ * @brief Assimp で glTF/glb モデルを読み込み、Mesh の集合とスキニング用のボーン情報を保持する。
+ */
 class Model {
   public:
+    /**
+     * @brief モデルを読み込む。
+     *
+     * @param path モデルファイルのパス。
+     * @param cache テクスチャの多重ロードを避けるための共有キャッシュ。
+     */
     Model(const std::string &path, TextureCache &cache);
 
+    /**
+     * @brief ノード階層を辿って全メッシュを描画する。
+     *
+     * @param shader 描画に使うシェーダープログラム。
+     * @param modelMatrix Local → World への変換行列。
+     */
     void Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const;
 
     /* ---- ここから下はスキニングのための情報 ---- */
@@ -48,12 +65,18 @@ class Model {
     std::string directory_;
     TextureCache &cache_;
 
+    /// Assimp でシーンを読み込む。
     void loadModel(const std::string &path);
+    /// aiNode を ModelNode へ変換する。
     ModelNode processNode(const aiNode *node, const aiScene *scene);
+    /// aiMesh から Mesh を組み立てる。
     Mesh processMesh(const aiMesh *mesh, const aiScene *scene);
+    /// aiMesh のボーン情報を頂点へ書き込む。
     void loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices);
+    /// aiMaterial から PbrMaterial を組み立てる。
     gl::PbrMaterial loadMaterial(const aiMaterial *mat, const aiScene *scene);
     std::shared_ptr<Texture> loadTexture(const aiMaterial *mat, aiTextureType type, ColorSpace colorSpace,
                                          const aiScene *scene);
+    /// 親の変換を合成しながら子ノードへ再帰し、各メッシュを描画する。
     void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, gl::Shader &shader) const;
 };

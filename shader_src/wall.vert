@@ -1,3 +1,4 @@
+// gbuffer_wall.frag 用の頂点シェーダー。法線マッピング用の TBN 行列を渡す。
 #version 330 core
 #extension GL_ARB_shading_language_420pack : enable
 

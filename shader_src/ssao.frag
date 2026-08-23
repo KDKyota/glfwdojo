@@ -1,3 +1,4 @@
+// SSAO (Screen-Space Ambient Occlusion) 本体。周辺のサンプル点で遮蔽を調べる。
 #version 460 core
 
 out float FragColor; // 遮蔽率のスカラー1つだけ

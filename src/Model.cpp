@@ -275,6 +275,9 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
     const glm::mat4 skinnedWorldTransform = modelMatrix * root_.localTransform;
     // 第二引数はノードの親までの累積変換 -> ルートの時点では何もたどらないのでワールド配置の modelMatrix
     drawNode(root_, modelMatrix, skinnedWorldTransform, shader);
+
+    // 影パスのようにモデル以外と共有するシェーダーでは、hasBones を立てたまま抜けるとボーン属性を持たない VAO が既定値 aWeights=(0,0,0,1) を読んで finalBones[0] で変形される
+    shader.setBool("hasBones", false);
 }
 
 void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {

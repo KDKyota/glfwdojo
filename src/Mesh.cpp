@@ -1,7 +1,7 @@
 #include "Mesh.h"
 
-Mesh::Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material)
-    : vertices_(std::move(vertices)), indices_(std::move(indices)), material_(std::move(material)) {
+Mesh::Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material, bool isSkinned)
+    : vertices_(std::move(vertices)), indices_(std::move(indices)), material_(std::move(material)), isSkinned_(isSkinned) {
     setupMesh();
 }
 

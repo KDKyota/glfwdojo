@@ -13,9 +13,13 @@ layout(std140, binding = 0) uniform Matrices {
     mat4 projection;
 };
 
-const int MAX_BONES = 128;
+const int MAX_BONES = 128; // Model.h の kMaxBones と一致させる
 
-uniform mat4 finalBones[MAX_BONES]; // ボーンごとの最終返還行列を並べた配列
+// デフォルトブロックの uniform 上限（保証は 1024 component）を超えるので UBO で受け取る
+layout(std140, binding = 1) uniform BoneMatrices {
+    mat4 finalBones[MAX_BONES]; // ボーンごとの最終変換行列
+};
+
 uniform mat4 model;
 uniform bool hasBones;
 

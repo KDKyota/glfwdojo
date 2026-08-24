@@ -360,8 +360,13 @@ void Scene::initModels() {
             std::cout << "Skipped model: " << spawn.path << " (" << e.what() << ")" << std::endl;
             continue;
         }
-        const glm::mat4 translated = glm::translate(glm::mat4(1.0f), spawn.position);
-        modelMatrices_.push_back(glm::scale(translated, glm::vec3(spawn.scale)));
+        // T * R * S の順で合成する 回転を先にすると原点まわりに公転してしまうため平行移動は最後に掛ける
+        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), spawn.position);
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(spawn.rotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(spawn.rotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(spawn.rotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(spawn.scale));
+        modelMatrices_.push_back(modelMatrix);
         if (spawn.followTarget) {
             followTargetPosition_ = spawn.position;
             hasFollowTarget_ = true;

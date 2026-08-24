@@ -131,8 +131,8 @@ void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
         BoneInfo &info = inserted.first->second;
         if (inserted.second) {
             info.index = static_cast<int>(bones_.size()) - 1;
-            info.offset = toGlm(bone->mOffsetMatrix); 
-            // mOfsetMatrix: そのボーンがバインドポーズでどこにあったかの逆行列 
+            info.offset = toGlm(bone->mOffsetMatrix);
+            // mOfsetMatrix: そのボーンがバインドポーズでどこにあったかの逆行列
             // 動くときに関節（ジョイントを）原点として考える変換
         }
 
@@ -227,16 +227,16 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
     if (!boneMatrices_.empty()) {
         shader.setMat4Array("finalBones", boneMatrices_.data(), static_cast<int>(boneMatrices_.size()));
     }
+    // ボーン行列は globalInverse を掛けて root_.localTransform 分を打ち消しているので
+    // スキンメッシュにはここで root_.localTransform を掛け直して辻褄を合わせる
+    // 全ノード共通なのでここで一度だけ計算する
+    const glm::mat4 skinnedWorldTransform = modelMatrix * root_.localTransform;
     // 第二引数はノードの親までの累積変換 -> ルートの時点では何もたどらないのでワールド配置の modelMatrix
-    drawNode(root_, modelMatrix, modelMatrix, shader);
+    drawNode(root_, modelMatrix, skinnedWorldTransform, shader);
 }
 
-void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &modelMatrix, gl::Shader &shader) const {
+void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {
     const glm::mat4 worldTransform = parentTransform * node.localTransform;
-
-    // ボーン行列は globalInverse を掛けて root_.localTransform 分を打ち消しているので、
-    // スキンメッシュにはここで root_.localTransform を掛け直して辻褄を合わせる
-    const glm::mat4 skinnedWorldTransform = modelMatrix * root_.localTransform;
 
     for (const unsigned int index : node.meshIndices) {
         const Mesh &mesh = meshes_[index];
@@ -246,12 +246,11 @@ void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, co
     }
 
     for (const ModelNode &child : node.children) {
-        drawNode(child, worldTransform, modelMatrix, shader);
+        drawNode(child, worldTransform, skinnedWorldTransform, shader);
     }
 }
 
-/// この関数は再起関数となっているので一回の呼び出しで計算が完結する
-/// ルートには親がないから基本的にかけても影響がないように第二引数は glm::mat4(1.0f)
+/// ルートには親がないので、掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
 void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform) {
     const glm::mat4 globalTransform = parentTransform * node.localTransform;
     const auto found = bones_.find(node.name);

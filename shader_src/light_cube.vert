@@ -1,3 +1,4 @@
+// 各 PointLight の位置を示す、光らせるだけの小さなキューブを描くための頂点シェーダー。
 #version 460 core
 layout (location = 0) in vec3 aPos;
 

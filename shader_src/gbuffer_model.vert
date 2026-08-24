@@ -1,3 +1,4 @@
+// gbuffer_model.frag 用の頂点シェーダー。aBoneIDs/aWeights はまだ計算には使わない。
 #version 460 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;

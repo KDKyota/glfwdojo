@@ -1,3 +1,4 @@
+// 窓の「枠」だけを G-Buffer に書くシェーダー。ガラス部分は discard して glass.frag に任せる。
 #version 460 core
 
 layout(location = 0) out vec3 gPosition;
@@ -19,6 +20,7 @@ void main()
     if (texColor.a < 0.5)
         discard; // ガラス部分は別処理
 
+    // 裏面では法線を反転する（窓はカリングしていないため）
     vec3 normal = normalize(Normal);
     if (!gl_FrontFacing)
         normal = -normal;

@@ -1,4 +1,5 @@
 // #include される側なので #version は書かない
+// Cook-Torrance BRDF の D/G/F 項と IBL 用のサンプリングユーティリティ。
 #ifndef PBR_COMMON_GLSL
 #define PBR_COMMON_GLSL
 
@@ -31,6 +32,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
         GeometrySchlickGGX(NdotV, roughness);
 }
 
+// Fresnel-Schlick 近似。浅い角度ほど反射率が F0 から 1.0 に近づく。
 vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }

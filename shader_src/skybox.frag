@@ -1,3 +1,4 @@
+// envCubemap_ をそのまま背景として描く。
 #version 460 core
 out vec4 FragColor;
 // framebuffer_ は glDrawBuffers で2枚のカラーアタッチメントを同時に有効にしているため、

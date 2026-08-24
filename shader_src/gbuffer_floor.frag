@@ -1,3 +1,4 @@
+// 床用の G-Buffer 書き込みシェーダー。法線マッピングも POM も使わない最小構成。
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;

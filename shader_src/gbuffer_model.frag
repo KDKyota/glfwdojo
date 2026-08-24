@@ -1,3 +1,4 @@
+// glTF モデル用の G-Buffer 書き込みシェーダー。テクスチャが無ければ factor にフォールバックする。
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;
@@ -37,9 +38,9 @@ void main()
     float metallicValue = metallic;
     float roughnessValue = roughness;
     if (hasMetallicRoughnessMap) {
-        vec3 packed = texture(metallicRoughnessMap, TexCoords).rgb;
-        roughnessValue *= packed.g;
-        metallicValue *= packed.b;
+        vec3 metallicRoughnessSample = texture(metallicRoughnessMap, TexCoords).rgb;
+        roughnessValue *= metallicRoughnessSample.g;
+        metallicValue *= metallicRoughnessSample.b;
     }
 
     vec3 normal = normalize(Normal);

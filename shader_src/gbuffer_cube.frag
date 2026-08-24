@@ -1,3 +1,4 @@
+// レンガキューブ用の G-Buffer 書き込みシェーダー。Parallax Occlusion Mapping で凹凸を出す。
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;
@@ -44,6 +45,7 @@ void main()
 }
 
 
+// Steep Parallax Mapping。main() では使われていない（比較用に残してある）。
 // 視線レイを層に分割し、ハイトマップの深さを追い越した層の座標を返す
 vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
@@ -75,6 +77,7 @@ vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 	return currentTexCoords;
 }
 
+// Parallax Occlusion Mapping: SteepParallaxMapping と同じ層探索を行った上で、
 // 衝突した層と1つ手前の層を線形補間し、階段状のアーティファクトを滑らかにする
 vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir)
 {

@@ -1,3 +1,4 @@
+// gbuffer_floor.frag 用の頂点シェーダー。法線マッピングも POM も使わない、最小構成の G-Buffer 頂点シェーダー。
 #version 330 core
 #extension GL_ARB_shading_language_420pack : enable
 layout (location = 0) in vec3 aPos;

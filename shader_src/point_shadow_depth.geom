@@ -1,3 +1,4 @@
+// 入力の三角形を6面ぶん複製し、gl_Layer でキューブマップの面を選びながら出力する。
 #version 330 core
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 18) out;

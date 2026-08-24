@@ -43,7 +43,7 @@ void main()
             totalWeight += aWeights[i];
         }
         if (totalWeight < 1e-5) // 10のマイナス5乗
-            skin = mat4(1.0);　// どのボーンにも属していないので動かさない
+            skin = mat4(1.0); // どのボーンにも属していないので動かさない
         localPos = skin * localPos;
         mat3 skinRotation = mat3(skin);
         localNormal = skinRotation * aNormal;

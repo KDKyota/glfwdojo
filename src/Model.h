@@ -60,10 +60,11 @@ class Model {
     glm::mat4 globalInverseTransform_{1.0f};
     std::unordered_map<std::string, BoneInfo> bones_;
     // 同じ aiMesh を複数のノードが参照していても二重に GPU へ送らないための対応表
-    std::unordered_map<unsigned int, unsigned int> meshIndexByAiIndex_;
+    std::unordered_map<unsigned int, unsigned int> meshIndexByAiIndex_; // map の一つ目のint が　Assimp の番号 二つ目が meshes_ の添え字
     std::string path_;
     std::string directory_;
     TextureCache &cache_;
+    std::vector<glm::mat4> boneMatrices_;
 
     /// Assimp でシーンを読み込む。
     void loadModel(const std::string &path);
@@ -77,6 +78,14 @@ class Model {
     gl::PbrMaterial loadMaterial(const aiMaterial *mat, const aiScene *scene);
     std::shared_ptr<Texture> loadTexture(const aiMaterial *mat, aiTextureType type, ColorSpace colorSpace,
                                          const aiScene *scene);
-    /// 親の変換を合成しながら子ノードへ再帰し、各メッシュを描画する。
-    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, gl::Shader &shader) const;
+    /**
+     * @brief ノードを描画する
+     * @param [in] node 今書こうとしているノード
+     * @param [in] parentTransform このノードの親までの累積変換
+     * @param [in] modelMatrix モデル全体をシーンのどこに置くか
+     * @param [in] shader 描画に使うシェーダ
+     */
+    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &modelMatrix,gl::Shader &shader) const;
+    /// ノード階層をたどり、各ボーンの最終返還行列を計算する
+    void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform);
 };

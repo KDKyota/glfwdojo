@@ -48,9 +48,15 @@ void Model::loadModel(const std::string &path) {
 
     globalInverseTransform_ = glm::inverse(toGlm(scene->mRootNode->mTransformation));
     root_ = processNode(scene->mRootNode, scene);
+
+    if (static_cast<int>(bones_.size()) > kMaxBones)
+        throw std::runtime_error("Too many bones: " + path + " (" + std::to_string(bones_.size()) + ") ");
+
+    boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
+    updateBoneMatrices(root_, glm::mat4(1.0f));
 }
 
-/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。
+/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。 その際、同じノードを二回以上送らないように  meshIndexByAiIndex_ で管理
 ModelNode Model::processNode(const aiNode *node, const aiScene *scene) {
     ModelNode result;
     result.name = node->mName.C_Str();
@@ -125,7 +131,9 @@ void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
         BoneInfo &info = inserted.first->second;
         if (inserted.second) {
             info.index = static_cast<int>(bones_.size()) - 1;
-            info.offset = toGlm(bone->mOffsetMatrix);
+            info.offset = toGlm(bone->mOffsetMatrix); 
+            // mOfsetMatrix: そのボーンがバインドポーズでどこにあったかの逆行列 
+            // 動くときに関節（ジョイントを）原点として考える変換
         }
 
         for (unsigned int w = 0; w < bone->mNumWeights; ++w) {
@@ -216,20 +224,45 @@ std::shared_ptr<Texture> Model::loadTexture(const aiMaterial *mat, aiTextureType
 }
 
 void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
-    drawNode(root_, modelMatrix, shader);
+    if (!boneMatrices_.empty()) {
+        shader.setMat4Array("finalBones", boneMatrices_.data(), static_cast<int>(boneMatrices_.size()));
+    }
+    // 第二引数はノードの親までの累積変換 -> ルートの時点では何もたどらないのでワールド配置の modelMatrix
+    drawNode(root_, modelMatrix, modelMatrix, shader);
 }
 
-void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, gl::Shader &shader) const {
+void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &modelMatrix, gl::Shader &shader) const {
     const glm::mat4 worldTransform = parentTransform * node.localTransform;
 
-    if (!node.meshIndices.empty()) {
-        shader.setMat4("model", worldTransform);
-        for (const unsigned int index : node.meshIndices) {
-            meshes_[index].Draw(shader);
-        }
+    for (const unsigned int index : node.meshIndices) {
+        const Mesh &mesh = meshes_[index];
+        shader.setMat4("model", mesh.IsSkinned() ? modelMatrix : worldTransform);
+        shader.setBool("hasBones", mesh.IsSkinned());
+        mesh.Draw(shader);
     }
 
+    // if (!node.meshIndices.empty()) {
+    //     shader.setMat4("model", worldTransform);
+    //     for (const unsigned int index : node.meshIndices) {
+    //         meshes_[index].Draw(shader);
+    //     }
+    // }
+
     for (const ModelNode &child : node.children) {
-        drawNode(child, worldTransform, shader);
+        drawNode(child, worldTransform, modelMatrix, shader);
+    }
+}
+
+/// この関数は再起関数となっているので一回の呼び出しで計算が完結する
+/// ルートには親がないから基本的にかけても影響がないように第二引数は glm::mat4(1.0f)
+void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform) {
+    const glm::mat4 globalTransform = parentTransform * node.localTransform;
+    const auto found = bones_.find(node.name);
+    if (found != bones_.end()) {
+        const BoneInfo &info = found->second;
+        boneMatrices_[info.index] =  globalTransform * info.offset; // ここで globalInverseTransform をかけない
+    }
+    for (const ModelNode &child : node.children) {
+        updateBoneMatrices(child, globalTransform);
     }
 }

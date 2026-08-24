@@ -48,7 +48,10 @@ struct Animation {
     std::unordered_map<std::string, NodeAnimation> channels; // ノード名 -> キー列
 };
 
-inline constexpr int kMaxBones = 128; // uniform 配列で送るので上限を決めておく
+// UBO のサイズを決め打ちするための上限。gbuffer_model.vert / point_shadow_depth.vert の MAX_BONES と一致させる
+inline constexpr int kMaxBones = 128;
+// ボーンパレット用の UBO のバインディング。0 は Scene の Matrices が使っている
+inline constexpr unsigned int kBoneUBOBinding = 1;
 
 /**
  * @brief Assimp で glTF/glb モデルを読み込み、Mesh の集合とスキニング用のボーン情報を保持する。
@@ -97,6 +100,8 @@ class Model {
     std::string directory_;
     TextureCache &cache_;
     std::vector<glm::mat4> boneMatrices_;
+    // デフォルトブロックの uniform 上限（GL の保証は 1024 component）を避けるため UBO で送る
+    gl::BufferHandle boneUBO_;
 
     std::vector<Animation> animations_;
     int activeAnimation_ = -1; // 再生中のアニメーション -1 でなし
@@ -122,6 +127,8 @@ class Model {
      * @param [in] shader 描画に使うシェーダ
      */
     void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const;
+    /// boneMatrices_ を UBO へ書き込む。
+    void uploadBoneMatrices();
     /// aiAnimation をすべて読み込む
     void loadAnimations(const aiScene *scene);
     /// チャンネルがあれば時刻 time のローカル変換を作り、なければバインドポーズを返す

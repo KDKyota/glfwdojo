@@ -8,8 +8,12 @@ layout(location = 5) in vec3 aOffset;
 layout(location = 6) in ivec4 aBoneIDs;
 layout(location = 7) in vec4 aWeights;
 
-const int MAX_BONES = 128;
-uniform mat4 finalBones[MAX_BONES]; // ボーンごとの最終返還行列を並べた配列
+const int MAX_BONES = 128; // Model.h の kMaxBones と一致させる
+// デフォルトブロックの uniform 上限（保証は 1024 component）を超えるので UBO で受け取る
+layout(std140, binding = 1) uniform BoneMatrices {
+    mat4 finalBones[MAX_BONES]; // ボーンごとの最終変換行列
+};
+
 uniform mat4 model;
 uniform bool hasBones;
 

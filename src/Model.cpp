@@ -96,6 +96,23 @@ void Model::loadModel(const std::string &path) {
     loadAnimations(scene);
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
     updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);
+
+    if (!boneMatrices_.empty()) {
+        boneUBO_.create();
+        glBindBuffer(GL_UNIFORM_BUFFER, boneUBO_);
+        // シェーダーの配列長は MAX_BONES 固定なので、実際のボーン数に関わらず枠ぶん確保する
+        glBufferData(GL_UNIFORM_BUFFER, kMaxBones * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        uploadBoneMatrices();
+    }
+}
+
+/// boneMatrices_ を UBO へ書き込む。
+void Model::uploadBoneMatrices() {
+    glBindBuffer(GL_UNIFORM_BUFFER, boneUBO_);
+    // std140 の mat4 配列は 64 バイト刻みで、glm::mat4 の並びとそのまま一致する
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, boneMatrices_.size() * sizeof(glm::mat4), boneMatrices_.data());
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 /// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。 その際、同じノードを二回以上送らないように  meshIndexByAiIndex_ で管理
@@ -267,11 +284,10 @@ std::shared_ptr<Texture> Model::loadTexture(const aiMaterial *mat, aiTextureType
 
 void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
     if (!boneMatrices_.empty()) {
-        shader.setMat4Array("finalBones", boneMatrices_.data(), static_cast<int>(boneMatrices_.size()));
+        glBindBufferBase(GL_UNIFORM_BUFFER, kBoneUBOBinding, boneUBO_);
     }
     // ボーン行列は globalInverse を掛けて root_.localTransform 分を打ち消しているので
     // スキンメッシュにはここで root_.localTransform を掛け直して辻褄を合わせる
-    // 全ノード共通なのでここで一度だけ計算する
     const glm::mat4 skinnedWorldTransform = modelMatrix * root_.localTransform;
     // 第二引数はノードの親までの累積変換 -> ルートの時点では何もたどらないのでワールド配置の modelMatrix
     drawNode(root_, modelMatrix, skinnedWorldTransform, shader);
@@ -281,7 +297,9 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
 }
 
 void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {
-    const glm::mat4 worldTransform = parentTransform * node.localTransform;
+    // updateBoneMatrices と同じ変換を辿らないと、アニメーションするノードにぶら下がる
+    // 非スキンメッシュだけがバインドポーズに取り残される
+    const glm::mat4 worldTransform = parentTransform * nodeTransform(node, animationTime_);
 
     for (const unsigned int index : node.meshIndices) {
         const Mesh &mesh = meshes_[index];
@@ -372,4 +390,5 @@ void Model::UpdateAnimation(float deltaTime) {
         animationTime_ = std::fmod(animationTime_, animation.duration);
 
     updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
+    uploadBoneMatrices();
 }

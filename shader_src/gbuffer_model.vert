@@ -32,14 +32,14 @@ void main()
     vec3 localBitangent = aBitangent;
 
     if (hasBones) {
-        mat4 skin = mat4(0.0);
+        mat4 skin = mat4(0.0); // 変換行列
         float totalWeight = 0.0;
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) { // 一つの頂点に影響を与えるのは 最大 4 つ
             skin += finalBones[aBoneIDs[i]] * aWeights[i];
             totalWeight += aWeights[i];
         }
         if (totalWeight < 1e-5) // 10のマイナス5乗
-            skin = mat4(1.0);
+            skin = mat4(1.0);　// どのボーンにも属していないので動かさない
         localPos = skin * localPos;
         mat3 skinRotation = mat3(skin);
         localNormal = skinRotation * aNormal;

@@ -18,6 +18,7 @@ uniform float bloomStrength;
  * screenTexture から HDR の色を読み、
  * exposure を使って 0~1 に圧縮して、ガンマ補正結果を出力
  */
+// レンダーパイプラインの最終段。Bloom 合成 → トーンマッピング → ガンマ補正を行う。
 void main() {
   const float gamma = 2.2;
   vec3 hdrColor = texture(screenTexture, TexCoords).rgb;

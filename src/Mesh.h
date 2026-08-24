@@ -1,25 +1,44 @@
 #pragma once
-#include <vector>
 #include "GeometryData.h"
 #include "GlHandle.h"
 #include "PbrMaterial.h"
+#include <vector>
 
+/**
+ * @brief 1つの VAO/VBO/EBO と PbrMaterial を持つ、描画可能な最小単位。
+ */
 class Mesh {
-private:
-	gl::VertexArrayHandle VAO_;
-	gl::BufferHandle VBO_, EBO_;
-	std::vector<gl::Vertex> vertices_;
-	std::vector<unsigned int> indices_;
-	gl::PbrMaterial material_;
+  private:
+    gl::VertexArrayHandle VAO_;
+    gl::BufferHandle VBO_, EBO_;
+    std::vector<gl::Vertex> vertices_;
+    std::vector<unsigned int> indices_;
+    gl::PbrMaterial material_;
+    bool isSkinned_ = false; // そのメッシュがボーンを持つか（スキンメッシュなら true）
 
-	void setupMesh();
-public:
+    void setupMesh();
 
-	Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material);
+  public:
+    /**
+     * @brief 頂点・インデックス・マテリアルから Mesh を構築する。
+     *
+     * @param vertices 頂点データ。
+     * @param indices 描画順のインデックス。
+     * @param material 適用する PBR マテリアル。
+     * @param isSkinned ボーンを持つメッシュかどうか。
+     */
+    Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material, bool isSkinned);
 
-	// GlHandle がコピー禁止・ムーブ可なので、Mesh もそれに従う（std::vector<Mesh> で必要）
-	Mesh(Mesh&&) noexcept = default;
-	Mesh& operator=(Mesh&&) noexcept = default;
+    bool IsSkinned() const { return isSkinned_; }
 
-	void Draw(gl::Shader& shader) const;
+    // GlHandle がコピー禁止・ムーブ可なので、Mesh もそれに従う（std::vector<Mesh> で必要）
+    Mesh(Mesh &&) noexcept = default;
+    Mesh &operator=(Mesh &&) noexcept = default;
+
+    /**
+     * @brief マテリアルを適用して描画する。
+     *
+     * @param shader 描画に使うシェーダープログラム。
+     */
+    void Draw(gl::Shader &shader) const;
 };

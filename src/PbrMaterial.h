@@ -6,6 +6,9 @@
 #include "Texture.h"
 
 namespace gl {
+/**
+ * @brief glTF の Metallic-Roughness ワークフローに基づく PBR マテリアル。
+ */
 struct PbrMaterial {
     float metallic = 0.0f;
     // 0.0 だと GGX の分布が発散するので、UI 側でも 0 まで下げないこと
@@ -21,13 +24,21 @@ struct PbrMaterial {
     std::shared_ptr<Texture> occlusionMap;
     std::shared_ptr<Texture> emissiveMap;
 
+    /**
+     * @brief metallic/roughness のスカラー値のみを送る。
+     *
+     * テクスチャを持たないマテリアル用。
+     */
     void applyToShader(const Shader &shader) const {
         shader.setFloat("metallic", metallic);
         shader.setFloat("roughness", roughness);
     }
 
-    // テクスチャを持つマテリアル（モデル）専用
-    // シーンに直接置くオブジェクトでは呼ばない
+    /**
+     * @brief テクスチャマップと factor をすべて送る。
+     *
+     * テクスチャを持つマテリアル専用。
+     */
     void bindMaps(const Shader &shader) const {
         shader.setVec3("baseColorFactor", baseColorFactor);
         shader.setVec3("emissiveFactor", emissiveFactor);
@@ -39,6 +50,7 @@ struct PbrMaterial {
     }
 
   private:
+    // map が無ければ hasXxxMap フラグだけ送り、シェーダー側で factor にフォールバックさせる。
     static void bindMap(const Shader &shader, const std::shared_ptr<Texture> &map, const char *sampler,
                         const char *presenceFlag, unsigned int unit) {
         shader.setBool(presenceFlag, static_cast<bool>(map));

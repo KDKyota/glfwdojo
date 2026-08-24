@@ -1,30 +1,29 @@
 #pragma once
 #include <glad/glad.h>
 
-namespace gl
-{
+namespace gl {
 
-// 派生の static gen() / del() を CRTP で呼ぶ。デストラクタからは仮想関数が派生へ届かないため
-template <typename Derived> class HandleBase
-{
+/**
+ * @brief OpenGL オブジェクトの ID を RAII 管理する基底クラス。
+ *
+ * CRTP で派生の static gen()/del() を呼ぶ。
+ */
+template <typename Derived>
+class HandleBase {
   public:
     HandleBase() = default;
-    ~HandleBase()
-    {
+    ~HandleBase() {
         reset();
     }
 
     HandleBase(const HandleBase &) = delete;
     HandleBase &operator=(const HandleBase &) = delete;
 
-    HandleBase(HandleBase &&other) noexcept : id_(other.id_)
-    {
+    HandleBase(HandleBase &&other) noexcept : id_(other.id_) {
         other.id_ = 0;
     }
-    HandleBase &operator=(HandleBase &&other) noexcept
-    {
-        if (this != &other)
-        {
+    HandleBase &operator=(HandleBase &&other) noexcept {
+        if (this != &other) {
             reset();
             id_ = other.id_;
             other.id_ = 0;
@@ -32,26 +31,25 @@ template <typename Derived> class HandleBase
         return *this;
     }
 
-    void create()
-    {
+    /**
+     * @brief 新しい OpenGL オブジェクトを生成する。
+     */
+    void create() {
         reset(Derived::gen());
     }
 
     // 外部で生成された ID の所有権を引き取る
-    void reset(GLuint id = 0)
-    {
+    void reset(GLuint id = 0) {
         if (id_ != 0)
             Derived::del(id_);
         id_ = id;
     }
 
-    GLuint get() const
-    {
+    GLuint get() const {
         return id_;
     }
 
-    operator GLuint() const
-    {
+    operator GLuint() const {
         return id_;
     }
 
@@ -59,77 +57,77 @@ template <typename Derived> class HandleBase
     GLuint id_ = 0;
 };
 
-class VertexArrayHandle : public HandleBase<VertexArrayHandle>
-{
+/**
+ * @brief VAO を管理する。
+ */
+class VertexArrayHandle : public HandleBase<VertexArrayHandle> {
   public:
-    static GLuint gen()
-    {
+    static GLuint gen() {
         GLuint id = 0;
         glGenVertexArrays(1, &id);
         return id;
     }
-    static void del(GLuint id)
-    {
+    static void del(GLuint id) {
         glDeleteVertexArrays(1, &id);
     }
 };
 
-class BufferHandle : public HandleBase<BufferHandle>
-{
+/**
+ * @brief VBO・EBO・UBO などのバッファを管理する。
+ */
+class BufferHandle : public HandleBase<BufferHandle> {
   public:
-    static GLuint gen()
-    {
+    static GLuint gen() {
         GLuint id = 0;
         glGenBuffers(1, &id);
         return id;
     }
-    static void del(GLuint id)
-    {
+    static void del(GLuint id) {
         glDeleteBuffers(1, &id);
     }
 };
 
-class TextureHandle : public HandleBase<TextureHandle>
-{
+/**
+ * @brief テクスチャを管理する。
+ */
+class TextureHandle : public HandleBase<TextureHandle> {
   public:
-    static GLuint gen()
-    {
+    static GLuint gen() {
         GLuint id = 0;
         glGenTextures(1, &id);
         return id;
     }
-    static void del(GLuint id)
-    {
+    static void del(GLuint id) {
         glDeleteTextures(1, &id);
     }
 };
 
-class FramebufferHandle : public HandleBase<FramebufferHandle>
-{
+/**
+ * @brief FBO を管理する。
+ */
+class FramebufferHandle : public HandleBase<FramebufferHandle> {
   public:
-    static GLuint gen()
-    {
+    static GLuint gen() {
         GLuint id = 0;
         glGenFramebuffers(1, &id);
         return id;
     }
-    static void del(GLuint id)
-    {
+    static void del(GLuint id) {
         glDeleteFramebuffers(1, &id);
     }
 };
 
-class RenderbufferHandle : public HandleBase<RenderbufferHandle>
-{
+/**
+ * @brief RBO を管理する。
+ */
+class RenderbufferHandle : public HandleBase<RenderbufferHandle> {
   public:
-    static GLuint gen()
-    {
+    static GLuint gen() {
         GLuint id = 0;
         glGenRenderbuffers(1, &id);
         return id;
     }
-    static void del(GLuint id)
-    {
+    static void del(GLuint id) {
         glDeleteRenderbuffers(1, &id);
     }
 };

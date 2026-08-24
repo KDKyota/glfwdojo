@@ -1,3 +1,4 @@
+// Point Light 用シャドウマップの深度パス。ワールド座標のまま geometry shader へ渡す。
 #version 330 core
 layout(location = 0) in vec3 aPos;
 layout(location = 2) in vec2 aTexCoords;

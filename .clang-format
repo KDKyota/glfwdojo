@@ -1,0 +1,14 @@
+BasedOnStyle: Microsoft
+# 行の長さを理由にした自動改行(引数の折り返し等)を止める
+ColumnLimit: 0
+# 開き括弧を改行せず同じ行に置く (K&R風: void func() { ... })
+BreakBeforeBraces: Attach
+# 1行で書いた短いブロックを展開せずそのまま残す (中の空白は自動で補われる)
+AllowShortFunctionsOnASingleLine: All
+AllowShortBlocksOnASingleLine: Always
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+# include の自動ソートを無効にする。glad は他の OpenGL ヘッダより先に
+# 展開されないとコンパイルが通らず、アルファベット順では GLFW が先に来てしまう
+SortIncludes: Never

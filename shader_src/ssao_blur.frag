@@ -1,3 +1,4 @@
+// SSAO の後処理。ノイズ起因の格子模様をブラーで消す。
 #version 460 core
 
 out float FragColor;

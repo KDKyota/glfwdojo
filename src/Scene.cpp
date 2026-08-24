@@ -56,6 +56,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     initIBL(); // skyboxVAO_ が必要なので初期化の最後
 }
 
+/// IBL 用の irradianceMap_/prefilterMap_/brdfLUT_ を起動時に一度だけ事前計算する。
 void Scene::initIBL() {
     /* --- 正距円筒図法の HDR を読み込む --- */
     stbi_set_flip_vertically_on_load(true);
@@ -230,6 +231,7 @@ void Scene::initIBL() {
     // カリングのベース状態は無効。ここで有効にすると床・壁・空が消える
 }
 
+/// プロシージャルジオメトリの VAO/VBO/EBO を構築する。
 void Scene::initMesh() {
     int stride = sizeof(gl::Vertex);
 
@@ -257,6 +259,7 @@ void Scene::initMesh() {
     glBufferData(GL_ARRAY_BUFFER, cube_pos_.size() * sizeof(glm::vec3), cube_pos_.data(), GL_STATIC_DRAW);
     glEnableVertexAttribArray(5);
     glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+    // location 5 はインスタンスごとに進む
     glVertexAttribDivisor(5, 1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -350,6 +353,7 @@ void Scene::initMesh() {
     glBindVertexArray(0);
 }
 
+/// modelSpawns_ に従って各モデルを読み込む。
 void Scene::initModels() {
     for (const ModelSpawn &spawn : modelSpawns_) {
         try {
@@ -384,6 +388,7 @@ void Scene::initModels() {
     }
 }
 
+/// テクスチャをロードし、各シェーダーのサンプラー uniform を設定する。
 void Scene::initTextures() {
     cubeTexture_ = cache_.get("resources/textures/bricks2.jpg", true, ColorSpace::SRGB);
     cubeNormalMap_ = cache_.get("resources/textures/bricks2_normal.jpg", true, ColorSpace::Linear);
@@ -456,6 +461,7 @@ void Scene::initTextures() {
     // ambientStrength は Render() 側、SSAO 系の uniform は initSSAO() 側で送る
 }
 
+/// メインの HDR フレームバッファとシャドウ用・ブラー用の FBO を構築する。
 void Scene::initFramebuffer() {
     /* framebuffer configuration */
     framebuffer_.create();
@@ -542,6 +548,7 @@ void Scene::initFramebuffer() {
     }
 }
 
+/// View/Projection 行列を格納する UBO を作る。
 void Scene::initUBO() {
     matricesUBO_.create();
     glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO_);
@@ -550,6 +557,7 @@ void Scene::initUBO() {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
+/// Deferred Shading 用の G-Buffer を構築する。
 void Scene::initGBuffer() {
     gBuffer_.create();
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
@@ -595,6 +603,7 @@ void Scene::initGBuffer() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+/// SSAO 用のサンプルカーネル・ノイズテクスチャ・FBO を準備する。
 void Scene::initSSAO() {
     std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
     std::default_random_engine generator;
@@ -966,6 +975,7 @@ void Scene::renderToScreen() {
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
+/// pointLights_ を配列 uniform として送る。
 void Scene::applyPointLights(gl::Shader &shader) {
     for (const auto &pointLight : pointLights_)
         pointLight.applyToShader(shader, "pointLights[" + std::to_string(&pointLight - pointLights_.data()) + "]");
@@ -1010,6 +1020,7 @@ void Scene::renderSkybox() {
     glDepthFunc(GL_LESS);
 }
 
+/// ガラス窓を透過（乗算）と反射（加算）の2パスに分けて描く。
 void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sorted) {
     transparentwindowShader_->use();
     transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());

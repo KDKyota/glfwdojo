@@ -28,6 +28,7 @@ int main(void) {
         float delta = 0.0f, last = 0.0f;
     } frametime; // ループごとの経過時間を確認する構造体
 
+    // UI は Scene の描画結果に重ねるため、gui->Render() は最後に呼ぶ
     while (!window->ShouldClose()) {
         float currentFrame = static_cast<float>(glfwGetTime());
         // ポーズ中は経過時間を止める。last の更新は止めないこと（復帰の1フレームに全時間が乗る）
@@ -89,7 +90,7 @@ int main(void) {
                     "3: G-Buffer Albedo", "4: G-Buffer Normal", "5: G-Buffer Position",
                     "6: Split view", "7: SSAO", "8: Shadow color[0]",
                     "9: G-Buffer Metallic", "10: G-Buffer Roughness",
-                    "11: IBL Irradiance",   "12: IBL Prefilter",
+                    "11: IBL Irradiance", "12: IBL Prefilter",
                     "13: IBL BRDF LUT"};
                 ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
                              IM_ARRAYSIZE(kDebugModes));

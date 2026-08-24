@@ -272,13 +272,14 @@ class Scene {
     struct ModelSpawn {
         std::string path;
         glm::vec3 position;
+        glm::vec3 rotationDegrees{0.0f}; // 軸の向きが通常とは違うモデルを立たせるための補正
         float scale;
         bool followTarget = false; // 三人称カメラが注視するモデル
     };
     const std::vector<ModelSpawn> modelSpawns_ = {
-        {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), 1.0f},
-        {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), 1.0f},
-        {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), 1.0f, true},
+        {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), glm::vec3(0.0f), 1.0f},
+        {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f},
+        {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f, true},
     };
 
     const std::array<gl::PointLight, 4> pointLights_ = {

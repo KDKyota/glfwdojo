@@ -234,19 +234,16 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
 void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &modelMatrix, gl::Shader &shader) const {
     const glm::mat4 worldTransform = parentTransform * node.localTransform;
 
+    // ボーン行列は globalInverse を掛けて root_.localTransform 分を打ち消しているので、
+    // スキンメッシュにはここで root_.localTransform を掛け直して辻褄を合わせる
+    const glm::mat4 skinnedWorldTransform = modelMatrix * root_.localTransform;
+
     for (const unsigned int index : node.meshIndices) {
         const Mesh &mesh = meshes_[index];
-        shader.setMat4("model", mesh.IsSkinned() ? modelMatrix : worldTransform);
+        shader.setMat4("model", mesh.IsSkinned() ? skinnedWorldTransform : worldTransform);
         shader.setBool("hasBones", mesh.IsSkinned());
         mesh.Draw(shader);
     }
-
-    // if (!node.meshIndices.empty()) {
-    //     shader.setMat4("model", worldTransform);
-    //     for (const unsigned int index : node.meshIndices) {
-    //         meshes_[index].Draw(shader);
-    //     }
-    // }
 
     for (const ModelNode &child : node.children) {
         drawNode(child, worldTransform, modelMatrix, shader);
@@ -260,7 +257,8 @@ void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTra
     const auto found = bones_.find(node.name);
     if (found != bones_.end()) {
         const BoneInfo &info = found->second;
-        boneMatrices_[info.index] =  globalTransform * info.offset; // ここで globalInverseTransform をかけない
+        // globalInverse を掛けた分、drawNode 側でスキンメッシュに root_.localTransform を掛け直して辻褄を合わせる
+        boneMatrices_[info.index] = globalInverseTransform_ * globalTransform * info.offset;
     }
     for (const ModelNode &child : node.children) {
         updateBoneMatrices(child, globalTransform);

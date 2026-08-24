@@ -679,6 +679,10 @@ void Scene::Render(float deltaTime, float heightScale) {
     elapsedTime_ += deltaTime;
     heightScale_ = heightScale;
 
+    // ポーズ中は deltaTime に 0 を渡す
+    for(const std::unique_ptr<Model> &model : models_)
+        model->UpdateAnimation(deltaTime);
+        
     // 透過窓の並び順は前方描画でも使うので、ここで受け取って持ち回る
     std::vector<gl::TransparentDraw> sorted;
     updateTransparentInstances(sorted);

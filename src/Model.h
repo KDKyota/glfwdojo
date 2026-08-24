@@ -8,6 +8,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "Mesh.h"
 #include "TextureCache.h"
@@ -23,6 +24,28 @@ struct ModelNode {
 struct BoneInfo {
     int index = 0;
     glm::mat4 offset{1.0f}; // メッシュ空間からボーン空間への変換（aiBone::mOffsetMatrix）
+};
+
+/// キーフレーム1つ。時刻は現実の秒ではなくアニメーションの tick 単位
+template <typename T>
+struct AnimationKey {
+    float time = 0.0f;
+    T value{};
+};
+
+/// 1ノードのキーフレーム列（aiNodeAnim に対応）
+struct NodeAnimation {
+    std::vector<AnimationKey<glm::vec3>> positions;
+    std::vector<AnimationKey<glm::quat>> rotations;
+    std::vector<AnimationKey<glm::vec3>> scales;
+};
+
+/// アニメーション1本
+struct Animation {
+    std::string name;
+    float duration = 0.0f; // tick 単位の長さ
+    float ticksPerSecond = 25.0f; // 1秒 = 25 ticks -> 1tics = 40ms
+    std::unordered_map<std::string, NodeAnimation> channels; // ノード名 -> キー列
 };
 
 inline constexpr int kMaxBones = 128; // uniform 配列で送るので上限を決めておく
@@ -48,6 +71,15 @@ class Model {
      */
     void Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const;
 
+    /**
+     * @brief 再生位置を進め、ボーン行列を作り直す
+     *
+     * @param deltaTime 前フレームからの経過秒
+     */
+    void UpdateAnimation(float deltaTime);
+
+    bool HasAnimation() const { return activeAnimation_ >= 0; }
+
     /* ---- ここから下はスキニングのための情報 ---- */
     const ModelNode &RootNode() const { return root_; }
     // ルートノードの変換の逆行列。掛け忘れるとモデル全体が変な位置とスケールで出る
@@ -65,6 +97,10 @@ class Model {
     std::string directory_;
     TextureCache &cache_;
     std::vector<glm::mat4> boneMatrices_;
+
+    std::vector<Animation> animations_;
+    int activeAnimation_ = -1; // 再生中のアニメーション -1 でなし
+    float animationTime_ = 0.0f; // アニメーションの再生時間
 
     /// Assimp でシーンを読み込む。
     void loadModel(const std::string &path);
@@ -86,6 +122,10 @@ class Model {
      * @param [in] shader 描画に使うシェーダ
      */
     void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const;
+    /// aiAnimation をすべて読み込む
+    void loadAnimations(const aiScene *scene);
+    /// チャンネルがあれば時刻 time のローカル変換を作り、なければバインドポーズを返す
+    glm::mat4 nodeTransform(const ModelNode &node, float time) const;
     /// ノード階層をたどり、各ボーンの最終変換行列を計算する
-    void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform);
+    void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time);
 };

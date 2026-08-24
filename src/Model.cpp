@@ -1,7 +1,12 @@
 #include "Model.h"
 
+#include <assimp/anim.h>
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
+#include <utility>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace {
 
@@ -28,6 +33,42 @@ void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
     // aiProcess_LimitBoneWeights で 4 本へ切り詰めているので、あふれてここへ来ることはない
 }
 
+// time をはさむ前側のキーの添え字とその区間内での補間率を返す
+template <typename T>
+std::pair<size_t, float> findSegment(const std::vector<AnimationKey<T>> &keys, float time) {
+    // 前後のキーを見て、 キーを判断する
+    for (size_t i = 0; i + 1 < keys.size(); ++i) {
+        if (time < keys[i + 1].time) {
+            const float span = keys[i + 1].time - keys[i].time;
+            return {i, span > 0.0f ? (time - keys[i].time) / span : 0.0f};
+        }
+    }
+    return {keys.size() - 1, 0.0f};
+}
+
+// アニメーションによる位置とスケールの補完
+glm::vec3 sampleVec3(const std::vector<AnimationKey<glm::vec3>> &keys, float time, const glm::vec3 &fallback) {
+    if (keys.empty()) return fallback;
+    // 最初のキーは 0 tick とは限らないので、範囲外は端の値で固定
+    if (time <= keys.front().time) return keys.front().value;
+    if (time >= keys.back().time) return keys.back().value;
+    const auto [index, factor] = findSegment(keys, time);
+    return glm::mix(keys[index].value, keys[index + 1].value, factor);
+}
+
+// アニメーションによる回転の補完
+glm::quat sampleQuat(const std::vector<AnimationKey<glm::quat>> &keys, float time) {
+    if (keys.empty())
+        return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    if (time <= keys.front().time)
+        return keys.front().value;
+    if (time >= keys.back().time)
+        return keys.back().value;
+
+    const auto [index, factor] = findSegment(keys, time);
+    // 線形補間だと単位長からずれて回転速度がムラになるので slerp を使う
+    return glm::slerp(keys[index].value, keys[index + 1].value, factor);
+}
 } // namespace
 
 Model::Model(const std::string &path, TextureCache &cache) : path_(path), cache_(cache) {
@@ -52,8 +93,9 @@ void Model::loadModel(const std::string &path) {
     if (static_cast<int>(bones_.size()) > kMaxBones)
         throw std::runtime_error("Too many bones: " + path + " (" + std::to_string(bones_.size()) + ") ");
 
+    loadAnimations(scene);
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
-    updateBoneMatrices(root_, glm::mat4(1.0f));
+    updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);
 }
 
 /// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。 その際、同じノードを二回以上送らないように  meshIndexByAiIndex_ で管理
@@ -250,16 +292,81 @@ void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, co
     }
 }
 
+/// aiAnimation をすべて読み込み、ノード名で引けるチャンネルにまとめる
+void Model::loadAnimations(const aiScene *scene) {
+    for (unsigned int i = 0; i < scene->mNumAnimations; ++i) {
+        const aiAnimation *source = scene->mAnimations[i];
+        Animation animation;
+        animation.name = source->mName.C_Str();
+        animation.duration = static_cast<float>(source->mDuration);
+        if (source->mTicksPerSecond != 0.0)
+            animation.ticksPerSecond = static_cast<float>(source->mTicksPerSecond);
+
+        // すべてのチャンネル（すべてのフレーム）について操作して、ボーンの動きを取得する
+        for (unsigned int c = 0; c < source->mNumChannels; ++c) {
+            const aiNodeAnim *channel = source->mChannels[c];
+            NodeAnimation node;
+
+            node.positions.reserve(channel->mNumPositionKeys);
+            for (unsigned int k = 0; k < channel->mNumPositionKeys; ++k) {
+                const aiVectorKey &key = channel->mPositionKeys[k];
+                node.positions.push_back({static_cast<float>(key.mTime), {key.mValue.x, key.mValue.y, key.mValue.z}});
+            }
+
+            node.rotations.reserve(channel->mNumRotationKeys);
+            for (unsigned int k = 0; k < channel->mNumRotationKeys; ++k) {
+                const aiQuatKey &key = channel->mRotationKeys[k];
+                // glm::quat の引数順は (w, x, y, z)。aiQuaternion のメンバ並びと違う
+                node.rotations.push_back({static_cast<float>(key.mTime), glm::quat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z)});
+            }
+
+            node.scales.reserve(channel->mNumScalingKeys);
+            for (unsigned int k = 0; k < channel->mNumScalingKeys; ++k) {
+                const aiVectorKey &key = channel->mScalingKeys[k];
+                node.scales.push_back({static_cast<float>(key.mTime), {key.mValue.x, key.mValue.y, key.mValue.z}});
+            }
+            animation.channels[channel->mNodeName.C_Str()] = std::move(node);
+        }
+        animations_.push_back(std::move(animation));
+    }
+    if (!animations_.empty()) activeAnimation_ = 0;
+}
+
+glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
+    if (activeAnimation_ < 0) return node.localTransform;
+
+    const Animation &animation = animations_[activeAnimation_];
+    const auto found = animation.channels.find(node.name);
+    if (found == animation.channels.end()) return node.localTransform;
+
+    const NodeAnimation &channel = found->second;
+    const glm::vec3 position = sampleVec3(channel.positions, time, glm::vec3(0.0f));
+    const glm::quat rotation = sampleQuat(channel.rotations, time);
+    const glm::vec3 scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+
+    return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+}
+
 /// ルートには親がないので、掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
-void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform) {
-    const glm::mat4 globalTransform = parentTransform * node.localTransform;
+void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time) {
+    const glm::mat4 globalTransform = parentTransform * nodeTransform(node, time);
     const auto found = bones_.find(node.name);
     if (found != bones_.end()) {
         const BoneInfo &info = found->second;
         // globalInverse を掛けた分、drawNode 側でスキンメッシュに root_.localTransform を掛け直して辻褄を合わせる
         boneMatrices_[info.index] = globalInverseTransform_ * globalTransform * info.offset;
     }
-    for (const ModelNode &child : node.children) {
-        updateBoneMatrices(child, globalTransform);
-    }
+    for (const ModelNode &child : node.children)
+        updateBoneMatrices(child, globalTransform, time);
+}
+
+void Model::UpdateAnimation(float deltaTime) {
+    if (activeAnimation_ < 0 || boneMatrices_.empty()) return;
+
+    const Animation &animation = animations_[activeAnimation_];
+    animationTime_ += deltaTime * animation.ticksPerSecond;
+    if (animation.duration > 0.0f)
+        animationTime_ = std::fmod(animationTime_, animation.duration);
+
+    updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
 }

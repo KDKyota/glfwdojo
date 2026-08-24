@@ -82,10 +82,10 @@ class Model {
      * @brief ノードを描画する
      * @param [in] node 今書こうとしているノード
      * @param [in] parentTransform このノードの親までの累積変換
-     * @param [in] modelMatrix モデル全体をシーンのどこに置くか
+     * @param [in] skinnedWorldTransform スキンメッシュに使うワールド変換（modelMatrix * root_.localTransform、全ノード共通）
      * @param [in] shader 描画に使うシェーダ
      */
-    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &modelMatrix,gl::Shader &shader) const;
-    /// ノード階層をたどり、各ボーンの最終返還行列を計算する
+    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const;
+    /// ノード階層をたどり、各ボーンの最終変換行列を計算する
     void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform);
 };

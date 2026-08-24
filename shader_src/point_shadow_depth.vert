@@ -1,5 +1,5 @@
 // Point Light 用シャドウマップの深度パス。ワールド座標のまま geometry shader へ渡す。
-#version 330 core
+#version 460 core
 layout(location = 0) in vec3 aPos;
 layout(location = 2) in vec2 aTexCoords;
 // 有効化していないVAOでは既定値 (0,0,0) が読まれて無効化される。この依存は意図的
@@ -29,7 +29,6 @@ void main()
         if (totalWeight < 1e-5)
             skin = mat4(1.0);
         localPos = skin * localPos;
-        mat3 skinRotation = mat3(skin);
     }
 
     // 光源視点への変換は geometry shader が面ごとに行うのでワールド座標のまま渡す

@@ -1,6 +1,7 @@
 #pragma once
 #include "Camera.h"
 #include "Character.h"
+#include "Collision.h"
 #include "GeometryData.h"
 #include "GlHandle.h"
 #include "Lighting.h"
@@ -78,10 +79,24 @@ class Scene {
         return character_.get();
     }
 
+    const gl::CollisionWorld &Colliders() const {
+        return colliders_;
+    }
+
+    bool &DebugCollision() {
+        return debugCollision_;
+    }
+
   private:
     void initMesh();
     void initTextures();
     void initModels();
+    /// 壁と立方体から衝突判定用の直方体を作る。
+    void initColliders();
+    /// デバッグ表示用の円柱ワイヤーフレームを作る。
+    void initDebugShapes();
+    /// 衝突判定の円柱を描く。
+    void renderDebugCollision();
     /// 操作対象のモデル行列を現在の位置と向きから作り直す。
     void updatePlayerModelMatrix();
     void initFramebuffer();
@@ -176,6 +191,7 @@ class Scene {
     std::unique_ptr<gl::Shader> skyboxShader_;
     std::vector<std::unique_ptr<Model>> models_; // テクスチャやボーン・アニメーションなどの描画情報を持つ
     std::unique_ptr<Character> character_; // キャラクターのゲーム上の状態
+    gl::CollisionWorld colliders_;         // 壁と立方体を直方体として持つ
     // 操作対象のモデル 読み込めていなければ -1
     int playerModelIndex_ = -1;
     // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う
@@ -187,7 +203,11 @@ class Scene {
     std::unique_ptr<gl::Shader> pointColorShader_; // カラー付き透過シャドウ（ガラスの透過色）用
     std::unique_ptr<gl::Shader> debugDepthShader_;
     std::unique_ptr<gl::Shader> wallShader_;
-    std::unique_ptr<gl::Shader> blurShader_; // Boolの際にぼかしを入れるシェーダ
+    std::unique_ptr<gl::Shader> blurShader_;      // Boolの際にぼかしを入れるシェーダ
+    std::unique_ptr<gl::Shader> debugLineShader_; // 衝突判定の可視化用
+    gl::VertexArrayHandle debugCylinderVAO_;
+    gl::BufferHandle debugCylinderVBO_;
+    int debugCylinderVertexCount_ = 0;
     /* G-Bufferのシェーダ */
     std::unique_ptr<gl::Shader> gbufferFloorShader_;
     std::unique_ptr<gl::Shader> gbufferWallShader_;
@@ -237,6 +257,8 @@ class Scene {
     int debugMode_ = 0;
     // Bloom・トーンマッピング・ガンマ補正を飛ばす。デバッグ表示には必須
     bool debugRawOutput_ = false;
+    // 衝突判定の円柱をワイヤーフレームで重ねて描く
+    bool debugCollision_ = false;
     // SSAO の効き具合（0.0 = 無効, 1.0 = そのまま適用）
     float ssaoStrength_ = 1.0f;
 

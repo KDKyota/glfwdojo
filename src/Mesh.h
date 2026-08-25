@@ -15,8 +15,12 @@ class Mesh {
     std::vector<unsigned int> indices_;
     gl::PbrMaterial material_;
     bool isSkinned_ = false; // そのメッシュがボーンを持つか（スキンメッシュなら true）
+    glm::vec3 boundsMin_{0.0f};
+    glm::vec3 boundsMax_{0.0f};
 
     void setupMesh();
+    /// 頂点からバインドポーズの AABB を求める。
+    void computeBounds();
 
   public:
     /**
@@ -30,6 +34,8 @@ class Mesh {
     Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material, bool isSkinned);
 
     bool IsSkinned() const { return isSkinned_; }
+    const glm::vec3 &BoundsMin() const { return boundsMin_; }
+    const glm::vec3 &BoundsMax() const { return boundsMax_; }
 
     // GlHandle がコピー禁止・ムーブ可なので、Mesh もそれに従う（std::vector<Mesh> で必要）
     Mesh(Mesh &&) noexcept = default;

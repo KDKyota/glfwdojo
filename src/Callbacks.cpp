@@ -41,7 +41,7 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
     camera->ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void processInput(GLFWwindow *window, float deltaTime, Character *character) {
+void processInput(GLFWwindow *window, float deltaTime, Character *character, const gl::CollisionWorld &colliders) {
     if (!input->IsGameplay()) return;
 
     if (camera->Mode() == CameraMode::ThirdPerson && character != nullptr) {
@@ -55,7 +55,7 @@ void processInput(GLFWwindow *window, float deltaTime, Character *character) {
             move.x += 1.0f;
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
             move.x -= 1.0f;
-        character->Move(camera->GetViewFront(), move, deltaTime);
+        character->Move(camera->GetViewFront(), move, deltaTime, colliders);
     } else {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             camera->ProcessKeyboard(Camera_Movement::FORWARD, deltaTime);

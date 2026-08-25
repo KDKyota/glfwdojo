@@ -1,8 +1,24 @@
 #include "Mesh.h"
 
+#include <limits>
+
 Mesh::Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material, bool isSkinned)
     : vertices_(std::move(vertices)), indices_(std::move(indices)), material_(std::move(material)), isSkinned_(isSkinned) {
+    computeBounds();
     setupMesh();
+}
+
+/// 頂点からバインドポーズの AABB を求める。
+void Mesh::computeBounds() {
+    if (vertices_.empty())
+        return;
+
+    boundsMin_ = glm::vec3(std::numeric_limits<float>::max());
+    boundsMax_ = glm::vec3(std::numeric_limits<float>::lowest());
+    for (const gl::Vertex &vertex : vertices_) {
+        boundsMin_ = glm::min(boundsMin_, vertex.position);
+        boundsMax_ = glm::max(boundsMax_, vertex.position);
+    }
 }
 
 /// VAO を組み立て、頂点属性 location を設定する。

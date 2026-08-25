@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "GeometryData.h"
+#include <cmath>
 #include <cstddef>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -22,6 +23,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
         std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_color.frag");
     debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");
     blurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "blur.frag");
+    debugLineShader_ = std::make_unique<gl::Shader>("debug_line.vert", "debug_line.frag");
 
     /* G-Buffer */
     gbufferFloorShader_ = std::make_unique<gl::Shader>("shader.vert", "gbuffer_floor.frag");
@@ -45,8 +47,10 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     // cubePositions_ = std::move(cubePositions);
 
     initMesh();
+    initDebugShapes();
     initTextures();
     initModels();
+    initColliders();
     initFramebuffer();
     initUBO();
     initGBuffer();
@@ -371,9 +375,74 @@ void Scene::initModels() {
         if (spawn.followTarget) {
             playerModelIndex_ = static_cast<int>(models_.size()) - 1;
             playerBaseTransform_ = orientation;
-            character_ = std::make_unique<Character>(spawn.position);
+            character_ = std::make_unique<Character>(spawn.position, models_.back()->Height() * spawn.scale);
         }
     }
+}
+
+/// 壁と立方体から衝突判定用の直方体を作る。
+void Scene::initColliders() {
+    constexpr float half = gl::units::floorHalfExtent;
+    // 平面のままだと厚みが 0 で押し出す向きが決まらないので外側へ伸ばす
+    constexpr float wallThickness = 5.0f;
+
+    colliders_.Add({{-half, gl::units::floorY, -half - wallThickness}, {half, gl::units::wallTopY, -half}});
+    colliders_.Add({{-half, gl::units::floorY, half}, {half, gl::units::wallTopY, half + wallThickness}});
+
+    // cubeVertices は ±0.5 なので中心から半分ずつ広げる
+    constexpr float cubeHalf = 0.5f;
+    for (const glm::vec3 &center : cube_pos_)
+        colliders_.Add({center - glm::vec3(cubeHalf), center + glm::vec3(cubeHalf)});
+}
+
+/// デバッグ表示用の円柱ワイヤーフレームを作る。
+void Scene::initDebugShapes() {
+    constexpr int segments = 24;
+    constexpr float twoPi = 6.28318530717958647692f;
+    // 半径 1 高さ 1 の円柱を作り 描画時にスケールで実寸へ合わせる
+    std::vector<glm::vec3> lines;
+    for (int i = 0; i < segments; ++i) {
+        const float a0 = twoPi * i / segments;
+        const float a1 = twoPi * (i + 1) / segments;
+        const glm::vec3 bottom0(std::cos(a0), 0.0f, std::sin(a0));
+        const glm::vec3 bottom1(std::cos(a1), 0.0f, std::sin(a1));
+        const glm::vec3 up(0.0f, 1.0f, 0.0f);
+
+        lines.push_back(bottom0);
+        lines.push_back(bottom1);
+        lines.push_back(bottom0 + up);
+        lines.push_back(bottom1 + up);
+        if (i % 6 == 0) {
+            lines.push_back(bottom0);
+            lines.push_back(bottom0 + up);
+        }
+    }
+    debugCylinderVertexCount_ = static_cast<int>(lines.size());
+
+    debugCylinderVAO_.create();
+    debugCylinderVBO_.create();
+    glBindVertexArray(debugCylinderVAO_);
+    glBindBuffer(GL_ARRAY_BUFFER, debugCylinderVBO_);
+    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(glm::vec3), lines.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+    glBindVertexArray(0);
+}
+
+/// 衝突判定の円柱を描く。
+void Scene::renderDebugCollision() {
+    if (!debugCollision_ || !character_)
+        return;
+
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), character_->Position());
+    model = glm::scale(model, glm::vec3(character_->Radius(), character_->Height(), character_->Radius()));
+
+    debugLineShader_->use();
+    debugLineShader_->setMat4("model", model);
+    debugLineShader_->setVec3("color", glm::vec3(0.1f, 1.0f, 0.3f));
+    glBindVertexArray(debugCylinderVAO_);
+    glDrawArrays(GL_LINES, 0, debugCylinderVertexCount_);
+    glBindVertexArray(0);
 }
 
 /// 操作対象のモデル行列を現在の位置と向きから作り直す。
@@ -931,6 +1000,7 @@ void Scene::renderForwardPass(const std::vector<gl::TransparentDraw> &sorted) {
 
     renderLightCubes();
     renderSkybox();
+    renderDebugCollision();
 
     /* 透過窓（ブレンドが必要なのはここだけ。Geometryパスの冒頭で無効化しているので、描画中だけ有効にする）*/
     glEnable(GL_BLEND);

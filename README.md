@@ -8,6 +8,11 @@
 
 <table>
 <tr>
+<td><img src="images/Screenshot_3Dmodel.png"></td>
+<table>
+</tr>
+</table>
+<tr>
 <td><img src="images/Screenshot.png"></td>
 <td><img src="images/Screenshot_skip.png"></td>
 <td><img src="images/Screenshot_ssao.png"></td>

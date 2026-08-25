@@ -1595,6 +1595,133 @@ Assimp はこのテクスチャを版によって `aiTextureType_GLTF_METALLIC_R
 
 **対策:** `Scene::modelSpawns_` の `ModelSpawn::rotationDegrees` に、そのモデル用の補正回転を設定する。ボーン行列やローダー側は変更しない — 軸の向きは配置の問題であり、スキニングの計算とは別レイヤーで対処する。
 
+### 新しい3Dモデルを追加する（実用手順）
+
+1. **モデルファイルを `resources/` 以下に置く。** 推奨は `.glb`（glTF バイナリ、
+   テクスチャも1ファイルに埋め込まれる）。キャラクターなら `resources/characters/`、
+   静物なら `resources/publishable-objects/` に既存ファイルがあるので同じ並びに置く
+2. **`Scene.h` の `modelSpawns_` に1行足す。これだけでシーンに出る。**
+   `Model`・`Scene.cpp`・シェーダーは何も変更しなくてよい（[新しい3Dオブジェクトの追加](#新しい3dオブジェクトの追加)
+   や [新しいシェーダーの追加](#新しいシェーダーの追加) と違い、頂点データやVAOを自分で書く必要が無い。
+   Assimp 経由で読み込む形式は完全にデータ駆動になっている）
+
+   ```cpp
+   // Scene.h
+   const std::vector<ModelSpawn> modelSpawns_ = {
+       // path, position, rotationDegrees, scale, followTarget(省略可、trueなら1体だけ)
+       {"resources/characters/MyModel.glb", glm::vec3(0.0f, gl::units::floorY, 0.0f), glm::vec3(0.0f), 1.0f},
+   };
+   ```
+
+3. **ビルドして起動するだけで表示される。** `Scene::initModels()`（`Scene.cpp`）が
+   `modelSpawns_` を1行ずつループして `Model` を構築する
+
+**うまく表示されないときに確認すること**
+
+| 症状 | 確認箇所 |
+| --- | --- |
+| コンソールに `Skipped model: ...` と出て表示されない | パスが間違っている、または Assimp が対応していない形式。読み込み失敗は `try/catch` で握りつぶして読み飛ばすだけで、**起動は止まらない**（`Scene.cpp` の `initModels()`） |
+| モデルが横に倒れる・変な向きに立つ | `rotationDegrees` を設定する。[軸の向きが違うモデルは倒れて読み込まれる](#軸の向きが違うモデルは倒れて読み込まれる) 参照 |
+| モデルが極端に大きい／小さい | `scale` を調整する。このプロジェクトは 1.0 = 1メートル規約（[モデル読み込みと単位系](#モデル読み込みと単位系)）なので、glTF 側が正しくメートルでエクスポートされていればほぼ 1.0 のままで合う |
+| ボーンが動かずバインドポーズのまま固まる | モデル自体にスキニング・アニメーションが入っていない。次項参照 |
+
+**キャラクターとして操作したい場合**
+
+`followTarget: true` を追加する。三人称カメラの注視対象になり、`Character`（`Scene::character_`）が
+そのモデルの spawn 位置・高さで生成される（`initModels()` 内、`spawn.followTarget` の分岐）。
+**`true` は1体だけを想定している。** 2体以上に付けると `playerModelIndex_` が後勝ちで上書きされ、
+カメラと `Character` は配列内で最後に `true` を付けたモデルだけを追従する。
+
+**読み込み時の Assimp フラグ（`Model::LoadModel()` / `Model.cpp`）**
+
+```cpp
+importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs |
+    aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights);
+```
+
+四角面や法線・タンジェントが無いモデルでもこのフラグで自動生成されるので、通常は
+モデル側を事前加工する必要はない。`aiProcess_LimitBoneWeights` により1頂点あたりの
+ボーン影響は自動的に4本へ切り詰められる（`gl::Vertex::m_BoneIDs` の枠と一致させるため）。
+
+---
+
+### 3Dモデルのアニメーションを再生する（実用手順）
+
+**手順は無い。モデルにアニメーションが埋め込まれていれば、追加のコードなしで自動的に再生される。**
+
+上の手順でモデルを `modelSpawns_` に足しただけで、そのモデルにスキニング・アニメーション
+（glTF の `animations` セクション）が入っていれば、`Model` コンストラクタ内で自動的に
+アニメーションが読み込まれ、**1本目のクリップがロードした瞬間から再生され続ける**（ループ再生）。
+`Character` や `Scene` 側で「このモデルのアニメーションを再生開始する」ような呼び出しを
+どこかに書く必要は無い。
+
+- **止める／再開する:** `Scene::Render()` が毎フレーム `models_[i]->UpdateAnimation(freeze ? 0.0f : deltaTime)`
+  を呼んでいる（`Scene.cpp`）。`deltaTime` に `0.0f` を渡すだけで、その瞬間の姿勢のまま止まる。
+  ポーズ機能（UI の一時停止）はこれを使っている
+- **アニメーションが無いモデル:** バインドポーズ（`T` ポーズ等）のまま静止して描画される。
+  エラーにはならない（`Model::HasAnimation()` が `false` を返す経路にそのまま乗るだけ）
+- **複数のモーション（例: 歩行 + ジャンプ）を切り替えたい場合:** **現状は未対応。**
+  `.glb` に何本クリップが入っていても、常に1本目（`animations_[0]`）しか再生されない。
+  切り替えの仕組みそのものを実装する必要がある（[#31](https://github.com/KDKyota/glfwdojo/issues/31) 参照）
+
+**内部でどう動いているか（実装の参考）**
+
+以下は「なぜ自動再生されるのか」の実装詳細。手を加える予定が無ければ読み飛ばしてよい。
+
+**読み込み（`Model::loadAnimations()`）**
+
+`aiScene::mAnimations[]` を全部 `Model::animations_`（`std::vector<Animation>`）へ読み込みます。
+1本の `Animation` は「ノード名 → そのノードの位置／回転／スケールのキー列」という
+`unordered_map` (`channels`) を持ちます（`aiAnimation::mChannels[]` を1本ずつ読み替えたもの。
+キー列の構造は `Model.h` の `Animation` / `NodeAnimation` / `AnimationKey` を直接参照してください）。
+
+読み込みの最後で `if (!animations_.empty()) activeAnimation_ = 0;` としているため、
+2本目以降のクリップは読み込まれてはいるものの**一切使われません**。
+
+**毎フレームの再生（`Model::UpdateAnimation()`）**
+
+```cpp
+void Model::UpdateAnimation(float deltaTime) {
+    if (activeAnimation_ < 0 || boneMatrices_.empty()) return;
+    const Animation &animation = animations_[activeAnimation_];
+    animationTime_ += deltaTime * animation.ticksPerSecond;
+    if (animation.duration > 0.0f)
+        animationTime_ = std::fmod(animationTime_, animation.duration);
+    updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
+    uploadBoneMatrices();
+}
+```
+
+- `animationTime_` は「tick」単位で進む（秒ではない）。`ticksPerSecond` を掛けて秒→tickに変換している
+- `std::fmod` でループさせている。**単発再生（1回きりで終わるモーション）を作る場合はここを変える必要がある** —
+  現状は全アニメーションが無条件にループする作りになっている
+- `updateBoneMatrices()` がノード階層を再帰的に辿り、各ノードについて `nodeTransform()` で
+  現在時刻のローカル変換を作ってボーン行列 `boneMatrices_` を更新する
+- `Scene::Render()` 側では `models_[i]->UpdateAnimation(freeze ? 0.0f : deltaTime)`（`Scene.cpp`）のように、
+  ポーズ中は `deltaTime` を渡さないことでアニメーションを止めている
+
+**キーフレームの補間（`Model::nodeTransform()`）**
+
+```cpp
+glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
+    if (activeAnimation_ < 0) return node.localTransform;
+    const Animation &animation = animations_[activeAnimation_];
+    const auto found = animation.channels.find(node.name);
+    if (found == animation.channels.end()) return node.localTransform;
+    // 位置・スケールは線形補間、回転は quaternion の slerp
+    ...
+}
+```
+
+- そのノード名に対応するチャンネルが**無ければ** `node.localTransform`（バインドポーズの変換）をそのまま返す。
+  アニメーションが動かさないノード（例えばメッシュ本体を吊るす親ノード）はこの経路を通る
+- 位置とスケールは前後のキーを線形補間（`sampleVec3`）、回転は `glm::slerp` で球面線形補間（`sampleQuat`）する。
+  回転を線形補間ではなく slerp にしているのは、クォータニオンを単純に線形補間すると
+  途中で回転速度が不自然に変化する（球面上を通らない）ため
+- `ticksPerSecond` が glTF ファイル側で 0 になっていることがある。`Animation::ticksPerSecond` の
+  既定値 `25.0f`（`Model.h`）はこの場合のフォールバックで、`loadAnimations()` は
+  `source->mTicksPerSecond != 0.0` のときだけ上書きしている
+
 ---
 
 ## 今後の課題

@@ -41,23 +41,37 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
     camera->ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void processInput(GLFWwindow *window, float deltaTime) {
+void processInput(GLFWwindow *window, float deltaTime, Character *character, const gl::CollisionWorld &colliders) {
     if (!input->IsGameplay()) return;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera->ProcessKeyboard(Camera_Movement::FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera->ProcessKeyboard(Camera_Movement::BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera->ProcessKeyboard(Camera_Movement::LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera->ProcessKeyboard(Camera_Movement::RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        camera->ProcessKeyboard(Camera_Movement::UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        camera->ProcessKeyboard(Camera_Movement::DOWN, deltaTime);
+    if (camera->Mode() == CameraMode::ThirdPerson && character != nullptr) {
+        glm::vec2 move(0.0f);
+        // 入力キーごとに移動する方向に割り当てる
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            move.y += 1.0f;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            move.y -= 1.0f;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            move.x += 1.0f;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            move.x -= 1.0f;
+        character->Move(camera->GetViewFront(), move, deltaTime, colliders);
+    } else {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera->ProcessKeyboard(Camera_Movement::FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera->ProcessKeyboard(Camera_Movement::BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera->ProcessKeyboard(Camera_Movement::LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera->ProcessKeyboard(Camera_Movement::RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera->ProcessKeyboard(Camera_Movement::UP, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            camera->ProcessKeyboard(Camera_Movement::DOWN, deltaTime);
+    }
 
-    // Parallax Mapping の heightScale を矢印キーで調整（1秒あたりの変化量 = heightScaleSpeed）
+    // Parallax Mapping の heightScale を矢印キーで調整（1秒あたりの変化量=heightScaleSpeed）
     constexpr float heightScaleSpeed = 0.2f;
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
         heightScale = std::min(heightScale + heightScaleSpeed * deltaTime, 1.0f);

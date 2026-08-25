@@ -1,14 +1,13 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "GeometryData.h"
+#include <cmath>
 #include <cstddef>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <random>
 #include <stdexcept>
-#include <algorithm>
-#include <cmath>
 #include <stb_image.h>
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
@@ -24,6 +23,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
         std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_color.frag");
     debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");
     blurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "blur.frag");
+    debugLineShader_ = std::make_unique<gl::Shader>("debug_line.vert", "debug_line.frag");
 
     /* G-Buffer */
     gbufferFloorShader_ = std::make_unique<gl::Shader>("shader.vert", "gbuffer_floor.frag");
@@ -47,8 +47,10 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     // cubePositions_ = std::move(cubePositions);
 
     initMesh();
+    initDebugShapes();
     initTextures();
     initModels();
+    initColliders();
     initFramebuffer();
     initUBO();
     initGBuffer();
@@ -362,30 +364,95 @@ void Scene::initModels() {
             std::cout << "Skipped model: " << spawn.path << " (" << e.what() << ")" << std::endl;
             continue;
         }
-        const glm::mat4 translated = glm::translate(glm::mat4(1.0f), spawn.position);
-        modelMatrices_.push_back(glm::scale(translated, glm::vec3(spawn.scale)));
+        glm::mat4 orientation = glm::rotate(glm::mat4(1.0f), glm::radians(spawn.rotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        orientation = glm::rotate(orientation, glm::radians(spawn.rotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        orientation = glm::rotate(orientation, glm::radians(spawn.rotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        orientation = glm::scale(orientation, glm::vec3(spawn.scale));
+
+        // 注意: T * R * S の順を崩すとモデルが原点まわりに公転する
+        modelMatrices_.push_back(glm::translate(glm::mat4(1.0f), spawn.position) * orientation);
+
         if (spawn.followTarget) {
-            followTargetPosition_ = spawn.position;
-            hasFollowTarget_ = true;
+            playerModelIndex_ = static_cast<int>(models_.size()) - 1;
+            playerBaseTransform_ = orientation;
+            character_ = std::make_unique<Character>(spawn.position, models_.back()->Height() * spawn.scale);
         }
     }
-    // NOTE: 後で消す
-    for (const std::unique_ptr<Model> &model : models_) {
-        if (!model->HasBones()) {
-            continue;
+}
+
+/// 壁と立方体から衝突判定用の直方体を作る。
+void Scene::initColliders() {
+    constexpr float half = gl::units::floorHalfExtent;
+    // 平面のままだと厚みが 0 で押し出す向きが決まらないので外側へ伸ばす
+    constexpr float wallThickness = 5.0f;
+
+    colliders_.Add({{-half, gl::units::floorY, -half - wallThickness}, {half, gl::units::wallTopY, -half}});
+    colliders_.Add({{-half, gl::units::floorY, half}, {half, gl::units::wallTopY, half + wallThickness}});
+
+    // cubeVertices は ±0.5 なので中心から半分ずつ広げる
+    constexpr float cubeHalf = 0.5f;
+    for (const glm::vec3 &center : cube_pos_)
+        colliders_.Add({center - glm::vec3(cubeHalf), center + glm::vec3(cubeHalf)});
+}
+
+/// デバッグ表示用の円柱ワイヤーフレームを作る。
+void Scene::initDebugShapes() {
+    constexpr int segments = 24;
+    constexpr float twoPi = 6.28318530717958647692f;
+    // 半径 1 高さ 1 の円柱を作り 描画時にスケールで実寸へ合わせる
+    std::vector<glm::vec3> lines;
+    for (int i = 0; i < segments; ++i) {
+        const float a0 = twoPi * i / segments;
+        const float a1 = twoPi * (i + 1) / segments;
+        const glm::vec3 bottom0(std::cos(a0), 0.0f, std::sin(a0));
+        const glm::vec3 bottom1(std::cos(a1), 0.0f, std::sin(a1));
+        const glm::vec3 up(0.0f, 1.0f, 0.0f);
+
+        lines.push_back(bottom0);
+        lines.push_back(bottom1);
+        lines.push_back(bottom0 + up);
+        lines.push_back(bottom1 + up);
+        if (i % 6 == 0) {
+            lines.push_back(bottom0);
+            lines.push_back(bottom0 + up);
         }
-        model->UpdateBonePalette();
-        float maxDeviation = 0.0f;
-        for (const glm::mat4 &m : model->BonePalette()) {
-            for (int c = 0; c < 4; ++c) {
-                for (int r = 0; r < 4; ++r) {
-                    const float expected = (c == r) ? 1.0f : 0.0f;
-                    maxDeviation = std::max(maxDeviation, std::abs(m[c][r] - expected));
-                }
-            }
-        }
-        std::cout << "palette deviation = " << maxDeviation << std::endl;
     }
+    debugCylinderVertexCount_ = static_cast<int>(lines.size());
+
+    debugCylinderVAO_.create();
+    debugCylinderVBO_.create();
+    glBindVertexArray(debugCylinderVAO_);
+    glBindBuffer(GL_ARRAY_BUFFER, debugCylinderVBO_);
+    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(glm::vec3), lines.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+    glBindVertexArray(0);
+}
+
+/// 衝突判定の円柱を描く。
+void Scene::renderDebugCollision() {
+    if (!debugCollision_ || !character_)
+        return;
+
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), character_->Position());
+    model = glm::scale(model, glm::vec3(character_->Radius(), character_->Height(), character_->Radius()));
+
+    debugLineShader_->use();
+    debugLineShader_->setMat4("model", model);
+    debugLineShader_->setVec3("color", glm::vec3(0.1f, 1.0f, 0.3f));
+    glBindVertexArray(debugCylinderVAO_);
+    glDrawArrays(GL_LINES, 0, debugCylinderVertexCount_);
+    glBindVertexArray(0);
+}
+
+/// 操作対象のモデル行列を現在の位置と向きから作り直す。
+void Scene::updatePlayerModelMatrix() {
+    if (!character_ || playerModelIndex_ < 0)
+        return;
+
+    modelMatrices_[playerModelIndex_] =
+        glm::translate(glm::mat4(1.0f), character_->Position()) *
+        glm::rotate(glm::mat4(1.0f), character_->Yaw(), glm::vec3(0.0f, 1.0f, 0.0f)) * playerBaseTransform_;
 }
 
 /// テクスチャをロードし、各シェーダーのサンプラー uniform を設定する。
@@ -693,6 +760,15 @@ void Scene::Render(float deltaTime, float heightScale) {
     elapsedTime_ += deltaTime;
     heightScale_ = heightScale;
 
+    updatePlayerModelMatrix();
+
+    // アニメーションのループ ポーズ中は deltaTime に 0 を渡す
+    for (size_t i = 0; i < models_.size(); ++i) {
+        // 待機モーションが無いので停止中は再生位置を進めない
+        const bool freeze = character_ && static_cast<int>(i) == playerModelIndex_ && !character_->IsMoving();
+        models_[i]->UpdateAnimation(freeze ? 0.0f : deltaTime);
+    }
+
     // 透過窓の並び順は前方描画でも使うので、ここで受け取って持ち回る
     std::vector<gl::TransparentDraw> sorted;
     updateTransparentInstances(sorted);
@@ -924,6 +1000,7 @@ void Scene::renderForwardPass(const std::vector<gl::TransparentDraw> &sorted) {
 
     renderLightCubes();
     renderSkybox();
+    renderDebugCollision();
 
     /* 透過窓（ブレンドが必要なのはここだけ。Geometryパスの冒頭で無効化しているので、描画中だけ有効にする）*/
     glEnable(GL_BLEND);

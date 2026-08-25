@@ -40,11 +40,12 @@ int main(void) {
             mouse->Reset();
         }
 
-        // 追従先はシーンが持っているので、カメラの更新より前に渡す
+        processInput(window->Get(), frametime.delta, scene->PlayerCharacter(), scene->Colliders());
+
+        // SetFollowTarget は processInput の後に呼ぶ 前だとカメラが1フレーム遅れて追従した
         if (const glm::vec3 *target = scene->FollowTargetPosition())
             camera->SetFollowTarget(*target);
 
-        processInput(window->Get(), frametime.delta);
         camera->Update(frametime.delta);
 
         // ImGui:: の呼び出しより前に必ず1回
@@ -98,6 +99,7 @@ int main(void) {
                 // G-Buffer や AO を見るときはトーンマッピングを切らないと階調が潰れる
                 ImGui::Checkbox("Raw output (skip tonemap/bloom)",
                                 &scene->DebugRawOutput());
+                ImGui::Checkbox("Show collision shape", &scene->DebugCollision());
                 ImGui::Separator();
 
                 ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);

@@ -1,7 +1,13 @@
 #include "Model.h"
 
+#include <assimp/anim.h>
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
+#include <limits>
+#include <utility>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace {
 
@@ -28,6 +34,42 @@ void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
     // aiProcess_LimitBoneWeights で 4 本へ切り詰めているので、あふれてここへ来ることはない
 }
 
+// time をはさむ前側のキーの添え字とその区間内での補間率を返す
+template <typename T>
+std::pair<size_t, float> findSegment(const std::vector<AnimationKey<T>> &keys, float time) {
+    // 前後のキーを見て、 キーを判断する
+    for (size_t i = 0; i + 1 < keys.size(); ++i) {
+        if (time < keys[i + 1].time) {
+            const float span = keys[i + 1].time - keys[i].time;
+            return {i, span > 0.0f ? (time - keys[i].time) / span : 0.0f};
+        }
+    }
+    return {keys.size() - 1, 0.0f};
+}
+
+// アニメーションによる位置とスケールの補完
+glm::vec3 sampleVec3(const std::vector<AnimationKey<glm::vec3>> &keys, float time, const glm::vec3 &fallback) {
+    if (keys.empty()) return fallback;
+    // 最初のキーは 0 tick とは限らないので、範囲外は端の値で固定
+    if (time <= keys.front().time) return keys.front().value;
+    if (time >= keys.back().time) return keys.back().value;
+    const auto [index, factor] = findSegment(keys, time);
+    return glm::mix(keys[index].value, keys[index + 1].value, factor);
+}
+
+// アニメーションによる回転の補完
+glm::quat sampleQuat(const std::vector<AnimationKey<glm::quat>> &keys, float time) {
+    if (keys.empty())
+        return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    if (time <= keys.front().time)
+        return keys.front().value;
+    if (time >= keys.back().time)
+        return keys.back().value;
+
+    const auto [index, factor] = findSegment(keys, time);
+    // 線形補間だと単位長からずれて回転速度がムラになるので slerp を使う
+    return glm::slerp(keys[index].value, keys[index + 1].value, factor);
+}
 } // namespace
 
 Model::Model(const std::string &path, TextureCache &cache) : path_(path), cache_(cache) {
@@ -47,29 +89,62 @@ void Model::loadModel(const std::string &path) {
     directory_ = (slash == std::string::npos) ? "" : path.substr(0, slash);
 
     globalInverseTransform_ = glm::inverse(toGlm(scene->mRootNode->mTransformation));
-
-    // NOTE: 後で消す
-    const glm::mat4 rootT = toGlm(scene->mRootNode->mTransformation);
-    std::cout << "[" << path << "]root=" << scene->mRootNode->mName.C_Str() << std::endl;
-    for (int r = 0; r < 4; ++r) {
-        std::cout << " " << rootT[0][r] << " " << rootT[1][r] << " " << rootT[2][r] << " " << rootT[3][r]
-                  << std::endl;
-    }
     root_ = processNode(scene->mRootNode, scene);
-    std::cout << " bones=" << bones_.size() << std::endl;
 
-    // NOTE: 後で消す
-    const auto boneIt = bones_.find("Bone");
-    if (boneIt != bones_.end()) {
-        const glm::mat4 &off = boneIt->second.offset;
-        std::cout << "offset[Bone] index = " << boneIt->second.index << std::endl;
-        for (int r = 0; r < 4; ++r) {
-            std::cout << " " << off[0][r] << " " << off[1][r] << " " << off[2][r] << " " << off[3][r] << std::endl;
-        }
+    if (static_cast<int>(bones_.size()) > kMaxBones)
+        throw std::runtime_error("Too many bones: " + path + " (" + std::to_string(bones_.size()) + ") ");
+
+    boundsMin_ = glm::vec3(std::numeric_limits<float>::max());
+    boundsMax_ = glm::vec3(std::numeric_limits<float>::lowest());
+    accumulateBounds(root_, glm::mat4(1.0f));
+
+    loadAnimations(scene);
+    boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
+    updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);
+
+    if (!boneMatrices_.empty()) {
+        boneUBO_.create();
+        glBindBuffer(GL_UNIFORM_BUFFER, boneUBO_);
+        // シェーダーの配列長は MAX_BONES 固定なので、実際のボーン数に関わらず枠ぶん確保する
+        glBufferData(GL_UNIFORM_BUFFER, kMaxBones * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        uploadBoneMatrices();
     }
 }
 
-/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。
+/// バインドポーズの AABB をノード階層をたどって求める。
+void Model::accumulateBounds(const ModelNode &node, const glm::mat4 &parentTransform) {
+    const glm::mat4 worldTransform = parentTransform * node.localTransform;
+
+    for (const unsigned int index : node.meshIndices) {
+        const Mesh &mesh = meshes_[index];
+        // drawNode と同じ規則で スキンメッシュはノード変換を使わない
+        const glm::mat4 &transform = mesh.IsSkinned() ? root_.localTransform : worldTransform;
+        const glm::vec3 &min = mesh.BoundsMin();
+        const glm::vec3 &max = mesh.BoundsMax();
+
+        for (int corner = 0; corner < 8; ++corner) {
+            const glm::vec3 local((corner & 1) ? max.x : min.x, (corner & 2) ? max.y : min.y,
+                                  (corner & 4) ? max.z : min.z);
+            const glm::vec3 world = glm::vec3(transform * glm::vec4(local, 1.0f));
+            boundsMin_ = glm::min(boundsMin_, world);
+            boundsMax_ = glm::max(boundsMax_, world);
+        }
+    }
+
+    for (const ModelNode &child : node.children)
+        accumulateBounds(child, worldTransform);
+}
+
+/// boneMatrices_ を UBO へ書き込む。
+void Model::uploadBoneMatrices() {
+    glBindBuffer(GL_UNIFORM_BUFFER, boneUBO_);
+    // std140 の mat4 配列は 64 バイト刻みで、glm::mat4 の並びとそのまま一致する
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, boneMatrices_.size() * sizeof(glm::mat4), boneMatrices_.data());
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。 その際、同じノードを二回以上送らないように  meshIndexByAiIndex_ で管理
 ModelNode Model::processNode(const aiNode *node, const aiScene *scene) {
     ModelNode result;
     result.name = node->mName.C_Str();
@@ -145,6 +220,8 @@ void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
         if (inserted.second) {
             info.index = static_cast<int>(bones_.size()) - 1;
             info.offset = toGlm(bone->mOffsetMatrix);
+            // mOfsetMatrix: そのボーンがバインドポーズでどこにあったかの逆行列
+            // 動くときに関節（ジョイントを）原点として考える変換
         }
 
         for (unsigned int w = 0; w < bone->mNumWeights; ++w) {
@@ -235,42 +312,112 @@ std::shared_ptr<Texture> Model::loadTexture(const aiMaterial *mat, aiTextureType
 }
 
 void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
-    drawNode(root_, modelMatrix, shader);
+    if (!boneMatrices_.empty()) {
+        glBindBufferBase(GL_UNIFORM_BUFFER, kBoneUBOBinding, boneUBO_);
+    }
+    // ボーン行列は globalInverse を掛けて root_.localTransform 分を打ち消しているので
+    // スキンメッシュにはここで root_.localTransform を掛け直して辻褄を合わせる
+    const glm::mat4 skinnedWorldTransform = modelMatrix * root_.localTransform;
+    // 第二引数はノードの親までの累積変換 -> ルートの時点では何もたどらないのでワールド配置の modelMatrix
+    drawNode(root_, modelMatrix, skinnedWorldTransform, shader);
+
+    // 影パスのようにモデル以外と共有するシェーダーでは、hasBones を立てたまま抜けるとボーン属性を持たない VAO が既定値 aWeights=(0,0,0,1) を読んで finalBones[0] で変形される
+    shader.setBool("hasBones", false);
 }
 
-void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, gl::Shader &shader) const {
-    const glm::mat4 worldTransform = parentTransform * node.localTransform;
+void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {
+    // updateBoneMatrices と同じ変換を辿らないと、アニメーションするノードにぶら下がる
+    // 非スキンメッシュだけがバインドポーズに取り残される
+    const glm::mat4 worldTransform = parentTransform * nodeTransform(node, animationTime_);
 
-    if (!node.meshIndices.empty()) {
-        shader.setMat4("model", worldTransform);
-        for (const unsigned int index : node.meshIndices) {
-            meshes_[index].Draw(shader);
-        }
+    for (const unsigned int index : node.meshIndices) {
+        const Mesh &mesh = meshes_[index];
+        shader.setMat4("model", mesh.IsSkinned() ? skinnedWorldTransform : worldTransform);
+        shader.setBool("hasBones", mesh.IsSkinned());
+        mesh.Draw(shader);
     }
 
     for (const ModelNode &child : node.children) {
-        drawNode(child, worldTransform, shader);
+        drawNode(child, worldTransform, skinnedWorldTransform, shader);
     }
 }
 
-void Model::UpdateBonePalette() {
-    if (bones_.empty()) {
-        return;
+/// aiAnimation をすべて読み込み、ノード名で引けるチャンネルにまとめる
+void Model::loadAnimations(const aiScene *scene) {
+    for (unsigned int i = 0; i < scene->mNumAnimations; ++i) {
+        const aiAnimation *source = scene->mAnimations[i];
+        Animation animation;
+        animation.name = source->mName.C_Str();
+        animation.duration = static_cast<float>(source->mDuration);
+        if (source->mTicksPerSecond != 0.0)
+            animation.ticksPerSecond = static_cast<float>(source->mTicksPerSecond);
+
+        // すべてのチャンネル（すべてのフレーム）について操作して、ボーンの動きを取得する
+        for (unsigned int c = 0; c < source->mNumChannels; ++c) {
+            const aiNodeAnim *channel = source->mChannels[c];
+            NodeAnimation node;
+
+            node.positions.reserve(channel->mNumPositionKeys);
+            for (unsigned int k = 0; k < channel->mNumPositionKeys; ++k) {
+                const aiVectorKey &key = channel->mPositionKeys[k];
+                node.positions.push_back({static_cast<float>(key.mTime), {key.mValue.x, key.mValue.y, key.mValue.z}});
+            }
+
+            node.rotations.reserve(channel->mNumRotationKeys);
+            for (unsigned int k = 0; k < channel->mNumRotationKeys; ++k) {
+                const aiQuatKey &key = channel->mRotationKeys[k];
+                // glm::quat の引数順は (w, x, y, z)。aiQuaternion のメンバ並びと違う
+                node.rotations.push_back({static_cast<float>(key.mTime), glm::quat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z)});
+            }
+
+            node.scales.reserve(channel->mNumScalingKeys);
+            for (unsigned int k = 0; k < channel->mNumScalingKeys; ++k) {
+                const aiVectorKey &key = channel->mScalingKeys[k];
+                node.scales.push_back({static_cast<float>(key.mTime), {key.mValue.x, key.mValue.y, key.mValue.z}});
+            }
+            animation.channels[channel->mNodeName.C_Str()] = std::move(node);
+        }
+        animations_.push_back(std::move(animation));
     }
-    palette_.assign(bones_.size(), glm::mat4(1.0f));
-    accumulatePalette(root_, glm::mat4(1.0f));
+    if (!animations_.empty()) activeAnimation_ = 0;
 }
 
-void Model::accumulatePalette(const ModelNode &node, const glm::mat4 &parentTransform) {
-    const glm::mat4 globalTransform = parentTransform * node.localTransform;
+glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
+    if (activeAnimation_ < 0) return node.localTransform;
 
+    const Animation &animation = animations_[activeAnimation_];
+    const auto found = animation.channels.find(node.name);
+    if (found == animation.channels.end()) return node.localTransform;
+
+    const NodeAnimation &channel = found->second;
+    const glm::vec3 position = sampleVec3(channel.positions, time, glm::vec3(0.0f));
+    const glm::quat rotation = sampleQuat(channel.rotations, time);
+    const glm::vec3 scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+
+    return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+}
+
+/// ルートには親がないので、掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
+void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time) {
+    const glm::mat4 globalTransform = parentTransform * nodeTransform(node, time);
     const auto found = bones_.find(node.name);
     if (found != bones_.end()) {
         const BoneInfo &info = found->second;
-        palette_[info.index] = globalInverseTransform_ * globalTransform * info.offset;
+        // globalInverse を掛けた分、drawNode 側でスキンメッシュに root_.localTransform を掛け直して辻褄を合わせる
+        boneMatrices_[info.index] = globalInverseTransform_ * globalTransform * info.offset;
     }
+    for (const ModelNode &child : node.children)
+        updateBoneMatrices(child, globalTransform, time);
+}
 
-    for (const ModelNode &child : node.children) {
-        accumulatePalette(child, globalTransform);
-    }
+void Model::UpdateAnimation(float deltaTime) {
+    if (activeAnimation_ < 0 || boneMatrices_.empty()) return;
+
+    const Animation &animation = animations_[activeAnimation_];
+    animationTime_ += deltaTime * animation.ticksPerSecond;
+    if (animation.duration > 0.0f)
+        animationTime_ = std::fmod(animationTime_, animation.duration);
+
+    updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
+    uploadBoneMatrices();
 }

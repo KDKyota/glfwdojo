@@ -61,6 +61,8 @@ class Shader {
     // ------------------------------------------------------------------------
     void setMat4(const std::string &name, const glm::mat4 &mat) const;
 
+    void setMat4Array(const std::string &name, const glm::mat4 *mats, int count) const;
+
   private:
     // utility functions for checking shader compilation/linking errors.
     void checkCompileErrors(unsigned int shader, std::string type);

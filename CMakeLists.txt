@@ -29,7 +29,9 @@ add_executable(
   src/Mesh.cpp
   src/GeometryData.cpp
   src/Gui.cpp
-  src/InputState.cpp)
+  src/InputState.cpp
+  src/Character.cpp
+  src/Collision.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 
@@ -83,7 +85,9 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/irradiance_convolution.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/equirectangular_to_cubemap.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/prefilter.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/brdf_lut.frag)
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/brdf_lut.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_line.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_line.frag)
 
 add_custom_command(
   TARGET glfwdojo

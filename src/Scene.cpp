@@ -360,18 +360,30 @@ void Scene::initModels() {
             std::cout << "Skipped model: " << spawn.path << " (" << e.what() << ")" << std::endl;
             continue;
         }
-        // T * R * S の順で合成する 回転を先にすると原点まわりに公転してしまうため平行移動は最後に掛ける
-        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), spawn.position);
-        modelMatrix = glm::rotate(modelMatrix, glm::radians(spawn.rotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
-        modelMatrix = glm::rotate(modelMatrix, glm::radians(spawn.rotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
-        modelMatrix = glm::rotate(modelMatrix, glm::radians(spawn.rotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(spawn.scale));
-        modelMatrices_.push_back(modelMatrix);
+        glm::mat4 orientation = glm::rotate(glm::mat4(1.0f), glm::radians(spawn.rotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        orientation = glm::rotate(orientation, glm::radians(spawn.rotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        orientation = glm::rotate(orientation, glm::radians(spawn.rotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        orientation = glm::scale(orientation, glm::vec3(spawn.scale));
+
+        // 注意: T * R * S の順を崩すとモデルが原点まわりに公転する
+        modelMatrices_.push_back(glm::translate(glm::mat4(1.0f), spawn.position) * orientation);
+
         if (spawn.followTarget) {
-            followTargetPosition_ = spawn.position;
-            hasFollowTarget_ = true;
+            playerModelIndex_ = static_cast<int>(models_.size()) - 1;
+            playerBaseTransform_ = orientation;
+            character_ = std::make_unique<Character>(spawn.position);
         }
     }
+}
+
+/// 操作対象のモデル行列を現在の位置と向きから作り直す。
+void Scene::updatePlayerModelMatrix() {
+    if (!character_ || playerModelIndex_ < 0)
+        return;
+
+    modelMatrices_[playerModelIndex_] =
+        glm::translate(glm::mat4(1.0f), character_->Position()) *
+        glm::rotate(glm::mat4(1.0f), character_->Yaw(), glm::vec3(0.0f, 1.0f, 0.0f)) * playerBaseTransform_;
 }
 
 /// テクスチャをロードし、各シェーダーのサンプラー uniform を設定する。
@@ -679,10 +691,15 @@ void Scene::Render(float deltaTime, float heightScale) {
     elapsedTime_ += deltaTime;
     heightScale_ = heightScale;
 
-    // ポーズ中は deltaTime に 0 を渡す
-    for(const std::unique_ptr<Model> &model : models_)
-        model->UpdateAnimation(deltaTime);
-        
+    updatePlayerModelMatrix();
+
+    // アニメーションのループ ポーズ中は deltaTime に 0 を渡す
+    for (size_t i = 0; i < models_.size(); ++i) {
+        // 待機モーションが無いので停止中は再生位置を進めない
+        const bool freeze = character_ && static_cast<int>(i) == playerModelIndex_ && !character_->IsMoving();
+        models_[i]->UpdateAnimation(freeze ? 0.0f : deltaTime);
+    }
+
     // 透過窓の並び順は前方描画でも使うので、ここで受け取って持ち回る
     std::vector<gl::TransparentDraw> sorted;
     updateTransparentInstances(sorted);

@@ -37,7 +37,7 @@ constexpr float ORBIT_MAX_DISTANCE = 12.0f;
 // 注視点は足元ではなく胸のあたり
 constexpr float TARGET_HEIGHT = gl::units::characterHeight * 0.7f;
 // 追従の追いつく速さ
-constexpr float FOLLOW_STIFFNESS = 8.0f;
+constexpr float FOLLOW_STIFFNESS = 8.0f; // FPS による依存をなくす
 constexpr float PITCH_LIMIT = 89.0f;
 } // namespace CameraDefaults
 

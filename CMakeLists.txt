@@ -29,7 +29,8 @@ add_executable(
   src/Mesh.cpp
   src/GeometryData.cpp
   src/Gui.cpp
-  src/InputState.cpp)
+  src/InputState.cpp
+  src/Character.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 

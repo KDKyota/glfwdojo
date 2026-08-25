@@ -1,5 +1,7 @@
 #pragma once
 #include "Camera.h"
+#include "Character.h"
+#include "Collision.h"
 #include "GeometryData.h"
 #include "GlHandle.h"
 #include "Lighting.h"
@@ -69,13 +71,34 @@ class Scene {
     }
     // 三人称カメラの追従先。対象のモデルが読み込めていなければ nullptr
     const glm::vec3 *FollowTargetPosition() const {
-        return hasFollowTarget_ ? &followTargetPosition_ : nullptr;
+        return character_ ? &character_->Position() : nullptr;
+    }
+
+    // 操作対象 読み込めていなければ nullptr
+    Character *PlayerCharacter() {
+        return character_.get();
+    }
+
+    const gl::CollisionWorld &Colliders() const {
+        return colliders_;
+    }
+
+    bool &DebugCollision() {
+        return debugCollision_;
     }
 
   private:
     void initMesh();
     void initTextures();
     void initModels();
+    /// 壁と立方体から衝突判定用の直方体を作る。
+    void initColliders();
+    /// デバッグ表示用の円柱ワイヤーフレームを作る。
+    void initDebugShapes();
+    /// 衝突判定の円柱を描く。
+    void renderDebugCollision();
+    /// 操作対象のモデル行列を現在の位置と向きから作り直す。
+    void updatePlayerModelMatrix();
     void initFramebuffer();
     void initGBuffer();
     void initSSAO();
@@ -166,17 +189,25 @@ class Scene {
     std::unique_ptr<gl::Shader> screenshader_;
     // std::unique_ptr<gl::Shader> glasscubeShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
-    std::vector<std::unique_ptr<Model>> models_;
-    glm::vec3 followTargetPosition_ = glm::vec3(0.0f);
-    bool hasFollowTarget_ = false;
+    std::vector<std::unique_ptr<Model>> models_; // テクスチャやボーン・アニメーションなどの描画情報を持つ
+    std::unique_ptr<Character> character_; // キャラクターのゲーム上の状態
+    gl::CollisionWorld colliders_;         // 壁と立方体を直方体として持つ
+    // 操作対象のモデル 読み込めていなければ -1
+    int playerModelIndex_ = -1;
+    // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う
+    glm::mat4 playerBaseTransform_{1.0f}; // モデル行列は通常 T・R_yaw・R・S 最後の二つは最初から変わらないので一つにする
     // models_ と添字が一対一で対応する。読み込みに失敗したモデルは両方に積まれない
-    std::vector<glm::mat4> modelMatrices_;
+    std::vector<glm::mat4> modelMatrices_; // 描画用のモデルのデータ（どこにどの向きで描くか）
     std::shared_ptr<Camera> camera_;
     std::unique_ptr<gl::Shader> pointDepthShader_;
     std::unique_ptr<gl::Shader> pointColorShader_; // カラー付き透過シャドウ（ガラスの透過色）用
     std::unique_ptr<gl::Shader> debugDepthShader_;
     std::unique_ptr<gl::Shader> wallShader_;
-    std::unique_ptr<gl::Shader> blurShader_; // Boolの際にぼかしを入れるシェーダ
+    std::unique_ptr<gl::Shader> blurShader_;      // Boolの際にぼかしを入れるシェーダ
+    std::unique_ptr<gl::Shader> debugLineShader_; // 衝突判定の可視化用
+    gl::VertexArrayHandle debugCylinderVAO_;
+    gl::BufferHandle debugCylinderVBO_;
+    int debugCylinderVertexCount_ = 0;
     /* G-Bufferのシェーダ */
     std::unique_ptr<gl::Shader> gbufferFloorShader_;
     std::unique_ptr<gl::Shader> gbufferWallShader_;
@@ -226,6 +257,8 @@ class Scene {
     int debugMode_ = 0;
     // Bloom・トーンマッピング・ガンマ補正を飛ばす。デバッグ表示には必須
     bool debugRawOutput_ = false;
+    // 衝突判定の円柱をワイヤーフレームで重ねて描く
+    bool debugCollision_ = false;
     // SSAO の効き具合（0.0 = 無効, 1.0 = そのまま適用）
     float ssaoStrength_ = 1.0f;
 
@@ -272,13 +305,14 @@ class Scene {
     struct ModelSpawn {
         std::string path;
         glm::vec3 position;
+        glm::vec3 rotationDegrees{0.0f}; // 軸の向きが通常とは違うモデルを立たせるための補正
         float scale;
         bool followTarget = false; // 三人称カメラが注視するモデル
     };
     const std::vector<ModelSpawn> modelSpawns_ = {
-        {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), 1.0f},
-        {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), 1.0f},
-        {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), 1.0f, true},
+        {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), glm::vec3(0.0f), 1.0f},
+        {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f},
+        {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f, true},
     };
 
     const std::array<gl::PointLight, 4> pointLights_ = {

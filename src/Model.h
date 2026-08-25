@@ -8,6 +8,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "Mesh.h"
 #include "TextureCache.h"
@@ -25,7 +26,32 @@ struct BoneInfo {
     glm::mat4 offset{1.0f}; // メッシュ空間からボーン空間への変換（aiBone::mOffsetMatrix）
 };
 
-inline constexpr int kMaxBones = 128; // uniform 配列で送るので上限を決めておく
+/// キーフレーム1つ。時刻は現実の秒ではなくアニメーションの tick 単位
+template <typename T>
+struct AnimationKey {
+    float time = 0.0f;
+    T value{};
+};
+
+/// 1ノードのキーフレーム列（aiNodeAnim に対応）
+struct NodeAnimation {
+    std::vector<AnimationKey<glm::vec3>> positions;
+    std::vector<AnimationKey<glm::quat>> rotations;
+    std::vector<AnimationKey<glm::vec3>> scales;
+};
+
+/// アニメーション1本
+struct Animation {
+    std::string name;
+    float duration = 0.0f; // tick 単位の長さ
+    float ticksPerSecond = 25.0f; // 1秒 = 25 ticks -> 1tics = 40ms
+    std::unordered_map<std::string, NodeAnimation> channels; // ノード名 -> キー列
+};
+
+// UBO のサイズを決め打ちするための上限。gbuffer_model.vert / point_shadow_depth.vert の MAX_BONES と一致させる
+inline constexpr int kMaxBones = 128;
+// ボーンパレット用の UBO のバインディング。0 は Scene の Matrices が使っている
+inline constexpr unsigned int kBoneUBOBinding = 1;
 
 /**
  * @brief Assimp で glTF/glb モデルを読み込み、Mesh の集合とスキニング用のボーン情報を保持する。
@@ -48,18 +74,25 @@ class Model {
      */
     void Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const;
 
+    /**
+     * @brief 再生位置を進め、ボーン行列を作り直す
+     *
+     * @param deltaTime 前フレームからの経過秒
+     */
+    void UpdateAnimation(float deltaTime);
+
+    /// バインドポーズでの高さを返す。
+    float Height() const {
+        return boundsMax_.y - boundsMin_.y;
+    }
+
+    bool HasAnimation() const { return activeAnimation_ >= 0; }
+
     /* ---- ここから下はスキニングのための情報 ---- */
     const ModelNode &RootNode() const { return root_; }
     // ルートノードの変換の逆行列。掛け忘れるとモデル全体が変な位置とスケールで出る
     const glm::mat4 &GlobalInverseTransform() const { return globalInverseTransform_; }
     const std::unordered_map<std::string, BoneInfo> &Bones() const { return bones_; }
-
-    /// ボーンを持つか判定する。
-    bool HasBones() const { return !bones_.empty(); }
-    /// 現在のボーンパレット（スキニング用行列配列）を取得する。
-    const std::vector<glm::mat4> &BonePalette() const { return palette_; }
-    /// 現在のノード階層からボーンパレットを再計算する。
-    void UpdateBonePalette();
 
   private:
     std::vector<Mesh> meshes_;
@@ -67,13 +100,19 @@ class Model {
     glm::mat4 globalInverseTransform_{1.0f};
     std::unordered_map<std::string, BoneInfo> bones_;
     // 同じ aiMesh を複数のノードが参照していても二重に GPU へ送らないための対応表
-    std::unordered_map<unsigned int, unsigned int> meshIndexByAiIndex_;
+    std::unordered_map<unsigned int, unsigned int> meshIndexByAiIndex_; // map の一つ目のint が　Assimp の番号 二つ目が meshes_ の添え字
     std::string path_;
     std::string directory_;
     TextureCache &cache_;
+    std::vector<glm::mat4> boneMatrices_;
+    glm::vec3 boundsMin_{0.0f};
+    glm::vec3 boundsMax_{0.0f};
+    // デフォルトブロックの uniform 上限（GL の保証は 1024 component）を避けるため UBO で送る
+    gl::BufferHandle boneUBO_;
 
-    std::vector<glm::mat4> palette_;
-    void accumulatePalette(const ModelNode &node, const glm::mat4 &parentTransform);
+    std::vector<Animation> animations_;
+    int activeAnimation_ = -1; // 再生中のアニメーション -1 でなし
+    float animationTime_ = 0.0f; // アニメーションの再生時間
 
     /// Assimp でシーンを読み込む。
     void loadModel(const std::string &path);
@@ -87,6 +126,22 @@ class Model {
     gl::PbrMaterial loadMaterial(const aiMaterial *mat, const aiScene *scene);
     std::shared_ptr<Texture> loadTexture(const aiMaterial *mat, aiTextureType type, ColorSpace colorSpace,
                                          const aiScene *scene);
-    /// 親の変換を合成しながら子ノードへ再帰し、各メッシュを描画する。
-    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, gl::Shader &shader) const;
+    /**
+     * @brief ノードを描画する
+     * @param [in] node 今書こうとしているノード
+     * @param [in] parentTransform このノードの親までの累積変換
+     * @param [in] skinnedWorldTransform スキンメッシュに使うワールド変換（modelMatrix * root_.localTransform、全ノード共通）
+     * @param [in] shader 描画に使うシェーダ
+     */
+    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const;
+    /// boneMatrices_ を UBO へ書き込む。
+    void uploadBoneMatrices();
+    /// バインドポーズの AABB をノード階層をたどって求める。
+    void accumulateBounds(const ModelNode &node, const glm::mat4 &parentTransform);
+    /// aiAnimation をすべて読み込む
+    void loadAnimations(const aiScene *scene);
+    /// チャンネルがあれば時刻 time のローカル変換を作り、なければバインドポーズを返す
+    glm::mat4 nodeTransform(const ModelNode &node, float time) const;
+    /// ノード階層をたどり、各ボーンの最終変換行列を計算する
+    void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time);
 };

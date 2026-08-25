@@ -1,8 +1,24 @@
 #include "Mesh.h"
 
+#include <limits>
+
 Mesh::Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material, bool isSkinned)
     : vertices_(std::move(vertices)), indices_(std::move(indices)), material_(std::move(material)), isSkinned_(isSkinned) {
+    computeBounds();
     setupMesh();
+}
+
+/// 頂点からバインドポーズの AABB を求める。
+void Mesh::computeBounds() {
+    if (vertices_.empty())
+        return;
+
+    boundsMin_ = glm::vec3(std::numeric_limits<float>::max());
+    boundsMax_ = glm::vec3(std::numeric_limits<float>::lowest());
+    for (const gl::Vertex &vertex : vertices_) {
+        boundsMin_ = glm::min(boundsMin_, vertex.position);
+        boundsMax_ = glm::max(boundsMax_, vertex.position);
+    }
 }
 
 /// VAO を組み立て、頂点属性 location を設定する。
@@ -36,8 +52,8 @@ void Mesh::setupMesh() {
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, bitangent));
 
-    // location 5 は使わない。point_shadow_depth.vert の aOffset（インスタンス位置）が
-    // そこを読み、有効化していなければ既定値 (0,0,0) になるという依存に合わせている
+    // location 5 は使わない。
+    // point_shadow_depth.vert の aOffset（インスタンス位置）がそこを読み、有効化していなければ既定値 (0,0,0) になるという依存に合わせている
     glEnableVertexAttribArray(6);
     // 整数として渡すので I 付き。GL_INT を glVertexAttribPointer で送ると float に変換されて壊れる
     glVertexAttribIPointer(6, MAX_BONE_INFLUENCE, GL_INT, stride, (void *)offsetof(gl::Vertex, m_BoneIDs));

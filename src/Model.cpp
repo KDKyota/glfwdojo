@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
+#include <limits>
 #include <utility>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -93,6 +94,10 @@ void Model::loadModel(const std::string &path) {
     if (static_cast<int>(bones_.size()) > kMaxBones)
         throw std::runtime_error("Too many bones: " + path + " (" + std::to_string(bones_.size()) + ") ");
 
+    boundsMin_ = glm::vec3(std::numeric_limits<float>::max());
+    boundsMax_ = glm::vec3(std::numeric_limits<float>::lowest());
+    accumulateBounds(root_, glm::mat4(1.0f));
+
     loadAnimations(scene);
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
     updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);
@@ -105,6 +110,30 @@ void Model::loadModel(const std::string &path) {
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
         uploadBoneMatrices();
     }
+}
+
+/// バインドポーズの AABB をノード階層をたどって求める。
+void Model::accumulateBounds(const ModelNode &node, const glm::mat4 &parentTransform) {
+    const glm::mat4 worldTransform = parentTransform * node.localTransform;
+
+    for (const unsigned int index : node.meshIndices) {
+        const Mesh &mesh = meshes_[index];
+        // drawNode と同じ規則で スキンメッシュはノード変換を使わない
+        const glm::mat4 &transform = mesh.IsSkinned() ? root_.localTransform : worldTransform;
+        const glm::vec3 &min = mesh.BoundsMin();
+        const glm::vec3 &max = mesh.BoundsMax();
+
+        for (int corner = 0; corner < 8; ++corner) {
+            const glm::vec3 local((corner & 1) ? max.x : min.x, (corner & 2) ? max.y : min.y,
+                                  (corner & 4) ? max.z : min.z);
+            const glm::vec3 world = glm::vec3(transform * glm::vec4(local, 1.0f));
+            boundsMin_ = glm::min(boundsMin_, world);
+            boundsMax_ = glm::max(boundsMax_, world);
+        }
+    }
+
+    for (const ModelNode &child : node.children)
+        accumulateBounds(child, worldTransform);
 }
 
 /// boneMatrices_ を UBO へ書き込む。

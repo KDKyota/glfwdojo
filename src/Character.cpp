@@ -18,10 +18,11 @@ float wrapAngle(float radians) {
 
 } // namespace
 
-Character::Character(const glm::vec3 &position) : position_(position) {
+Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height) {
 }
 
-void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float deltaTime) {
+void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float deltaTime,
+                     const gl::CollisionWorld &world) {
     isMoving_ = glm::dot(input, input) > kInputEpsilon;
     if (!isMoving_)
         return;
@@ -34,6 +35,8 @@ void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float
     const glm::vec3 direction = glm::normalize(forward * input.y + right * input.x);
 
     position_ += direction * CharacterDefaults::MOVE_SPEED * deltaTime;
+    // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
+    position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);
     turnTowards(direction, deltaTime);
 }
 

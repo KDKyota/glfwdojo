@@ -81,6 +81,11 @@ class Model {
      */
     void UpdateAnimation(float deltaTime);
 
+    /// バインドポーズでの高さを返す。
+    float Height() const {
+        return boundsMax_.y - boundsMin_.y;
+    }
+
     bool HasAnimation() const { return activeAnimation_ >= 0; }
 
     /* ---- ここから下はスキニングのための情報 ---- */
@@ -100,6 +105,8 @@ class Model {
     std::string directory_;
     TextureCache &cache_;
     std::vector<glm::mat4> boneMatrices_;
+    glm::vec3 boundsMin_{0.0f};
+    glm::vec3 boundsMax_{0.0f};
     // デフォルトブロックの uniform 上限（GL の保証は 1024 component）を避けるため UBO で送る
     gl::BufferHandle boneUBO_;
 
@@ -129,6 +136,8 @@ class Model {
     void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const;
     /// boneMatrices_ を UBO へ書き込む。
     void uploadBoneMatrices();
+    /// バインドポーズの AABB をノード階層をたどって求める。
+    void accumulateBounds(const ModelNode &node, const glm::mat4 &parentTransform);
     /// aiAnimation をすべて読み込む
     void loadAnimations(const aiScene *scene);
     /// チャンネルがあれば時刻 time のローカル変換を作り、なければバインドポーズを返す

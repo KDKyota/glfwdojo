@@ -66,6 +66,16 @@ int main(void) {
                              ImGuiWindowFlags_AlwaysAutoResize);
             ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate,
                         1000.0f / ImGui::GetIO().Framerate);
+            ImGui::Separator();
+
+            // 表示している値は数フレーム前のもの GPU の完了を待たないため
+            const gl::GpuProfiler &profiler = scene->Profiler();
+            for (std::size_t i = 0; i < gl::GpuProfiler::kPassCount; ++i) {
+                const gl::GpuPass pass = static_cast<gl::GpuPass>(i);
+                ImGui::Text("%-9s %6.3f ms", gl::GpuProfiler::Name(pass), profiler.Milliseconds(pass));
+            }
+            ImGui::Separator();
+            ImGui::Text("%-9s %6.3f ms", "GPU total", profiler.TotalMilliseconds());
             ImGui::End();
         }
 

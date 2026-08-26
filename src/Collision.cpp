@@ -8,9 +8,13 @@ namespace {
 // 角では2面から同時に押されるので繰り返して落ち着かせる
 constexpr int kResolveIterations = 4; // Resolve() が計算を繰り返す最大回数
 constexpr float kCenterEpsilonSq = 1e-8f;
+// 判定を見た目より太らせて接触する手前で止める
+constexpr float kSkinWidth = 0.02f;
 
 /// XZ 平面での押し出し量を求める 重なっていなければ false
 bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::vec2 &push) { // ここでいう push とは押し出しベクトル
+    // 注意: 判定と押し出し量で違う半径を使うと壁際で震える
+    const float skinRadius = radius + kSkinWidth;
     // 矩形に関して，円に最も近い点を見つける
     const float closestX = std::clamp(center.x, box.min.x, box.max.x);
     const float closestZ = std::clamp(center.z, box.min.z, box.max.z);
@@ -24,12 +28,12 @@ bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::
      * そうなると distanceSq もほぼ 0 になる
      */
 
-    if (distanceSq > radius * radius)
+    if (distanceSq > skinRadius * skinRadius)
         return false;
 
     if (distanceSq > kCenterEpsilonSq) { // 中心が矩形の外側にある（ふつうはこの条件分岐を踏む）
         const float distance = std::sqrt(distanceSq);
-        push = offset / distance * (radius - distance);
+        push = offset / distance * (skinRadius - distance);
         return true;
     }
 
@@ -41,13 +45,13 @@ bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::
     const float shortest = std::min({toMinX, toMaxX, toMinZ, toMaxZ});
 
     if (shortest == toMinX)
-        push = {-(toMinX + radius), 0.0f};
+        push = {-(toMinX + skinRadius), 0.0f};
     else if (shortest == toMaxX)
-        push = {toMaxX + radius, 0.0f};
+        push = {toMaxX + skinRadius, 0.0f};
     else if (shortest == toMinZ)
-        push = {0.0f, -(toMinZ + radius)};
+        push = {0.0f, -(toMinZ + skinRadius)};
     else
-        push = {0.0f, toMaxZ + radius};
+        push = {0.0f, toMaxZ + skinRadius};
     return true;
 }
 

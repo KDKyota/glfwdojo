@@ -37,6 +37,7 @@ void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float
     position_ += direction * CharacterDefaults::MOVE_SPEED * deltaTime;
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
     position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);
+    // 壁沿いに滑っている間も入力した向きを保つ
     turnTowards(direction, deltaTime);
 }
 

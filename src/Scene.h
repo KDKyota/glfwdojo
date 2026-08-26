@@ -4,6 +4,7 @@
 #include "Collision.h"
 #include "GeometryData.h"
 #include "GlHandle.h"
+#include "GpuProfiler.h"
 #include "Lighting.h"
 #include "Material.h"
 #include "Model.h"
@@ -85,6 +86,10 @@ class Scene {
 
     bool &DebugCollision() {
         return debugCollision_;
+    }
+
+    const gl::GpuProfiler &Profiler() const {
+        return profiler_;
     }
 
   private:
@@ -189,6 +194,8 @@ class Scene {
     std::unique_ptr<gl::Shader> screenshader_;
     // std::unique_ptr<gl::Shader> glasscubeShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
+    gl::GpuProfiler profiler_;
+
     std::vector<std::unique_ptr<Model>> models_; // テクスチャやボーン・アニメーションなどの描画情報を持つ
     std::unique_ptr<Character> character_; // キャラクターのゲーム上の状態
     gl::CollisionWorld colliders_;         // 壁と立方体を直方体として持つ

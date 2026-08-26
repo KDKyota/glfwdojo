@@ -31,7 +31,8 @@ add_executable(
   src/Gui.cpp
   src/InputState.cpp
   src/Character.cpp
-  src/Collision.cpp)
+  src/Collision.cpp
+  src/GpuProfiler.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 

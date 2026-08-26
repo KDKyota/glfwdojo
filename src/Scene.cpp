@@ -56,6 +56,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     initGBuffer();
     initSSAO();
     initIBL(); // skyboxVAO_ が必要なので初期化の最後
+    profiler_.Init();
 }
 
 /// IBL 用の irradianceMap_/prefilterMap_/brdfLUT_ を起動時に一度だけ事前計算する。
@@ -773,15 +774,27 @@ void Scene::Render(float deltaTime, float heightScale) {
     std::vector<gl::TransparentDraw> sorted;
     updateTransparentInstances(sorted);
 
-    renderShadowPasses();         // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
-    updateMatricesUBO();          // [2] view / projection を UBO へ。以降の全パスが参照する
-    renderGeometryPass();         // [3] 不透明物の幾何情報を G-Buffer へ
-    renderSSAOPass();             // [4] G-Buffer から遮蔽率を求めてブラーまで
-    blitGeometryDepth();          // [5] G-Buffer の深度を framebuffer_ へ複製（前方描画の深度テスト用）
-    renderDeferredLightingPass(); // [6] G-Buffer + 影 + AO を合成
-    renderForwardPass(sorted);    // [7] G-Buffer に入れられないもの（ライトキューブ・空・ガラス）
-    renderBloomBlur();            // [8] 明るい部分をぼかして Bloom の素材を作る
-    renderToScreen();             // [9] トーンマッピングとガンマ補正をしてデフォルトFBOへ
+    profiler_.BeginFrame();
+
+    // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
+    profiler_.Measure(gl::GpuPass::Shadow, [&] { renderShadowPasses(); });
+    updateMatricesUBO(); // [2] view / projection を UBO へ。以降の全パスが参照する
+    // [3] 不透明物の幾何情報を G-Buffer へ
+    profiler_.Measure(gl::GpuPass::Geometry, [&] { renderGeometryPass(); });
+    // [4] G-Buffer から遮蔽率を求めてブラーまで
+    profiler_.Measure(gl::GpuPass::Ssao, [&] { renderSSAOPass(); });
+    // [5] G-Buffer の深度を framebuffer_ へ複製（前方描画の深度テスト用）
+    profiler_.Measure(gl::GpuPass::BlitDepth, [&] { blitGeometryDepth(); });
+    // [6] G-Buffer + 影 + AO を合成
+    profiler_.Measure(gl::GpuPass::Lighting, [&] { renderDeferredLightingPass(); });
+    // [7] G-Buffer に入れられないもの（ライトキューブ・空・ガラス）
+    profiler_.Measure(gl::GpuPass::Forward, [&] { renderForwardPass(sorted); });
+    // [8] 明るい部分をぼかして Bloom の素材を作る
+    profiler_.Measure(gl::GpuPass::Bloom, [&] { renderBloomBlur(); });
+    // [9] トーンマッピングとガンマ補正をしてデフォルトFBOへ
+    profiler_.Measure(gl::GpuPass::ToScreen, [&] { renderToScreen(); });
+
+    profiler_.EndFrame();
 }
 
 // 現在のガラスは乗算／加算ブレンドなので、この並べ替えは正しさには影響しない

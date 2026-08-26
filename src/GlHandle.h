@@ -132,4 +132,19 @@ class RenderbufferHandle : public HandleBase<RenderbufferHandle> {
     }
 };
 
+/**
+ * @brief 時間計測やオクルージョンに使うクエリを管理する。
+ */
+class QueryHandle : public HandleBase<QueryHandle> {
+  public:
+    static GLuint gen() {
+        GLuint id = 0;
+        glGenQueries(1, &id);
+        return id;
+    }
+    static void del(GLuint id) {
+        glDeleteQueries(1, &id);
+    }
+};
+
 } // namespace gl

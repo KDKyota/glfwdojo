@@ -5,7 +5,7 @@
 
 namespace gl {
 
-/// 軸に平行な直方体
+/// 軸に平行な直方体 障害物の衝突判定に利用する
 struct AABB {
     glm::vec3 min{0.0f};
     glm::vec3 max{0.0f};
@@ -21,7 +21,7 @@ class CollisionWorld {
     }
 
     /**
-     * @brief 円柱が障害物にめり込んでいれば押し出した位置を返す
+     * @brief 主にキャラクターに適用する円柱が障害物にめり込んでいれば押し出した位置を返す
      *
      * @param footPosition 円柱の底面の中心
      * @param radius 円柱の半径

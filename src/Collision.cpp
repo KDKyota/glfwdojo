@@ -6,20 +6,28 @@
 namespace {
 
 // 角では2面から同時に押されるので繰り返して落ち着かせる
-constexpr int kResolveIterations = 4;
+constexpr int kResolveIterations = 4; // Resolve() が計算を繰り返す最大回数
 constexpr float kCenterEpsilonSq = 1e-8f;
 
 /// XZ 平面での押し出し量を求める 重なっていなければ false
-bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::vec2 &push) {
+bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::vec2 &push) { // ここでいう push とは押し出しベクトル
+    // 矩形に関して，円に最も近い点を見つける
     const float closestX = std::clamp(center.x, box.min.x, box.max.x);
     const float closestZ = std::clamp(center.z, box.min.z, box.max.z);
-    const glm::vec2 offset(center.x - closestX, center.z - closestZ);
-    const float distanceSq = glm::dot(offset, offset);
+    const glm::vec2 offset(center.x - closestX, center.z - closestZ); // 矩形上の最近接点から円の中心へ向かうベクトル
+    const float distanceSq = glm::dot(offset, offset);                // 距離の二乗
+
+    /**
+     * ここまでで center.x が既に[box.min.x, box.max.x]の範囲内にあれば
+     * clamp は何もクランプせずに closestX = center.x をそのまま返す
+     * そうなると offset = (0, 0) のゼロベクトルになる
+     * そうなると distanceSq もほぼ 0 になる
+     */
 
     if (distanceSq > radius * radius)
         return false;
 
-    if (distanceSq > kCenterEpsilonSq) {
+    if (distanceSq > kCenterEpsilonSq) { // 中心が矩形の外側にある（ふつうはこの条件分岐を踏む）
         const float distance = std::sqrt(distanceSq);
         push = offset / distance * (radius - distance);
         return true;
@@ -45,6 +53,7 @@ bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::
 
 } // namespace
 
+/// 全ての障害物に対して何度も繰り返して適用する
 glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radius, float height) const {
     glm::vec3 result = footPosition;
 

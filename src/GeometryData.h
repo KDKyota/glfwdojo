@@ -23,7 +23,7 @@ struct Vertex {
  */
 struct TransparentDraw {
     float distance;
-    unsigned int index;
+    unsigned int index; // 透過オブジェクトに一意につく番号
 };
 
 inline const std::vector<glm::vec3> cubePositions = {

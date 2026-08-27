@@ -1,4 +1,4 @@
-#include "GlDebug.h"
+#include "debug/GlDebug.h"
 
 #include <glad/glad.h>
 

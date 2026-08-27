@@ -1,5 +1,5 @@
 // FrameArena の効果を測るためのベンチマーク。OpenGL には依存しないので単体で実行できる
-#include "FrameArena.h"
+#include "core/FrameArena.h"
 
 #include <algorithm>
 #include <chrono>

@@ -79,8 +79,16 @@ jobs:
 
       - name: Compare shader_src/ against SHADER_SOURCES
         run: |
-          listed=$(grep -oE 'shader_src/[A-Za-z0-9_]+\.(vert|frag|geom|glsl)' CMakeLists.txt | sed 's|shader_src/||' | sort -u)
-          actual=$(ls shader_src | sort -u)
+          # シェーダーはパス単位のサブディレクトリに置かれ、コピー時にフラットへ展開されるので
+          # 比較はディレクトリを除いたファイル名で行う（同名ファイルは上書き事故になるため重複も弾く）
+          listed=$(grep -oE 'shader_src/[A-Za-z0-9_/]+\.(vert|frag|geom|glsl)' CMakeLists.txt | sed 's|.*/||' | sort -u)
+          actual=$(find shader_src -type f \( -name '*.vert' -o -name '*.frag' -o -name '*.geom' -o -name '*.glsl' \) -exec basename {} \; | sort)
+          dupes=$(echo "$actual" | uniq -d)
+          if [ -n "$dupes" ]; then
+            echo "::error::shader_src/ にファイル名の重複がある（コピー時に上書きされる）:"; echo "$dupes"
+            exit 1
+          fi
+          actual=$(echo "$actual" | sort -u)
           missing=$(comm -13 <(echo "$listed") <(echo "$actual"))
           stale=$(comm -23 <(echo "$listed") <(echo "$actual"))
           if [ -n "$missing" ]; then

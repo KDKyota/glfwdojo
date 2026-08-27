@@ -1,11 +1,11 @@
-﻿#include "Callbacks.h"
-#include "Camera.h"
-#include "Gui.h"
-#include "InputState.h"
-#include "Mouse.h"
-#include "Scene.h"
-#include "Shader.h"
-#include "Window.h"
+﻿#include "app/Callbacks.h"
+#include "scene/Camera.h"
+#include "app/Gui.h"
+#include "app/InputState.h"
+#include "app/Mouse.h"
+#include "render/Scene.h"
+#include "gl/Shader.h"
+#include "app/Window.h"
 
 #include <imgui.h>
 

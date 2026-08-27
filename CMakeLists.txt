@@ -14,26 +14,32 @@ find_package(imgui CONFIG REQUIRED)
 add_executable(
   glfwdojo
   src/main.cpp
-  src/Callbacks.cpp
-  src/Camera.cpp
-  src/Mouse.cpp
-  src/Scene.cpp
-  src/Shader.cpp
-  src/Window.cpp
-  third_party/stb_image_impl.cpp
-  src/Material.cpp
-  src/Texture.cpp
-  src/TextureCache.cpp
-  src/Lighting.cpp
-  src/Model.cpp
-  src/Mesh.cpp
-  src/GeometryData.cpp
-  src/Gui.cpp
-  src/InputState.cpp
-  src/Character.cpp
-  src/Collision.cpp
+  # app: ウィンドウ・入力・UI
+  src/app/Callbacks.cpp
+  src/app/Gui.cpp
+  src/app/InputState.cpp
+  src/app/Mouse.cpp
+  src/app/Window.cpp
+  # gl: GL リソースの薄いラッパ
+  src/gl/Shader.cpp
+  src/gl/Texture.cpp
+  src/gl/TextureCache.cpp
+  # debug: 計測とデバッグ出力
   src/debug/GpuProfiler.cpp
-  src/debug/GlDebug.cpp)
+  src/debug/GlDebug.cpp
+  # render: 描画パイプライン
+  src/render/GeometryData.cpp
+  src/render/Lighting.cpp
+  src/render/Material.cpp
+  src/render/Scene.cpp
+  # asset: 読み込んだモデル
+  src/asset/Mesh.cpp
+  src/asset/Model.cpp
+  # scene: シーン上の存在
+  src/scene/Camera.cpp
+  src/scene/Character.cpp
+  src/scene/Collision.cpp
+  third_party/stb_image_impl.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 
@@ -58,46 +64,56 @@ target_compile_options(frame_arena_bench
                        PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 target_include_directories(frame_arena_bench PRIVATE src)
 
+# シェーダーはパス単位でディレクトリを分けている。コピー時に exe の隣へフラットに展開されるので
+# ファイル名はディレクトリをまたいで一意に保つこと
 set(SHADER_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/fragment_quad.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/skybox.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cube.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/window.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_mapping_depth.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_depth.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/wall.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.geom
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_depth.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/point_shadow_color.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/hdr.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/blur.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_floor.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_wall.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_cube.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_model.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_model.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/deferred_lighting.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao_blur.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer_window.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/glass.frag
-    # #include される共通ファイル。exe と同じ場所に無いと展開に失敗する
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/pbr_common.glsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow_common.glsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting_common.glsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/cubemap_capture.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/irradiance_convolution.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/equirectangular_to_cubemap.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/prefilter.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/brdf_lut.frag
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_line.vert
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug_line.frag)
+    # common
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/fragment_quad.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/lighting_common.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/pbr_common.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/shadow_common.glsl
+    # shadow
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/point_shadow_color.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/point_shadow_depth.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/point_shadow_depth.geom
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/point_shadow_depth.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/shadow_mapping_depth.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/shadow_mapping_depth.vert
+    # gbuffer
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/cube.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/gbuffer_cube.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/gbuffer_floor.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/gbuffer_model.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/gbuffer_model.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/gbuffer_wall.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/gbuffer_window.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/shader.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/wall.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/gbuffer/window.vert
+    # ssao
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/ssao.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/ssao_blur.frag
+    # lighting
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting/deferred_lighting.frag
+    # forward
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/glass.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/light_cube.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/light_cube.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/skybox.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/skybox.vert
+    # post
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/post/blur.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/post/hdr.frag
+    # ibl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ibl/brdf_lut.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ibl/cubemap_capture.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ibl/equirectangular_to_cubemap.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ibl/irradiance_convolution.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ibl/prefilter.frag
+    # debug
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug/debug_depth.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug/debug_line.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug/debug_line.vert)
 
 add_custom_command(
   TARGET glfwdojo

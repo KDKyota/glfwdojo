@@ -494,6 +494,7 @@ void Scene::initTextures() {
     transparentwindowShader_->setInt("prefilterMap", 13);
     transparentwindowShader_->setInt("brdfLUT", 14);
     transparentwindowShader_->setFloat("farPlane", shadowFarPlane_);
+    transparentwindowShader_->setFloat("shadowMapSize", static_cast<float>(SHADOW_WIDTH));
     /* screen */
     screenshader_->use();
     screenshader_->setInt("screenTexture", 0);
@@ -521,6 +522,7 @@ void Scene::initTextures() {
     for (unsigned int i = 0; i < 4; ++i)
         deferredLightingShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
     deferredLightingShader_->setFloat("farPlane", shadowFarPlane_);
+    deferredLightingShader_->setFloat("shadowMapSize", static_cast<float>(SHADOW_WIDTH));
     // 既存の割り当て（0〜2=G-Buffer, 3〜6=shadowMap）を壊さないよう 7 を使う
     deferredLightingShader_->setInt("ssao", 7);
     for (unsigned int i = 0; i < 4; ++i)
@@ -572,8 +574,8 @@ void Scene::initFramebuffer() {
 
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_[j]);
         for (unsigned int i = 0; i < 6; ++i)
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0,
-                         GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT16, SHADOW_WIDTH, SHADOW_HEIGHT,
+                         0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

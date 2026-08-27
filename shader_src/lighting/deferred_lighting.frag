@@ -64,7 +64,7 @@ void main() {
         vec3 result = (kD * diffuseIBL + specularIBL) * AmbientOcclusion * ambientStrength;
 
         for (int i = 0; i < NR_LIGHTS; ++i) {
-            // 26回サンプリングする ShadowCalculation() の手前で弾く
+            // PCF で複数回サンプリングする ShadowCalculation() の手前で弾く
             float dist = length(pointLights[i].position - FragPos);
             if (dist >= pointLights[i].radius)
                 continue;

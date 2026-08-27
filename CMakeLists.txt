@@ -32,13 +32,15 @@ add_executable(
   src/InputState.cpp
   src/Character.cpp
   src/Collision.cpp
-  src/GpuProfiler.cpp)
+  src/debug/GpuProfiler.cpp
+  src/debug/GlDebug.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)
 
 target_compile_options(glfwdojo PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(glfwdojo PRIVATE third_party)
+# src/ を include ルートにしてサブディレクトリを "debug/GpuProfiler.h" のように書けるようにする
+target_include_directories(glfwdojo PRIVATE third_party src)
 
 # stb_image.hはサードパーティコードなので警告を全て抑制する
 set_source_files_properties(

@@ -1,5 +1,6 @@
 #include "Window.h"
 #include "Callbacks.h"
+#include "debug/GlDebug.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -12,6 +13,11 @@ Window::Window(int width, int height, const std::string &title) : width_(width),
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // 同期デバッグ出力は計測値を歪めるので、GPU 時間を測る Release では要求しない
+#ifndef NDEBUG
+    // これが無いとドライバによってはデバッグメッセージが一部しか飛んでこない
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+#endif
 
     GLFWmonitor *monitor = glfwGetPrimaryMonitor(); // 今回は利用しない
     // フルスクリーンのためのモニターの解像度を取得
@@ -27,6 +33,8 @@ Window::Window(int width, int height, const std::string &title) : width_(width),
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         throw std::runtime_error("Failed to initialize GLAD");
+
+    gl::EnableDebugOutput();
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 

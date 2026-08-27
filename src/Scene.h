@@ -5,7 +5,7 @@
 #include "FrameArena.h"
 #include "GeometryData.h"
 #include "GlHandle.h"
-#include "GpuProfiler.h"
+#include "debug/GpuProfiler.h"
 #include "Lighting.h"
 #include "Material.h"
 #include "Model.h"

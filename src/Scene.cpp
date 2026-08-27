@@ -12,6 +12,8 @@
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight) {
+    // 現状は毎フレーム windows_pos_ ぶんの TransparentDraw しか置かないが、後で用途が増える余地を見て少し余裕を持たせる
+    frameArena_.Init(sizeof(gl::TransparentDraw) * windows_pos_.size() * 4);
     lightcubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
     screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "hdr.frag");
     skyboxShader_ = std::make_unique<gl::Shader>("skybox.vert", "skybox.frag");
@@ -770,9 +772,10 @@ void Scene::Render(float deltaTime, float heightScale) {
         models_[i]->UpdateAnimation(freeze ? 0.0f : deltaTime);
     }
 
+    // 前フレームの frameArena_ 確保をここで無効化する（末尾ではなく先頭でリセット）
+    frameArena_.Reset();
     // 透過窓の並び順は前方描画でも使うので、ここで受け取って持ち回る
-    std::vector<gl::TransparentDraw> sorted;
-    updateTransparentInstances(sorted);
+    auto sorted = updateTransparentInstances();
 
     profiler_.BeginFrame();
 
@@ -798,9 +801,10 @@ void Scene::Render(float deltaTime, float heightScale) {
 }
 
 // 現在のガラスは乗算／加算ブレンドなので、この並べ替えは正しさには影響しない
-void Scene::updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted) {
+gl::ArraySpan<gl::TransparentDraw> Scene::updateTransparentInstances() {
+    auto sorted = frameArena_.Allocate<gl::TransparentDraw>(windows_pos_.size());
     for (unsigned int i = 0; i < windows_pos_.size(); ++i)
-        sorted.push_back({glm::length(camera_->GetViewPosition() - windows_pos_[i]), i});
+        sorted.data[i] = {glm::length(camera_->GetViewPosition() - windows_pos_[i]), i};
     std::sort(sorted.begin(), sorted.end(),
               [](const gl::TransparentDraw &a, const gl::TransparentDraw &b) { return a.distance > b.distance; });
     transparent_positions_.clear();
@@ -811,6 +815,8 @@ void Scene::updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted)
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * transparent_positions_.size(),
                     transparent_positions_.data());
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    return sorted;
 }
 
 void Scene::updateMatricesUBO() {
@@ -1006,7 +1012,7 @@ void Scene::renderDeferredLightingPass() {
 }
 
 // G-Buffer に載せられないものだけを描く
-void Scene::renderForwardPass(const std::vector<gl::TransparentDraw> &sorted) {
+void Scene::renderForwardPass(gl::ArraySpan<gl::TransparentDraw> sorted) {
     glViewport(0, 0, scrWidth_, scrHeight_);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
     glEnable(GL_DEPTH_TEST);
@@ -1111,7 +1117,7 @@ void Scene::renderSkybox() {
 }
 
 /// ガラス窓を透過（乗算）と反射（加算）の2パスに分けて描く。
-void Scene::renderTransparentWindows(const std::vector<gl::TransparentDraw> &sorted) {
+void Scene::renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted) {
     transparentwindowShader_->use();
     transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentwindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));

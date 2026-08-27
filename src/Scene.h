@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "Character.h"
 #include "Collision.h"
+#include "FrameArena.h"
 #include "GeometryData.h"
 #include "GlHandle.h"
 #include "GpuProfiler.h"
@@ -112,8 +113,8 @@ class Scene {
     void initUBO();
 
     // Render() から順に呼ばれるパス。FBO とテクスチャで繋がっているので順序に意味がある
-    /// 透明オブジェクトをカメラ距離でソートする。
-    void updateTransparentInstances(std::vector<gl::TransparentDraw> &sorted);
+    /// 透明オブジェクトをカメラ距離でソートする（結果は frameArena_ 上に確保する）。
+    gl::ArraySpan<gl::TransparentDraw> updateTransparentInstances();
     /// View/Projection 行列を UBO へ書き込む。
     void updateMatricesUBO();
     /// Point Light のシャドウマップを描く。
@@ -127,7 +128,7 @@ class Scene {
     /// Deferred Shading のライティングを合成する。
     void renderDeferredLightingPass();
     /// G-Buffer に書けないオブジェクトを Forward Shading で描画する。
-    void renderForwardPass(const std::vector<gl::TransparentDraw> &sorted);
+    void renderForwardPass(gl::ArraySpan<gl::TransparentDraw> sorted);
     /// Bloom 用のぼかしを作る。
     void renderBloomBlur();
     /// トーンマッピングとガンマ補正をかけて画面へ出力する。
@@ -138,7 +139,7 @@ class Scene {
     void renderFloor(gl::Shader &shader);
     void renderLightCubes();
     void renderSkybox();
-    void renderTransparentWindows(const std::vector<gl::TransparentDraw> &sorted);
+    void renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted);
     void renderWindow(gl::Shader &shader); // 窓枠用
     void renderWalls(gl::Shader &shader);
     void renderModels(gl::Shader &shader);
@@ -195,6 +196,8 @@ class Scene {
     // std::unique_ptr<gl::Shader> glasscubeShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
     gl::GpuProfiler profiler_;
+    // 寿命が1フレームのデータ用。汎用アロケータの毎フレーム確保/解放を避ける
+    gl::FrameArena frameArena_;
 
     std::vector<std::unique_ptr<Model>> models_; // テクスチャやボーン・アニメーションなどの描画情報を持つ
     std::unique_ptr<Character> character_; // キャラクターのゲーム上の状態

@@ -49,6 +49,13 @@ set_source_files_properties(
 target_link_libraries(glfwdojo PRIVATE OpenGL::GL glfw glm::glm glad::glad
                                        assimp::assimp imgui::imgui)
 
+# FrameArena の効果測定用。OpenGL に依存しないので単体でビルド・実行できる
+add_executable(frame_arena_bench bench/frame_arena_bench.cpp)
+target_compile_features(frame_arena_bench PRIVATE cxx_std_17)
+target_compile_options(frame_arena_bench
+                       PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+target_include_directories(frame_arena_bench PRIVATE src)
+
 set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shader.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/light_cube.vert

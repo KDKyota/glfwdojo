@@ -285,12 +285,12 @@ class Scene {
     static constexpr float SSAO_RADIUS = 0.6f; // 遮蔽を探す半径。目安は物体サイズの 0.2〜1.0 倍
     static constexpr float SSAO_BIAS = 0.03f;  // 自己遮蔽によるアクネ対策。RADIUS に比例させる
     static constexpr float SSAO_POWER = 2.0f;  // AO のコントラスト。実用範囲は 1.5〜3.0
-    float ambientStrength_ = 0.5f;             // SSAO が掛かるのはこの項だけ
+    float ambientStrength_ = 1.8f;             // SSAO が掛かるのはこの項だけ
     float bloomStrength_ = 1.0f;
 
     float elapsedTime_ = 0.0f;
     float heightScale_ = 0.0f;
-    float exposure_ = 1.0f; // HDR 値自体は変えないので Bloom の閾値や AO のコントラストに影響しない
+    float exposure_ = 2.0f; // HDR 値自体は変えないので Bloom の閾値や AO のコントラストに影響しない
 
     int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
     bool blurEnable_ = true;

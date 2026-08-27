@@ -225,8 +225,17 @@ UI とカメラでマウスを奪い合わないよう、入力の宛先はモ�
 ```
 glfwdojo/
 ├── .github/       GitHub Actions のワークフロー（CI / リリース）
-├── src/           C++ ソース（Scene が描画処理の中心）
+├── src/           C++ ソース（render/Scene が描画処理の中心）
+│   ├── app/       ウィンドウ・入力・ImGui
+│   ├── gl/        GL リソースの薄いラッパ（ハンドル・シェーダー・テクスチャ）
+│   ├── debug/     GPU 時間計測とデバッグ出力
+│   ├── render/    描画パイプライン（Scene・マテリアル・ライト）
+│   ├── asset/     読み込んだモデルとメッシュ
+│   ├── scene/     シーン上の存在（カメラ・キャラクター・衝突）
+│   └── core/      アロケータと単位系
 ├── shader_src/    GLSL シェーダー（ビルド後に実行ファイルの隣へコピーされる）
+│                  common / shadow / gbuffer / ssao / lighting / forward / post / ibl / debug
+├── bench/         計測用の単体ベンチマーク
 ├── resources/     テクスチャ・3Dモデル
 │   ├── textures/            テクスチャと HDR 環境マップ
 │   ├── publishable-objects/ 再配布できる 3D モデル
@@ -239,7 +248,11 @@ glfwdojo/
 └── vcpkg.json
 ```
 
+`src/` はディレクトリ名を include に含めます（例: `#include "render/Scene.h"`）。`src/` 自体が include ルートです。
+
 シェーダーは `shader_src/` で編集しますが、実行時は `add_custom_command` でコピーされたビルドディレクトリ側が読み込まれます。**新しいシェーダーを追加したときは `CMakeLists.txt` の `SHADER_SOURCES` への追記も必要**です。
+
+シェーダーはレンダーパス単位でディレクトリを分けていますが、**コピー時は実行ファイルの隣へフラットに展開されます**。そのためコード側の指定は `Shader("skybox.vert", "skybox.frag")` のようにファイル名のみで、ディレクトリをまたいだ**同名ファイルは上書き事故になります**（CI で検出）。
 
 ---
 

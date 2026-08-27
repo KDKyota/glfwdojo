@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GlHandle.h"
+#include "gl/GlHandle.h"
 
 #include <array>
 #include <cstddef>

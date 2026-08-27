@@ -181,13 +181,6 @@ cmake --build --preset release-run  # Release でビルドして起動
 
 ファイル追加時の CMake の設定方法など、詳しい手順は [`docs/BUILD.md`](./docs/BUILD.md) にあります。
 
-> ちなみに，Linux 側はビルドがめちゃめちゃ早いです。ただし `-j` を付けたおかげではありません．
-> **Ninja はデフォルトで並列ビルドします**（論理コア数 + 2）。この環境なら既定で 18 並列相当になるので，
-> `-j16` はむしろ少し絞っていることになります．
->
-> プリセットを使わずビルドディレクトリを直接指定するなら `cmake --build build/linux-debug` です．
-> （`cmake --build linux-debug` はそのパスが存在しないので失敗します）
-
 ---
 
 ## 操作方法
@@ -272,6 +265,20 @@ glfwdojo/
 | `resources/publishable-objects/` | `DamagedHelmet.glb`                  | PBR の検証用。正解の見た目が広く出回っているので実装の答え合わせに使える               |
 | `resources/publishable-objects/` | `DragonDispersion.glb`               | 透過・体積減衰・分散を実装するためのモデル（未対応）                                   |
 | `resources/characters/`          | `RiggedSimple.glb` / `CesiumMan.glb` | スキニングの踏み台。Khronos の glTF-Sample-Assets 由来で **CC-BY-4.0**（`*-LICENSE.md` を同梱） |
+
+### 同梱モデルの出典とライセンス
+
+`resources/publishable-objects/` の 2 つは、どちらも Khronos の [glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) から取得したものです。ライセンス全文は各モデルの隣に `*-LICENSE.md` として同梱しています。
+
+| モデル                 | 出典                                                                                                                                                                                                                                          | 著作者・作業内容                                                                                                                                             | ライセンス                                                                                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DamagedHelmet.glb`    | [Damaged Helmet（Sketchfab）](https://sketchfab.com/3d-models/damaged-helmet-a1de6f1e738d446da3d50a3eebffe883)<br>[glTF-Sample-Assets/Models/DamagedHelmet](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DamagedHelmet)   | ctxwing（2018年・glTF への再構築と変換）<br>theblueturtle\_（2016年・元モデル）                                                                                | **CC-BY-4.0**（ctxwing の作業分）<br>**CC-BY-NC-4.0**（theblueturtle\_ の元モデル分）<br>→ [DamagedHelmet-LICENSE.md](resources/publishable-objects/DamagedHelmet-LICENSE.md) |
+| `DragonDispersion.glb` | [glTF-Sample-Assets/Models/DragonDispersion](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DragonDispersion)                                                                                                              | Stanford University Computer Graphics Laboratory（1996年・ドラゴンの原型）<br>Morgan McGuire's Computer Graphics Archive（2017年・変換と整形）<br>Adobe（2021年・布の背景） | [Stanford Graphics Library](resources/publishable-objects/LicenseRef-Stanford-Graphics.txt)（ドラゴン）<br>**CC0-1.0**（布の背景）<br>→ [DragonDispersion-LICENSE.md](resources/publishable-objects/DragonDispersion-LICENSE.md) |
+
+> [!IMPORTANT]
+> どちらのモデルにも **非商用限定の条件が含まれます**。`DamagedHelmet.glb` は元モデル（theblueturtle\_）が CC-BY-NC-4.0 で、`DragonDispersion.glb` のドラゴンは Stanford Graphics Library の条件（"such models or images are not to be used for commercial purposes"）に従います。学習・研究目的での利用と無償の再配布は認められていますが、商用利用はできません。
+
+### 同梱していないモデル
 
 一方、LearnOpenGL で使われている 3D モデル（backpack / cyborg / nanosuit / planet / rock）は、いずれも再配布が許諾されていない、あるいはライセンスが不明なため **同梱していません**（`resources/objects/` ごと `.gitignore` 済みです）。
 

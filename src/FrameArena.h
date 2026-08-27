@@ -43,16 +43,17 @@ class FrameArena {
     /// アライメントを合わせた領域を offset から切り出す。
     template <typename T>
     ArraySpan<T> Allocate(std::size_t count) {
-        static_assert(std::is_trivially_destructible_v<T>, "FrameArena はリセット時にデストラクタを呼ばない");
+        static_assert(std::is_trivially_destructible_v<T>, "FrameArena はリセット時にデストラクタを呼ばない"); // 型チェック
 
-        auto base = reinterpret_cast<std::uintptr_t>(buffer_.data() + offset_);
-        std::uintptr_t aligned = (base + alignof(T) - 1) & ~(static_cast<std::uintptr_t>(alignof(T)) - 1);
+        auto base = reinterpret_cast<std::uintptr_t>(buffer_.data() + offset_);                            // 一度ポインタから変数値に
+        std::uintptr_t aligned = (base + alignof(T) - 1) & ~(static_cast<std::uintptr_t>(alignof(T)) - 1); // 境界を合わせる
         std::size_t padding = static_cast<std::size_t>(aligned - base);
         std::size_t bytes = padding + sizeof(T) * count;
 
-        assert(offset_ + bytes <= buffer_.size() && "FrameArena overflow");
+        assert(offset_ + bytes <= buffer_.size() && "FrameArena overflow"); // 溢れチェック
 
         T *ptr = reinterpret_cast<T *>(buffer_.data() + offset_ + padding);
+        // 配って進める
         offset_ += bytes;
         return {ptr, count};
     }

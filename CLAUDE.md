@@ -108,3 +108,7 @@
 * Function/class summaries should generally use a verb-ending sentence such as `/// カメラの位置を取得する。`
 * Use `。` for Japanese sentences; omit punctuation for labels such as `// World Space`.
 * Do not change code behavior just to improve comments.
+
+## 出力の書き方（回答の仕方）
+回答が長文になりすぎないようにしてください。また、聞かれたことに対してどうしても長文での回答が必要になる場合には、
+「回答が長文になりすぎてしまうため何回かの出力に分けて回答します」という内容を添えて複数回に分けて出力するようにしてください。

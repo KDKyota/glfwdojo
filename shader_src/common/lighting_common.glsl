@@ -6,10 +6,14 @@
 #include "shadow_common.glsl"
 #include "pbr_common.glsl"
 
+// 環境光の強さ
+// Deferred と前方描画のガラスで同じ値を使うためここで一本化する
+uniform float ambientStrength;
+
 // この光源からの直接光だけを返す。環境光は呼び出し側で一括して足す。
 // ガラスのように拡散反射を持たせたくない場合は albedo に 0 を渡す
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
-    vec3 albedo, float roughness, float metallic, vec3 F0, float shadow) {
+                    vec3 albedo, float roughness, float metallic, vec3 F0, float shadow) {
     vec3 lightDir = normalize(light.position - fragPos);
     vec3 halfwayDir = normalize(viewDir + lightDir);
 
@@ -24,8 +28,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
 
     // 真横から見たときのゼロ除算を避ける
     float denominator = 4.0 * max(dot(normal, viewDir), 0.0) *
-            max(dot(normal, lightDir), 0.0) +
-            0.0001;
+                            max(dot(normal, lightDir), 0.0) +
+                        0.0001;
     vec3 specular = (NDF * G * F) / denominator;
 
     // 反射に回らなかったぶんが拡散へ。金属は拡散反射を持たない

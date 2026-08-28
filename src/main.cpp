@@ -110,6 +110,9 @@ int main(void) {
                 ImGui::Checkbox("Raw output (skip tonemap/bloom)",
                                 &scene->DebugRawOutput());
                 ImGui::Checkbox("Show collision shape", &scene->DebugCollision());
+                ImGui::Checkbox("Checker floor", &scene->DebugCheckerFloor());
+                ImGui::SameLine();
+                ImGui::Checkbox("Invert", &scene->DebugCheckerInvert());
                 ImGui::Separator();
 
                 ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);

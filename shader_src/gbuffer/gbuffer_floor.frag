@@ -13,6 +13,11 @@ uniform sampler2D diffuseMap;
 uniform float metallic;
 uniform float roughness;
 
+// 影の落ち方を目視で追うためのデバッグ用市松模様
+uniform bool checkerFloor;
+uniform bool checkerInvert;
+uniform float checkerTileSize;
+
 // 1 にすると床が固定色を書く。debugMode 6 でマゼンタだけなら 0/1 に届いていない
 #define GBUFFER_WRITE_TEST 0
 
@@ -29,5 +34,11 @@ void main()
       gNormal = vec4(normalize(Normal), metallic);
       gAlbedoRoughness.rgb = diffuseColor.rgb;
       gAlbedoRoughness.a = roughness;
+
+      if (checkerFloor) {
+            vec2 tile = floor(FragPos.xz / checkerTileSize);
+            bool odd = mod(tile.x + tile.y, 2.0) >= 1.0;
+            gAlbedoRoughness.rgb = vec3((odd != checkerInvert) ? 1.0 : 0.0);
+      }
 #endif
 }

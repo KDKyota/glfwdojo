@@ -920,6 +920,9 @@ void Scene::renderGeometryPass() {
     gbufferFloorShader_->use();
     gbufferFloorShader_->setMat3("normalMatrix", glm::mat3(1.0f));
     floorMaterial_.applyToShader(*gbufferFloorShader_);
+    gbufferFloorShader_->setBool("checkerFloor", debugCheckerFloor_);
+    gbufferFloorShader_->setBool("checkerInvert", debugCheckerInvert_);
+    gbufferFloorShader_->setFloat("checkerTileSize", gl::units::floorTileSize);
     renderFloor(*gbufferFloorShader_);
 
     /* wall */

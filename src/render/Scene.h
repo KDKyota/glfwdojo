@@ -44,6 +44,12 @@ class Scene {
     bool &DebugRawOutput() {
         return debugRawOutput_;
     }
+    bool &DebugCheckerFloor() {
+        return debugCheckerFloor_;
+    }
+    bool &DebugCheckerInvert() {
+        return debugCheckerInvert_;
+    }
     float &SsaoStrength() {
         return ssaoStrength_;
     }
@@ -269,6 +275,8 @@ class Scene {
     int debugMode_ = 0;
     // Bloom・トーンマッピング・ガンマ補正を飛ばす。デバッグ表示には必須
     bool debugRawOutput_ = false;
+    bool debugCheckerFloor_ = false;
+    bool debugCheckerInvert_ = false;
     // 衝突判定の円柱をワイヤーフレームで重ねて描く
     bool debugCollision_ = false;
     // SSAO の効き具合（0.0 = 無効, 1.0 = そのまま適用）

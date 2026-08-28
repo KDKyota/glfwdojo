@@ -22,9 +22,6 @@ const float MAX_REFLECTION_LOD = 4.0;
 
 uniform vec3 viewPos;
 
-// ライトごとに持たせると光源から離れるほど AO を掛ける対象が消えるため定数に一本化
-uniform float ambientStrength;
-
 // 対応表は main.cpp の kDebugModes。hdr.frag の debugRawOutput も要有効
 uniform int debugMode;
 

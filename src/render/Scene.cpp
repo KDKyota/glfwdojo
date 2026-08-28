@@ -14,6 +14,8 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight) {
     // 現状は毎フレーム windows_pos_ ぶんの TransparentDraw しか置かないが、後で用途が増える余地を見て少し余裕を持たせる
     frameArena_.Init(sizeof(gl::TransparentDraw) * windows_pos_.size() * 4);
+    // 既定の 0.5 では環境が高いミップまでぼけ、浅い角度で白い靄になる
+    glassMaterial_.roughness = 0.08f;
     lightcubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
     screenshader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "hdr.frag");
     skyboxShader_ = std::make_unique<gl::Shader>("skybox.vert", "skybox.frag");
@@ -1136,6 +1138,7 @@ void Scene::renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted) 
     transparentwindowShader_->use();
     transparentwindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentwindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
+    transparentwindowShader_->setFloat("ambientStrength", ambientStrength_);
     glassMaterial_.applyToShader(*transparentwindowShader_);
     for (unsigned int j = 0; j < 4; ++j) {
         glActiveTexture(GL_TEXTURE8 + j);

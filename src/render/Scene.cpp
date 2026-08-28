@@ -24,7 +24,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     pointColorShader_ =
         std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_color.frag");
     debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");
-    blurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "blur.frag");
+    blurShader_ = std::make_unique<gl::Shader>("blur.comp");
     debugLineShader_ = std::make_unique<gl::Shader>("debug_line.vert", "debug_line.frag");
 
     /* G-Buffer */
@@ -1030,26 +1030,36 @@ void Scene::renderForwardPass(gl::ArraySpan<gl::TransparentDraw> sorted) {
 }
 
 void Scene::renderBloomBlur() {
-    glDisable(GL_DEPTH_TEST);
     bool first_iteration = true;
     unsigned int amount = 10;
     blurShader_->use();
+    // 前のパスが FBO へ書いた brightColorBuffer_ を imageLoad で読むため、可視化を挟む
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     for (unsigned int i = 0; i < amount; ++i) {
-        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[horizontal_]);
-        blurShader_->setInt("horizontal", horizontal_);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D,
-                      first_iteration ? brightColorBuffer_.get() : pingpongColorbuffers_[!horizontal_].get());
-        glBindVertexArray(quadVAO_);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        const GLuint src = first_iteration ? brightColorBuffer_.get() : pingpongColorbuffers_[!horizontal_].get();
+        glBindImageTexture(0, src, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
+        glBindImageTexture(1, pingpongColorbuffers_[horizontal_], 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+        blurShader_->setBool("horizontal", horizontal_);
+
+        // ワークグループはぼかす軸に沿って並べる。もう一方の軸は1行（1列）につき1グループ
+        const unsigned int along = horizontal_ ? scrWidth_ : scrHeight_;
+        const unsigned int lines = horizontal_ ? scrHeight_ : scrWidth_;
+        glDispatchCompute((along + BLUR_TILE - 1) / BLUR_TILE, lines, 1);
+        // 次のパスが今の書き込みを読むので、完了を待たせる
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
         horizontal_ = !horizontal_;
         if (first_iteration)
             first_iteration = false;
     }
+    // renderToScreen は結果を imageLoad ではなく sampler で読むので、別のビットが要る
+    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 }
 
 void Scene::renderToScreen() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // 深度は clear していないので、有効なままだと前フレームの値で全画面クアッドが弾かれる
+    glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // [DEBUG] デプスマップを画面全体に表示して確認したい場合はここをアンコメント

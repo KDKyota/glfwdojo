@@ -102,7 +102,7 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/skybox.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/skybox.vert
     # post
-    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/post/blur.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/post/blur.comp
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/post/hdr.frag
     # ibl
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ibl/brdf_lut.frag

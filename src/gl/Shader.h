@@ -37,6 +37,11 @@ class Shader {
     Shader(const char *vertexPath, const char *fragmentPath);
 
     /**
+     * @brief Compute シェーダーからプログラムを生成する。
+     */
+    explicit Shader(const char *computePath);
+
+    /**
      * @brief このプログラムをバインドする。
      */
     void use() const;

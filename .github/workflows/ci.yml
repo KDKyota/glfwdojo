@@ -63,6 +63,7 @@ jobs:
           path: |
             build/Release/*.exe
             build/Release/*.dll
+            build/Release/*.comp
             build/Release/*.vert
             build/Release/*.frag
             build/Release/*.geom
@@ -81,8 +82,8 @@ jobs:
         run: |
           # シェーダーはパス単位のサブディレクトリに置かれ、コピー時にフラットへ展開されるので
           # 比較はディレクトリを除いたファイル名で行う（同名ファイルは上書き事故になるため重複も弾く）
-          listed=$(grep -oE 'shader_src/[A-Za-z0-9_/]+\.(vert|frag|geom|glsl)' CMakeLists.txt | sed 's|.*/||' | sort -u)
-          actual=$(find shader_src -type f \( -name '*.vert' -o -name '*.frag' -o -name '*.geom' -o -name '*.glsl' \) -exec basename {} \; | sort)
+          listed=$(grep -oE 'shader_src/[A-Za-z0-9_/]+\.(comp|vert|frag|geom|glsl)' CMakeLists.txt | sed 's|.*/||' | sort -u)
+          actual=$(find shader_src -type f \( -name '*.comp' -o -name '*.vert' -o -name '*.frag' -o -name '*.geom' -o -name '*.glsl' \) -exec basename {} \; | sort)
           dupes=$(echo "$actual" | uniq -d)
           if [ -n "$dupes" ]; then
             echo "::error::shader_src/ にファイル名の重複がある（コピー時に上書きされる）:"; echo "$dupes"

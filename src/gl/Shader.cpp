@@ -126,6 +126,23 @@ Shader::Shader(const char *vertexPath, const char *fragmentPath) {
     glDeleteShader(fragment);
 }
 
+Shader::Shader(const char *computePath) {
+    const std::string computeCode = expandIncludes(computePath);
+    const char *cShaderCode = computeCode.c_str();
+
+    unsigned int compute = glCreateShader(GL_COMPUTE_SHADER);
+    glShaderSource(compute, 1, &cShaderCode, NULL);
+    glCompileShader(compute);
+    checkCompileErrors(compute, "COMPUTE");
+
+    ID = glCreateProgram();
+    glAttachShader(ID, compute);
+    glLinkProgram(ID);
+    checkCompileErrors(ID, "PROGRAM");
+
+    glDeleteShader(compute);
+}
+
 void Shader::use() const { glUseProgram(ID); }
 
 void Shader::setBool(const std::string &name, bool value) const {

@@ -213,7 +213,9 @@ class Scene {
     std::unique_ptr<gl::Shader> pointColorShader_; // カラー付き透過シャドウ（ガラスの透過色）用
     std::unique_ptr<gl::Shader> debugDepthShader_;
     std::unique_ptr<gl::Shader> wallShader_;
-    std::unique_ptr<gl::Shader> blurShader_;      // Boolの際にぼかしを入れるシェーダ
+    std::unique_ptr<gl::Shader> blurShader_; // Bloom のぼかし（Compute）
+    // blur.comp の local_size_x と一致させること
+    static constexpr unsigned int BLUR_TILE = 256;
     std::unique_ptr<gl::Shader> debugLineShader_; // 衝突判定の可視化用
     gl::VertexArrayHandle debugCylinderVAO_;
     gl::BufferHandle debugCylinderVBO_;

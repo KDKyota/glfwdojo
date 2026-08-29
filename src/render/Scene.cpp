@@ -12,8 +12,7 @@
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight) {
-    // 現状は毎フレーム windows_pos_ ぶんの TransparentDraw しか置かないが、後で用途が増える余地を見て少し余裕を持たせる
-    frameArena_.Init(sizeof(gl::TransparentDraw) * windows_pos_.size() * 4);
+    frameArena_.Init(kFrameArenaBytes);
     // 既定の 0.5 では環境が高いミップまでぼけ、浅い角度で白い靄になる
     glassMaterial_.roughness = 0.08f;
     lightcubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");

@@ -16,7 +16,6 @@ namespace gl {
  */
 class Shader {
   public:
-    unsigned int ID;
     ~Shader();
 
     Shader(const Shader &) = delete;
@@ -77,5 +76,7 @@ class Shader {
   private:
     // utility functions for checking shader compilation/linking errors.
     void checkCompileErrors(unsigned int shader, std::string type);
+
+    unsigned int ID = 0;
 };
 } // namespace gl

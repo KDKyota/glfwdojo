@@ -60,6 +60,18 @@ std::string expandIncludes(const std::string &path, int depth = 0) {
 
 Shader::~Shader() { glDeleteProgram(ID); }
 
+// 移動元は0にしておく。glDeleteProgram(0) は何もしないので二重解放にならない
+Shader::Shader(Shader &&other) noexcept : ID(other.ID) { other.ID = 0; }
+
+Shader &Shader::operator=(Shader &&other) noexcept {
+    if (this != &other) {
+        glDeleteProgram(ID);
+        ID = other.ID;
+        other.ID = 0;
+    }
+    return *this;
+}
+
 Shader::Shader(const char *vertexPath, const char *geometryPath,
                const char *fragmentPath) {
     const std::string vertexCode = expandIncludes(vertexPath);

@@ -19,6 +19,12 @@ class Shader {
     unsigned int ID;
     ~Shader();
 
+    Shader(const Shader &) = delete;
+    Shader &operator=(const Shader &) = delete;
+
+    Shader(Shader &&other) noexcept;
+    Shader &operator=(Shader &&other) noexcept;
+
     /**
      * @brief Vertex/Geometry/Fragment シェーダーからプログラムを生成する。
      *

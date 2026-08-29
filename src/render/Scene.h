@@ -202,12 +202,19 @@ class Scene {
     // std::unique_ptr<gl::Shader> glasscubeShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
     gl::GpuProfiler profiler_;
+
+    // frameArena_ 用の見積もり
+    // 用途を増やしたら内訳をここに1行足すこと！
+    //  updateTransparentInstances(): TransparentDraw × 窓の上限数
+    static constexpr std::size_t kMaxTransparentWindows = 8; // 現在は6枚だが、増減の余地を見て少し余裕を持たせる
+    static constexpr std::size_t kFrameArenaBytes = sizeof(gl::TransparentDraw) * kMaxTransparentWindows;
+
     // 寿命が1フレームのデータ用。汎用アロケータの毎フレーム確保/解放を避ける
     gl::FrameArena frameArena_;
 
     std::vector<std::unique_ptr<Model>> models_; // テクスチャやボーン・アニメーションなどの描画情報を持つ
-    std::unique_ptr<Character> character_; // キャラクターのゲーム上の状態
-    gl::CollisionWorld colliders_;         // 壁と立方体を直方体として持つ
+    std::unique_ptr<Character> character_;       // キャラクターのゲーム上の状態
+    gl::CollisionWorld colliders_;               // 壁と立方体を直方体として持つ
     // 操作対象のモデル 読み込めていなければ -1
     int playerModelIndex_ = -1;
     // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う

@@ -325,3 +325,5 @@ LearnOpenGL のモデルを使いたい場合は、[公式リポジトリ](https
 
 - [LearnOpenGL](https://learnopengl.com/) — Joey de Vries
 - 本リポジトリは上記チュートリアルを元にした学習用の再実装です
+- [Zennブログ GLSL に `#include` を実装してみた](https://zenn.dev/articles/e41d6fe796b7a1/edit)
+- [Zennブログ OpenGL 開発で CRTP で GPU リソースを RAII 化する](https://zenn.dev/articles/160aac38016d28/edit)

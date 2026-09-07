@@ -170,7 +170,7 @@ renderGeometryPass()          [Pass 2] Geometry パス
    → gPosition_ / gNormal_ / gAlbedoRoughness_ の3枚に「幾何情報」だけを書き込む
       （この時点ではライティングもシャドウ判定も一切しない）
  ↓
-renderSSAOPass()              G-Buffer から遮蔽率を計算し、4x4 ブラーまでかける
+renderSsaoPass()              G-Buffer から遮蔽率を計算し、4x4 ブラーまでかける
    → ssaoColorBufferBlur_
  ↓
 blitGeometryDepth()           gBuffer_ の深度を framebuffer_ へ glBlitFramebuffer でコピー
@@ -607,7 +607,7 @@ SSAO を使うならこちらの形が適している。
 
 ### ライトをシェーダーに送る
 
-`Render()` 内でシェーダーごとに `use()` した後に呼ぶ。`shader_`, `cubeShader_`, `transparentwindowShader_` それぞれに送る必要がある（同じ .frag を使っていても、シェーダープログラムオブジェクトが別なら uniform の設定も別々に行う）。
+`Render()` 内でシェーダーごとに `use()` した後に呼ぶ。`shader_`, `cubeShader_`, `transparentWindowShader_` それぞれに送る必要がある（同じ .frag を使っていても、シェーダープログラムオブジェクトが別なら uniform の設定も別々に行う）。
 
 ```cpp
 for (const auto& pointLight : gl::pointLights) {
@@ -631,12 +631,12 @@ for (const auto& pointLight : gl::pointLights) {
 
 ```cpp
 // ← glBindFramebuffer(GL_FRAMEBUFFER, 0) より前に置くこと
-lightcubeShader_->use();
+lightCubeShader_->use();
 glBindVertexArray(cubeVAO_);
 for (const auto& pointLight : gl::pointLights) {
     glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);
     lightModel = glm::scale(lightModel, glm::vec3(0.2f));
-    lightcubeShader_->setMat4("model", lightModel);
+    lightCubeShader_->setMat4("model", lightModel);
     glDrawElements(GL_TRIANGLES, gl::cubeIndices.size(), GL_UNSIGNED_INT, 0);
 }
 ```
@@ -663,7 +663,7 @@ C++ 側から `setMat4("view", ...)` / `setMat4("projection", ...)` を呼んで
 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 
 // デプスマップ用テクスチャ
-glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT,
+glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, kShadowWidth, kShadowHeight,
              0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 ```
 
@@ -681,7 +681,7 @@ glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT,
 2. 新メソッド `initDepthMap()` をコンストラクタから呼び出す
 3. FBO 生成 → デプステクスチャ生成 → FBO にアタッチ → `glDrawBuffer(GL_NONE)` / `glReadBuffer(GL_NONE)` → FBO の完全性確認（`glCheckFramebufferStatus`）
 
-> **解像度:** シャドウマップの解像度（`SHADOW_WIDTH` / `SHADOW_HEIGHT`）はウィンドウ解像度と独立して設定できる。
+> **解像度:** シャドウマップの解像度（`kShadowWidth` / `kShadowHeight`）はウィンドウ解像度と独立して設定できる。
 > 高いほど精細な影になるが VRAM を消費する。1024×1024 程度が学習用途では一般的。
 
 ---
@@ -818,7 +818,7 @@ OpenGL では、**頂点属性配列が無効の場合、シェーダーは「�
 | `renderCubes` | `cubeVAO_` | 0,1,2,3,4,5 | 6,7 |
 | `renderWalls` | `wallVAO_` | 0,1,2,3,4 | 5,6,7 |
 | `renderModels` | Mesh の VAO | 0,1,2,3,4,6,7 | 5 |
-| `renderWindow` | `transparentVAO_` | 0,1,2,5 | 6,7 |
+| `renderWindows` | `transparentVAO_` | 0,1,2,5 | 6,7 |
 
 **なぜそうなるか:** 属性配列が無効だとシェーダーはカレント頂点属性値を読みますが、
 これは**頂点ごとに配列から読む**のとは機械語のレベルで別物です。
@@ -848,10 +848,10 @@ inline const std::array<Vertex, 4> rawMyObjectVertices = { {
     // ...
 } };
 inline const std::array<unsigned int, 6> myObjectIndices = { 0, 1, 2, 2, 3, 0 };
-inline const std::array<Vertex, 4> myObjectVertices = calculateFaceNormals(rawMyObjectVertices);
+inline const std::array<Vertex, 4> myObjectVertices = calcFaceNormals(rawMyObjectVertices);
 ```
 
-法線は `calculateFaceNormals()` が自動計算します（4頂点/面の構造が前提）。
+法線は `calcFaceNormals()` が自動計算します（4頂点/面の構造が前提）。
 
 **平面の頂点巻き順と法線の関係:**
 
@@ -1446,7 +1446,7 @@ shader_->setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))))
 // モデル行列が単位行列の場合は glm::mat3(1.0f) でも同じ
 ```
 
-複数のシェーダー（`shader_`, `cubeShader_`, `transparentwindowShader_`）それぞれに設定すること。
+複数のシェーダー（`shader_`, `cubeShader_`, `transparentWindowShader_`）それぞれに設定すること。
 
 ### 同じ .frag でも uniform はシェーダープログラムごとに設定する
 
@@ -1868,7 +1868,7 @@ importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs |
 
 四角面や法線・タンジェントが無いモデルでもこのフラグで自動生成されるので、通常は
 モデル側を事前加工する必要はない。`aiProcess_LimitBoneWeights` により1頂点あたりの
-ボーン影響は自動的に4本へ切り詰められる（`gl::Vertex::m_BoneIDs` の枠と一致させるため）。
+ボーン影響は自動的に4本へ切り詰められる（`gl::Vertex::boneIds` の枠と一致させるため）。
 
 ---
 
@@ -2026,7 +2026,7 @@ MSVC の `vector` は容量を 1.5 倍ずつ伸ばすので、6 要素の `push_
 1往復ぶんの `21.6 ns` とほぼ一致し、**独立に測った2つの値が同じコストモデルへ収束します。**
 
 **③ `reused` とアリーナはほぼ同着（1.09x）。**
-`transparent_positions_` が元々メンバ + `clear()` だったのは、
+`transparentPositions_` が元々メンバ + `clear()` だったのは、
 「一度確保して使い回す」が**1つの配列にだけ手作業で適用されていた**状態です。
 アリーナの価値は速さではなく、**それを書く場所ごとに手作業でやらなくて済むこと**にあります。
 
@@ -2130,7 +2130,7 @@ RTX 5070 の帯域 約 670 GB/s で割ると **約 0.34 ms** となり、実測 
 | Bloom のブラー | 横に連続した9テクセル | 重なるが、**L2 が既に吸収済み** |
 | SSAO | 半球状にばらけた64サンプル | 隣と揃わず**効かない** |
 
-SSAO は `SSAO_KERNEL_SIZE = 64` のサンプル数そのものがコストなので、
+SSAO は `kSsaoKernelSize = 64` のサンプル数そのものがコストなので、
 速くするならサンプル数を減らすか半解像度にするのが正攻法です。
 
 ---

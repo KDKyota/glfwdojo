@@ -1,4 +1,4 @@
-// glTF モデル用の G-Buffer 書き込みシェーダー。テクスチャが無ければ factor にフォールバックする。
+// glTF モデル用の G-Buffer 書き込みシェーダー テクスチャが無ければ factor にフォールバックする
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;
@@ -49,8 +49,8 @@ void main()
         normal = normalize(TBN * tangentNormal);
     }
 
-    // occlusionMap と emissiveMap は G-Buffer に置く枠がまだ無いので、読み込むだけで使っていない。
-    // AO は SSAO と合流させる必要があり、emissive はライティングの後に足す必要がある
+    // occlusionMap と emissiveMap は G-Buffer に置く枠がまだ無いので 読み込むだけで使っていない
+    // AO は SSAO と合流させる必要があり emissive はライティングの後に足す必要がある
 
     gPosition = FragPos;
     gNormal = vec4(normal, metallicValue);

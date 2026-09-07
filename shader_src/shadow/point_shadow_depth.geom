@@ -1,4 +1,4 @@
-// 入力の三角形を6面ぶん複製し、gl_Layer でキューブマップの面を選びながら出力する。
+// 入力の三角形を6面ぶん複製し gl_Layer でキューブマップの面を選びながら出力する
 #version 330 core
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 18) out;
@@ -8,7 +8,7 @@ in vec2 vTexCoords[];
 // 光源を中心とした6方向（cubemap の各面）の view*projection 行列
 uniform mat4 shadowMatrices[6];
 
-// 透視除算前のワールド座標。frag 側が光源からの実距離を求めるのに使う
+// 透視除算前のワールド座標 frag 側が光源からの実距離を求めるのに使う
 out vec4 FragPos;
 out vec2 TexCoords;
 

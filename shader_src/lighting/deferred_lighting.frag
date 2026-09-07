@@ -1,4 +1,4 @@
-// Deferred Shading の合成パス。debugMode != 0 のときは中間バッファを可視化する。
+// Deferred Shading の合成パス debugMode != 0 のときは中間バッファを可視化する
 #version 460 core
 out vec4 FragColor;
 layout(location = 1) out vec4 BrightColor;
@@ -22,7 +22,7 @@ const float MAX_REFLECTION_LOD = 4.0;
 
 uniform vec3 viewPos;
 
-// 対応表は main.cpp の kDebugModes。hdr.frag の debugRawOutput も要有効
+// 対応表は main.cpp の kDebugModes hdr.frag の debugRawOutput も要有効
 uniform int debugMode;
 
 uniform float ssaoStrength;
@@ -41,23 +41,23 @@ void main() {
 
         vec3 viewDir = normalize(viewPos - FragPos);
 
-        // 非金属は一律 0.04、金属は鏡面反射がアルベドの色を持つ
+        // 非金属は一律 0.04 金属は鏡面反射がアルベドの色を持つ
         vec3 F0 = mix(vec3(0.04), Albedo, Metallic);
 
-        // 環境光は IBL から。ループの外で1回だけ求める
+        // 環境光は IBL から ループの外で1回だけ求める
         float NdotV = max(dot(Normal, viewDir), 0.0);
         vec3 kS = fresnelSchlickRoughness(NdotV, F0, Roughness);
         vec3 kD = (1.0 - kS) * (1.0 - Metallic);
 
         vec3 diffuseIBL = texture(irradianceMap, Normal).rgb * Albedo;
 
-        // 反射方向の環境光を roughness に応じたミップから引き、LUT で反射率を補正する
+        // 反射方向の環境光を roughness に応じたミップから引き LUT で反射率を補正する
         vec3 R = reflect(-viewDir, Normal);
         vec3 prefiltered = textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y);
 
-        // kD が掛かるのは拡散だけ。鏡面は LUT 経由で kS を内包している
+        // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している
         vec3 result = (kD * diffuseIBL + specularIBL) * AmbientOcclusion * ambientStrength;
 
         for (int i = 0; i < NR_LIGHTS; ++i) {
@@ -69,7 +69,7 @@ void main() {
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
             float shadow = ShadowCalculation(FragPos, Normal, lightDir,
                     pointLights[i].position, shadowMap[i]);
-            // 窓枠は shadow≈1 で黒い影、ガラスは shadow=0 のままここで色付きに減衰する
+            // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
             vec3 transmit =
                 texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
             result += transmit * CalcPointLight(pointLights[i], Normal, FragPos, viewDir,
@@ -78,7 +78,7 @@ void main() {
 
         FragColor = vec4(result, 1.0);
 
-        // 明るいピクセルだけを BrightColor に残し、Bloom の素材にする
+        // 明るいピクセルだけを BrightColor に残し Bloom の素材にする
         float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
         if (brightness > 1.0)
             BrightColor = vec4(result, 1.0);
@@ -89,11 +89,11 @@ void main() {
     }
 
     // ---- デバッグ表示 ----
-    // Bloom が乗ると判定できなくなるので、デバッグ中は BrightColor を常に黒にする
+    // Bloom が乗ると判定できなくなるので デバッグ中は BrightColor を常に黒にする
     BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 
     if (debugMode == 1) {
-        // 必ず1灯だけで見ること。4灯を max() でまとめるとほぼ全面が白くなり判定できない
+        // 必ず1灯だけで見ること 4灯を max() でまとめるとほぼ全面が白くなり判定できない
         vec3 lightDir0 = normalize(pointLights[0].position - FragPos);
         float shadow0 = ShadowCalculation(FragPos, Normal, lightDir0,
                 pointLights[0].position, shadowMap[0]);
@@ -149,14 +149,14 @@ void main() {
     } else if (debugMode == 10) {
         FragColor = vec4(vec3(Roughness), 1.0);
     } else if (debugMode == 11) {
-        // 上向きの面が空色、下向きが地面色になっていれば畳み込みは成功
+        // 上向きの面が空色 下向きが地面色になっていれば畳み込みは成功
         FragColor = vec4(texture(irradianceMap, Normal).rgb, 1.0);
     } else if (debugMode == 12) {
         // roughness を上げるほど映り込みがぼけていけば正常
         vec3 R = reflect(-normalize(viewPos - FragPos), Normal);
         FragColor = vec4(textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb, 1.0);
     } else if (debugMode == 13) {
-        // 画面全体に LUT を貼る。左下が暗く右上が明るい赤緑のグラデーションが正解
+        // 画面全体に LUT を貼る 左下が暗く右上が明るい赤緑のグラデーションが正解
         FragColor = vec4(texture(brdfLUT, TexCoords).rg, 0.0, 1.0);
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）

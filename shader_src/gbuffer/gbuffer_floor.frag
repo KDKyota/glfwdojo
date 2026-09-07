@@ -1,4 +1,4 @@
-// 床用の G-Buffer 書き込みシェーダー。法線マッピングも POM も使わない最小構成。
+// 床用の G-Buffer 書き込みシェーダー 法線マッピングも POM も使わない最小構成
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;
@@ -18,7 +18,7 @@ uniform bool checkerFloor;
 uniform bool checkerInvert;
 uniform float checkerTileSize;
 
-// 1 にすると床が固定色を書く。debugMode 6 でマゼンタだけなら 0/1 に届いていない
+// 1 にすると床が固定色を書く debugMode 6 でマゼンタだけなら 0/1 に届いていない
 #define GBUFFER_WRITE_TEST 0
 
 void main()

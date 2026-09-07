@@ -146,6 +146,6 @@ int main(void) {
         gui->Render();
 
         window->SwapBuffers();
-        window->PolleEvents();
+        window->PollEvents();
     }
 }

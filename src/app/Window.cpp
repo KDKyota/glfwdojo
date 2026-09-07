@@ -78,7 +78,7 @@ void Window::SwapBuffers() {
     glfwSwapBuffers(handle_.get());
 }
 
-void Window::PolleEvents() {
+void Window::PollEvents() {
     glfwPollEvents();
 }
 

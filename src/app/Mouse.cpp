@@ -1,24 +1,24 @@
 #include "app/Mouse.h"
 
 void MouseState::Reset() {
-    FirstMouse = true;
+    firstMouse_ = true;
 }
 
 std::pair<float, float> MouseState::ComputeOffset(double xpos, double ypos) {
-    float fx = static_cast<float>(xpos);
-    float fy = static_cast<float>(ypos);
+    const float x = static_cast<float>(xpos);
+    const float y = static_cast<float>(ypos);
 
-    if (this->FirstMouse) {
-        this->LastX = fx;
-        this->LastY = fy;
-        FirstMouse = false;
+    if (firstMouse_) {
+        lastX_ = x;
+        lastY_ = y;
+        firstMouse_ = false;
     }
 
-    float xoffset = fx - this->LastX;
-    float yoffset = this->LastY - fy;
+    const float xoffset = x - lastX_;
+    const float yoffset = lastY_ - y;
 
-    this->LastX = fx;
-    this->LastY = fy;
+    lastX_ = x;
+    lastY_ = y;
 
     return {xoffset, yoffset};
 }

@@ -40,5 +40,5 @@ class Texture {
     Texture &operator=(Texture &&) noexcept;
 
     void bind(unsigned int unit) const;
-    unsigned int getID() const;
+    unsigned int getId() const;
 };

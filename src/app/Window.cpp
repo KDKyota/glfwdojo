@@ -13,7 +13,7 @@ Window::Window(int width, int height, const std::string &title) : width_(width),
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    // 同期デバッグ出力は計測値を歪めるので、GPU 時間を測る Release では要求しない
+    // 同期デバッグ出力は計測値を歪めるので GPU 時間を測る Release では要求しない
 #ifndef NDEBUG
     // これが無いとドライバによってはデバッグメッセージが一部しか飛んでこない
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
@@ -40,7 +40,7 @@ Window::Window(int width, int height, const std::string &title) : width_(width),
 
     glViewport(0, 0, width, height);
 
-    // GL_FRAMEBUFFER_SRGB は使わない。hdr.frag のガンマ補正と二重になり白っぽくなる
+    // GL_FRAMEBUFFER_SRGB は使わない hdr.frag のガンマ補正と二重になり白っぽくなる
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

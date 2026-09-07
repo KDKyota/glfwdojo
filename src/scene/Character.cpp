@@ -7,7 +7,7 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kInputEpsilon = 1e-4f; // 0 より大きいけど十分に小さい数
 
-/// 角度を -π〜π の範囲へ正規化する。
+/// 角度を -π〜π の範囲へ正規化する
 float wrapAngle(float radians) {
     while (radians > kPi)
         radians -= 2.0f * kPi;

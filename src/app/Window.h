@@ -12,15 +12,15 @@ struct GLFWwindowDeleter {
 };
 
 /**
- * @brief GLFW ウィンドウと OpenGL コンテキストを管理する RAII ラッパー。
+ * @brief GLFW ウィンドウと OpenGL コンテキストを管理する RAII ラッパー
  */
 class Window {
   public:
     /**
-     * @brief ウィンドウと OpenGL コンテキストを生成する。
+     * @brief ウィンドウと OpenGL コンテキストを生成する
      *
-     * @param width,height ウィンドウの初期サイズ。
-     * @param title タイトルバーの文字列。
+     * @param width,height ウィンドウの初期サイズ
+     * @param title タイトルバーの文字列
      */
     Window(int width, int height, const std::string &title);
     ~Window();
@@ -29,13 +29,13 @@ class Window {
     void SwapBuffers();
     void PollEvents();
     /**
-     * @brief GLFWwindow の生ポインタを返す。
+     * @brief GLFWwindow の生ポインタを返す
      */
     GLFWwindow *Get() const;
     int GetWidth() const;
     int GetHeight() const;
 
-    // ゲームプレイ中はカーソルを掴んで、ボタンを押さなくても視点が回るようにする
+    // ゲームプレイ中はカーソルを掴んで ボタンを押さなくても視点が回るようにする
     void SetCursorCaptured(bool captured);
 
   private:

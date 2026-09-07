@@ -4,7 +4,7 @@
 #include "gl/Shader.h"
 
 /**
- * @brief Blinn-Phong 用の旧マテリアル。gl::PbrMaterial への移行後は未使用。
+ * @brief Blinn-Phong 用の旧マテリアル gl::PbrMaterial への移行後は未使用
  */
 struct Material {
   private:

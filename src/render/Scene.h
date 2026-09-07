@@ -17,23 +17,23 @@
 #include <vector>
 
 /**
- * @brief シーンのジオメトリ・ライト・レンダーパイプライン全体を所有し、1フレームの描画を統括する。
+ * @brief シーンのジオメトリ・ライト・レンダーパイプライン全体を所有し 1フレームの描画を統括する
  */
 class Scene {
   public:
     /**
-     * @brief シーンを初期化する。
+     * @brief シーンを初期化する
      *
-     * @param camera 描画に使うカメラ。
-     * @param scrWidth,scrHeight 画面解像度。
+     * @param camera 描画に使うカメラ
+     * @param scrWidth,scrHeight 画面解像度
      */
     Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight);
 
     /**
-     * @brief 1フレーム分の描画を行う。
+     * @brief 1フレーム分の描画を行う
      *
-     * @param deltaTime 前フレームからの経過時間。
-     * @param heightScale Parallax Mapping の強さ。
+     * @param deltaTime 前フレームからの経過時間
+     * @param heightScale Parallax Mapping の強さ
      */
     void Render(float deltaTime, float heightScale);
 
@@ -77,7 +77,7 @@ class Scene {
     gl::PbrMaterial &GlassMaterial() {
         return glassMaterial_;
     }
-    // 三人称カメラの追従先。対象のモデルが読み込めていなければ nullptr
+    // 三人称カメラの追従先 対象のモデルが読み込めていなければ nullptr
     const glm::vec3 *FollowTargetPosition() const {
         return character_ ? &character_->Position() : nullptr;
     }
@@ -103,13 +103,13 @@ class Scene {
     void initMesh();
     void initTextures();
     void initModels();
-    /// 壁と立方体から衝突判定用の直方体を作る。
+    /// 壁と立方体から衝突判定用の直方体を作る
     void initColliders();
-    /// デバッグ表示用の円柱ワイヤーフレームを作る。
+    /// デバッグ表示用の円柱ワイヤーフレームを作る
     void initDebugShapes();
-    /// 衝突判定の円柱を描く。
+    /// 衝突判定の円柱を描く
     void renderDebugCollision();
-    /// 操作対象のモデル行列を現在の位置と向きから作り直す。
+    /// 操作対象のモデル行列を現在の位置と向きから作り直す
     void updatePlayerModelMatrix();
     void initFramebuffer();
     void initGBuffer();
@@ -118,26 +118,26 @@ class Scene {
     unsigned int loadTexture(const char *path, bool hasAlpha);
     void initUBO();
 
-    // Render() から順に呼ばれるパス。FBO とテクスチャで繋がっているので順序に意味がある
-    /// 透明オブジェクトをカメラ距離でソートする（結果は frameArena_ 上に確保する）。
+    // Render() から順に呼ばれるパス FBO とテクスチャで繋がっているので順序に意味がある
+    /// 透明オブジェクトをカメラ距離でソートする（結果は frameArena_ 上に確保する）
     gl::ArraySpan<gl::TransparentDraw> updateTransparentInstances();
-    /// View/Projection 行列を UBO へ書き込む。
+    /// View/Projection 行列を UBO へ書き込む
     void updateMatricesUBO();
-    /// Point Light のシャドウマップを描く。
+    /// Point Light のシャドウマップを描く
     void renderShadowPasses();
-    /// 不透明オブジェクトを G-Buffer へ描く。
+    /// 不透明オブジェクトを G-Buffer へ描く
     void renderGeometryPass();
-    /// SSAO を計算する。
+    /// SSAO を計算する
     void renderSsaoPass();
-    /// G-Buffer の深度をデフォルト FBO へコピーする。
+    /// G-Buffer の深度をデフォルト FBO へコピーする
     void blitGeometryDepth();
-    /// Deferred Shading のライティングを合成する。
+    /// Deferred Shading のライティングを合成する
     void renderDeferredLightingPass();
-    /// G-Buffer に書けないオブジェクトを Forward Shading で描画する。
+    /// G-Buffer に書けないオブジェクトを Forward Shading で描画する
     void renderForwardPass(gl::ArraySpan<gl::TransparentDraw> sorted);
-    /// Bloom 用のぼかしを作る。
+    /// Bloom 用のぼかしを作る
     void renderBloomBlur();
-    /// トーンマッピングとガンマ補正をかけて画面へ出力する。
+    /// トーンマッピングとガンマ補正をかけて画面へ出力する
     void renderToScreen();
 
     void applyPointLights(gl::Shader &shader);
@@ -153,7 +153,7 @@ class Scene {
     static constexpr unsigned int kShadowWidth = 1024,
                                   kShadowHeight = 1024; // depthCubemap_ 各面の解像度
     int scrWidth_, scrHeight_;
-    // 深度は実距離を farPlane で正規化して書くので、near を小さくしても精度は落ちない
+    // 深度は実距離を farPlane で正規化して書くので near を小さくしても精度は落ちない
     static constexpr float kShadowNearPlane = 0.1f;
     static constexpr float kShadowFarPlane = 50.0f; // シェーダー側の farPlane uniform と一致させる
 
@@ -200,12 +200,12 @@ class Scene {
     std::unique_ptr<gl::Shader> skyboxShader_;
     gl::GpuProfiler profiler_;
 
-    // frameArena_ の見積もり。用途を増やしたら内訳を1行足すこと
+    // frameArena_ の見積もり 用途を増やしたら内訳を1行足すこと
     //  updateTransparentInstances(): TransparentDraw × 窓の上限数
-    static constexpr std::size_t kMaxTransparentWindows = 8; // 現在6枚。増減の余地を見て余裕を持たせる
+    static constexpr std::size_t kMaxTransparentWindows = 8; // 現在6枚 増減の余地を見て余裕を持たせる
     static constexpr std::size_t kFrameArenaBytes = sizeof(gl::TransparentDraw) * kMaxTransparentWindows;
 
-    // 寿命が1フレームのデータ用。汎用アロケータの毎フレーム確保/解放を避ける
+    // 寿命が1フレームのデータ用 汎用アロケータの毎フレーム確保/解放を避ける
     gl::FrameArena frameArena_;
 
     std::vector<std::unique_ptr<Model>> models_; // テクスチャやボーン・アニメーションなどの描画情報を持つ
@@ -215,7 +215,7 @@ class Scene {
     int playerModelIndex_ = -1;
     // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う
     glm::mat4 playerBaseTransform_{1.0f}; // yaw 以外の回転とスケールを畳んだ行列
-    // models_ と添字が一対一で対応する。読み込みに失敗したモデルは両方に積まれない
+    // models_ と添字が一対一で対応する 読み込みに失敗したモデルは両方に積まれない
     std::vector<glm::mat4> modelMatrices_; // 描画用のモデルのデータ（どこにどの向きで描くか）
     std::shared_ptr<Camera> camera_;
     std::unique_ptr<gl::Shader> pointDepthShader_;
@@ -247,15 +247,15 @@ class Scene {
     std::shared_ptr<Texture> brickwallNormalTexture_;
     // 各テクセルは光源からの正規化距離
     std::array<gl::TextureHandle, 4> depthCubemap_;
-    // 各テクセルはガラスを透過した光の色。ガラスを通らない方向は白
+    // 各テクセルはガラスを透過した光の色 ガラスを通らない方向は白
     std::array<gl::TextureHandle, 4> shadowColorCubemap_;
 
     /* IBL */
     static constexpr unsigned int kEnvCubemapSize = 512;
-    // 畳み込み後は極めて低周波なので、解像度を上げても情報が増えない
+    // 畳み込み後は極めて低周波なので 解像度を上げても情報が増えない
     static constexpr unsigned int kIrradianceSize = 32;
     gl::TextureHandle hdrTexture_; // 正距円筒図法のまま読み込んだ元画像
-    gl::TextureHandle envCubemap_; // 上を6面へ焼き直したもの。背景と IBL の共通ソース
+    gl::TextureHandle envCubemap_; // 上を6面へ焼き直したもの 背景と IBL の共通ソース
     gl::TextureHandle irradianceMap_;
     // ミップの各レベルが roughness 0.0 / 0.25 / 0.5 / 0.75 / 1.0 に対応する
     static constexpr unsigned int kPrefilterSize = 128;
@@ -273,7 +273,7 @@ class Scene {
     /* ==== UI から実行時に変更する設定（毎フレーム送る） ==== */
     // 対応表は main.cpp の kDebugModes
     int debugMode_ = 0;
-    // Bloom・トーンマッピング・ガンマ補正を飛ばす。デバッグ表示には必須
+    // Bloom・トーンマッピング・ガンマ補正を飛ばす デバッグ表示には必須
     bool debugRawOutput_ = false;
     bool debugCheckerFloor_ = false;
     bool debugCheckerInvert_ = false;
@@ -292,9 +292,9 @@ class Scene {
     std::unique_ptr<gl::Shader> ssaoBlurShader_;
 
     static constexpr unsigned int kSsaoKernelSize = 64;
-    static constexpr float kSsaoRadius = 0.6f; // 遮蔽を探す半径。目安は物体サイズの 0.2〜1.0 倍
-    static constexpr float kSsaoBias = 0.03f;  // 自己遮蔽によるアクネ対策。半径に比例させる
-    static constexpr float kSsaoPower = 2.0f;  // AO のコントラスト。実用範囲は 1.5〜3.0
+    static constexpr float kSsaoRadius = 0.6f; // 遮蔽を探す半径 目安は物体サイズの 0.2〜1.0 倍
+    static constexpr float kSsaoBias = 0.03f;  // 自己遮蔽によるアクネ対策 半径に比例させる
+    static constexpr float kSsaoPower = 2.0f;  // AO のコントラスト 実用範囲は 1.5〜3.0
     float ambientStrength_ = 0.18f;            // SSAO が掛かるのはこの項だけ
     float bloomStrength_ = 1.0f;
 
@@ -335,7 +335,7 @@ class Scene {
         {// position, ambient, diffuse, specular, constant, linear, quadratic
          {glm::vec3(0.0f, 2.0f, 2.2f), glm::vec3(0.0f), glm::vec3(20.0f, 20.0f, 20.0f),
           glm::vec3(10.0f, 10.0f, 10.0f), 1.0f, 0.14f, 0.07f},
-         // TODO: 裏面ライティングの検証中のみ移動。元の位置は (-5.0f, 0.8f, -4.0f)
+         // TODO: 裏面ライティングの検証中のみ移動 元の位置は (-5.0f, 0.8f, -4.0f)
          {glm::vec3(-14.5f, 1.5f, -11.0f), glm::vec3(0.0f), glm::vec3(11.0f, 2.0f, 1.25f),
           glm::vec3(5.5f, 1.0f, 0.6f), 1.0f, 0.14f, 0.07f},
          {glm::vec3(4.2f, 3.0f, 1.8f), glm::vec3(0.0f), glm::vec3(2.0f, 3.0f, 11.0f), glm::vec3(1.0f, 1.5f, 5.5f),

@@ -12,7 +12,7 @@
 namespace gl {
 
 /**
- * @brief シェーダーのコンパイル・リンクと uniform 設定を行うクラス。
+ * @brief シェーダーのコンパイル・リンクと uniform 設定を行うクラス
  */
 class Shader {
   public:
@@ -25,29 +25,29 @@ class Shader {
     Shader &operator=(Shader &&other) noexcept;
 
     /**
-     * @brief Vertex/Geometry/Fragment シェーダーからプログラムを生成する。
+     * @brief Vertex/Geometry/Fragment シェーダーからプログラムを生成する
      *
-     * @param vertexPath Vertex Shader のパス。
-     * @param geometryPath Geometry Shader のパス。
-     * @param fragmentPath Fragment Shader のパス。
+     * @param vertexPath Vertex Shader のパス
+     * @param geometryPath Geometry Shader のパス
+     * @param fragmentPath Fragment Shader のパス
      */
     Shader(const char *vertexPath, const char *geometryPath, const char *fragmentPath);
 
     /**
-     * @brief Vertex/Fragment シェーダーからプログラムを生成する。
+     * @brief Vertex/Fragment シェーダーからプログラムを生成する
      *
-     * @param vertexPath Vertex Shader のパス。
-     * @param fragmentPath Fragment Shader のパス。
+     * @param vertexPath Vertex Shader のパス
+     * @param fragmentPath Fragment Shader のパス
      */
     Shader(const char *vertexPath, const char *fragmentPath);
 
     /**
-     * @brief Compute シェーダーからプログラムを生成する。
+     * @brief Compute シェーダーからプログラムを生成する
      */
     explicit Shader(const char *computePath);
 
     /**
-     * @brief このプログラムをバインドする。
+     * @brief このプログラムをバインドする
      */
     void use() const;
 

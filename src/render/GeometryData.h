@@ -6,7 +6,7 @@
 
 namespace gl {
 
-// 1頂点に影響するボーンの最大数。gl::Vertex の枠と各シェーダーの配列長に一致させる
+// 1頂点に影響するボーンの最大数 gl::Vertex の枠と各シェーダーの配列長に一致させる
 inline constexpr int kMaxBoneInfluence = 4;
 
 struct Vertex {
@@ -20,7 +20,7 @@ struct Vertex {
 };
 
 /**
- * @brief 透明オブジェクトを奥から手前へ描くための、カメラ距離によるソート用情報。
+ * @brief 透明オブジェクトを奥から手前へ描くための カメラ距離によるソート用情報
  */
 struct TransparentDraw {
     float distance;
@@ -164,7 +164,7 @@ inline const std::array<unsigned int, 36> cubeIndices =
 };
 
 inline constexpr float kFloorHalf = units::floorHalfExtent;
-// タイル1枚の実寸から繰り返し回数を導くので、床を広げてもテクセル密度は変わらない
+// タイル1枚の実寸から繰り返し回数を導くので 床を広げてもテクセル密度は変わらない
 inline constexpr float kFloorUv = 2.0f * units::floorHalfExtent / units::floorTileSize;
 
 // EBO用に重複を除いた頂点配列(床)
@@ -193,14 +193,14 @@ inline const std::array<unsigned int, 6> transparentIndices = {0, 1, 2, 2, 3, 0}
 glm::vec3 calcNormal(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 
 /**
- * @brief 法線マッピング用の Tangent/Bitangent を求める。
+ * @brief 法線マッピング用の Tangent/Bitangent を求める
  *
- * @param v0,v1,v2 三角形の頂点座標。
- * @param uv0,uv1,uv2 対応する UV 座標。
+ * @param v0,v1,v2 三角形の頂点座標
+ * @param uv0,uv1,uv2 対応する UV 座標
  */
 std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec2 &uv0, const glm::vec2 uv1, const glm::vec2 uv2);
 
-// 「1面 = 4頂点」の並びを前提に、面ごとに法線を計算して4頂点へ割り当てる
+// 「1面 = 4頂点」の並びを前提に 面ごとに法線を計算して4頂点へ割り当てる
 template <std::size_t N>
 std::array<Vertex, N> calcFaceNormals(std::array<Vertex, N> vertices) {
     static_assert(N % 4 == 0, "calcFaceNormals expects 4 vertices per face");
@@ -250,7 +250,7 @@ inline const std::array<Vertex, 4> transparentVertices = calcFaceNormals(rawTran
 inline constexpr float kWallUvU = 2.0f * units::floorHalfExtent / units::wallTileSize;
 inline constexpr float kWallUvV = (units::wallTopY - units::floorY) / units::wallTileSize;
 
-// 壁（z=-25 と z=+25 の2枚）。T×B = N が成立するよう解析的に設定
+// 壁（z=-25 と z=+25 の2枚） T×B = N が成立するよう解析的に設定
 inline const std::array<Vertex, 8> wallVertices = {{
     // z=-25 の壁 (法線: +z,  T: +x, B: +y)
     {{-kFloorHalf, units::floorY, -kFloorHalf}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},

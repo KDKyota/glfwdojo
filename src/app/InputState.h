@@ -1,13 +1,13 @@
 #pragma once
 
-// 入力の宛先を決めるアプリ全体のモード。カメラの FreeLook / ThirdPerson とは直交する
+// 入力の宛先を決めるアプリ全体のモード カメラの FreeLook / ThirdPerson とは直交する
 enum class InputMode {
-    Gameplay, // カーソルを掴んで視点操作へ。UI は出さない
+    Gameplay, // カーソルを掴んで視点操作へ UI は出さない
     Paused,   // カーソルを解放して UI へ ゲーム側の入力は止める
 };
 
 /**
- * @brief 入力とカーソルの捕捉状態を Gameplay/Paused の2値で管理する。
+ * @brief 入力とカーソルの捕捉状態を Gameplay/Paused の2値で管理する
  */
 class InputState {
   private:

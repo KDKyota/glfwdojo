@@ -3,20 +3,20 @@
 #include <glad/glad.h>
 #include <iostream>
 
-/// ピクセル列を GL_TEXTURE_2D としてアップロードする。
+/// ピクセル列を GL_TEXTURE_2D としてアップロードする
 void Texture::uploadPixels(unsigned char *pixels, int width, int height, int channels) {
     glBindTexture(GL_TEXTURE_2D, id_);
 
     const GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
     if (pixels) {
-        // sRGB 復号の対象は RGB のみで、アルファはリニアのまま（window.png の閾値判定が依存）
+        // sRGB 復号の対象は RGB のみで アルファはリニアのまま（window.png の閾値判定が依存）
         const GLenum internalFormat = (colorSpace_ == ColorSpace::SRGB)
                                           ? ((channels == 4) ? GL_SRGB8_ALPHA8 : GL_SRGB8)
                                           : format;
         glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, pixels);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
-    // RGBA は繰り返さない1枚絵、RGB はタイル状に繰り返すテクスチャという想定
+    // RGBA は繰り返さない1枚絵 RGB はタイル状に繰り返すテクスチャという想定
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

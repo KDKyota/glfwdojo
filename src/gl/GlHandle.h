@@ -4,9 +4,9 @@
 namespace gl {
 
 /**
- * @brief OpenGL オブジェクトの ID を RAII 管理する基底クラス。
+ * @brief OpenGL オブジェクトの ID を RAII 管理する基底クラス
  *
- * CRTP で派生の static gen()/del() を呼ぶ。
+ * CRTP で派生の static gen()/del() を呼ぶ
  */
 template <typename Derived>
 class HandleBase {
@@ -32,7 +32,7 @@ class HandleBase {
     }
 
     /**
-     * @brief 新しい OpenGL オブジェクトを生成する。
+     * @brief 新しい OpenGL オブジェクトを生成する
      */
     void create() {
         reset(Derived::gen());
@@ -58,7 +58,7 @@ class HandleBase {
 };
 
 /**
- * @brief VAO を管理する。
+ * @brief VAO を管理する
  */
 class VertexArrayHandle : public HandleBase<VertexArrayHandle> {
   public:
@@ -73,7 +73,7 @@ class VertexArrayHandle : public HandleBase<VertexArrayHandle> {
 };
 
 /**
- * @brief VBO・EBO・UBO などのバッファを管理する。
+ * @brief VBO・EBO・UBO などのバッファを管理する
  */
 class BufferHandle : public HandleBase<BufferHandle> {
   public:
@@ -88,7 +88,7 @@ class BufferHandle : public HandleBase<BufferHandle> {
 };
 
 /**
- * @brief テクスチャを管理する。
+ * @brief テクスチャを管理する
  */
 class TextureHandle : public HandleBase<TextureHandle> {
   public:
@@ -103,7 +103,7 @@ class TextureHandle : public HandleBase<TextureHandle> {
 };
 
 /**
- * @brief FBO を管理する。
+ * @brief FBO を管理する
  */
 class FramebufferHandle : public HandleBase<FramebufferHandle> {
   public:
@@ -118,7 +118,7 @@ class FramebufferHandle : public HandleBase<FramebufferHandle> {
 };
 
 /**
- * @brief RBO を管理する。
+ * @brief RBO を管理する
  */
 class RenderbufferHandle : public HandleBase<RenderbufferHandle> {
   public:
@@ -133,7 +133,7 @@ class RenderbufferHandle : public HandleBase<RenderbufferHandle> {
 };
 
 /**
- * @brief 時間計測やオクルージョンに使うクエリを管理する。
+ * @brief 時間計測やオクルージョンに使うクエリを管理する
  */
 class QueryHandle : public HandleBase<QueryHandle> {
   public:

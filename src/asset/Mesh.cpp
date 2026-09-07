@@ -8,7 +8,7 @@ Mesh::Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, 
     setupMesh();
 }
 
-/// 頂点からバインドポーズの AABB を求める。
+/// 頂点からバインドポーズの AABB を求める
 void Mesh::computeBounds() {
     if (vertices_.empty())
         return;
@@ -21,7 +21,7 @@ void Mesh::computeBounds() {
     }
 }
 
-/// VAO を組み立て、頂点属性 location を設定する。
+/// VAO を組み立て 頂点属性 location を設定する
 void Mesh::setupMesh() {
     VAO_.create();
     VBO_.create();
@@ -52,9 +52,9 @@ void Mesh::setupMesh() {
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, bitangent));
 
-    // location 5 は使わない。point_shadow_depth.vert の aOffset がそこを読み、未有効化で既定値 (0,0,0) になる依存に合わせている
+    // location 5 は使わない point_shadow_depth.vert の aOffset がそこを読み 未有効化で既定値 (0,0,0) になる依存に合わせている
     glEnableVertexAttribArray(6);
-    // 整数として渡すので I 付き。GL_INT を glVertexAttribPointer で送ると float に変換されて壊れる
+    // 整数として渡すので I 付き GL_INT を glVertexAttribPointer で送ると float に変換されて壊れる
     glVertexAttribIPointer(6, gl::kMaxBoneInfluence, GL_INT, stride, (void *)offsetof(gl::Vertex, boneIds));
 
     glEnableVertexAttribArray(7);

@@ -21,17 +21,17 @@ int main(void) {
     auto window = std::make_unique<Window>(SCR_WIDTH, SCR_HEIGHT, "learnopengl");
     auto scene =
         std::make_unique<Scene>(camera, window->GetWidth(), window->GetHeight());
-    // ImGui は既存のコールバックを保存して連鎖させるので、必ず登録がすべて済んだ後に生成する
+    // ImGui は既存のコールバックを保存して連鎖させるので 必ず登録がすべて済んだ後に生成する
     auto gui = std::make_unique<Gui>(window->Get());
 
     struct {
         float delta = 0.0f, last = 0.0f;
     } frametime; // ループごとの経過時間を確認する構造体
 
-    // UI は Scene の描画結果に重ねるため、gui->Render() は最後に呼ぶ
+    // UI は Scene の描画結果に重ねるため gui->Render() は最後に呼ぶ
     while (!window->ShouldClose()) {
         float currentFrame = static_cast<float>(glfwGetTime());
-        // ポーズ中は経過時間を止める。last の更新は止めないこと（復帰の1フレームに全時間が乗る）
+        // ポーズ中は経過時間を止める last の更新は止めないこと（復帰の1フレームに全時間が乗る）
         frametime.delta = input->IsPaused() ? 0.0f : currentFrame - frametime.last;
         frametime.last = currentFrame;
 
@@ -51,7 +51,7 @@ int main(void) {
         // ImGui:: の呼び出しより前に必ず1回
         gui->NewFrame();
 
-        // FPS だけは常時表示する。NoInputs なのでカーソルを掴んだままでも掴まれない
+        // FPS だけは常時表示する NoInputs なのでカーソルを掴んだままでも掴まれない
         {
             const ImGuiViewport *viewport = ImGui::GetMainViewport();
             ImGui::SetNextWindowPos(
@@ -79,7 +79,7 @@ int main(void) {
             ImGui::End();
         }
 
-        // 操作を伴う UI はポーズ中だけ。NewFrame / Render は毎フレーム呼び続ける
+        // 操作を伴う UI はポーズ中だけ NewFrame / Render は毎フレーム呼び続ける
         if (input->IsPaused()) {
             ImGui::Begin("Paused");
             {
@@ -116,20 +116,20 @@ int main(void) {
                 ImGui::Separator();
 
                 ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
-                // IBL 化で基準が「空の平均輝度」に変わり、1.0 では足りなくなった
+                // IBL 化で基準が「空の平均輝度」に変わり 1.0 では足りなくなった
                 ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 5.0f);
                 ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);
                 ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
                 ImGui::Separator();
 
-                // metallic は物理的には 0 か 1 の二択。中間は錆びた鉄のような混在時のみ
+                // metallic は物理的には 0 か 1 の二択 中間は錆びた鉄のような混在時のみ
                 ImGui::SliderFloat("Metallic: cube", &scene->CubeMaterial().metallic, 0.0f, 1.0f);
                 ImGui::SliderFloat("Metallic: floor", &scene->FloorMaterial().metallic, 0.0f, 1.0f);
                 ImGui::SliderFloat("Metallic: wall", &scene->WallMaterial().metallic, 0.0f, 1.0f);
                 ImGui::SliderFloat("Metallic: window", &scene->WindowMaterial().metallic, 0.0f, 1.0f);
                 ImGui::Separator();
 
-                // 下限を 0 にしない。GGX の分布が発散して真っ白な点が出る
+                // 下限を 0 にしない GGX の分布が発散して真っ白な点が出る
                 ImGui::SliderFloat("Roughness: cube", &scene->CubeMaterial().roughness, 0.05f, 1.0f);
                 ImGui::SliderFloat("Roughness: floor", &scene->FloorMaterial().roughness, 0.05f, 1.0f);
                 ImGui::SliderFloat("Roughness: wall", &scene->WallMaterial().roughness, 0.05f, 1.0f);
@@ -139,7 +139,7 @@ int main(void) {
             ImGui::End();
         }
 
-        // ポーズ中も描画を続ける。飛ばすと SwapBuffers() の待ちが消えてループが全力で回る
+        // ポーズ中も描画を続ける 飛ばすと SwapBuffers() の待ちが消えてループが全力で回る
         scene->Render(frametime.delta, heightScale);
 
         // Scene::Render() に入れるとパスの途中で UI を描くことになる

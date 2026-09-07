@@ -21,7 +21,7 @@ constexpr float HEIGHT = gl::units::characterHeight;
 class Character {
   public:
     /**
-     * @brief 足元の位置を指定して生成する。
+     * @brief 足元の位置を指定して生成する
      */
     explicit Character(const glm::vec3 &position, float height = CharacterDefaults::HEIGHT);
 
@@ -57,6 +57,6 @@ class Character {
     float height_ = CharacterDefaults::HEIGHT;
     bool isMoving_ = false;
 
-    /// 進行方向へyawを補間する。
+    /// 進行方向へyawを補間する
     void turnTowards(const glm::vec3 &direction, float deltaTime);
 };

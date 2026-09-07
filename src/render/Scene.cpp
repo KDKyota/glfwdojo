@@ -13,7 +13,7 @@
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : camera_(camera), scrWidth_(scrWidth), scrHeight_(scrHeight) {
     frameArena_.Init(kFrameArenaBytes);
-    // 既定の 0.5 では環境が高いミップまでぼけ、浅い角度で白い靄になる
+    // 既定の 0.5 では環境が高いミップまでぼけ 浅い角度で白い靄になる
     glassMaterial_.roughness = 0.08f;
     lightCubeShader_ = std::make_unique<gl::Shader>("light_cube.vert", "light_cube.frag");
     screenShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "hdr.frag");
@@ -21,7 +21,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     transparentWindowShader_ = std::make_unique<gl::Shader>("window.vert", "glass.frag");
     pointDepthShader_ =
         std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_depth.frag");
-    // vert / geom は深度パスと共用し、frag だけ差し替える
+    // vert / geom は深度パスと共用し frag だけ差し替える
     pointColorShader_ =
         std::make_unique<gl::Shader>("point_shadow_depth.vert", "point_shadow_depth.geom", "point_shadow_color.frag");
     debugDepthShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "debug_depth.frag");
@@ -60,7 +60,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     profiler_.Init();
 }
 
-/// IBL 用の irradianceMap_/prefilterMap_/brdfLUT_ を起動時に一度だけ事前計算する。
+/// IBL 用の irradianceMap_/prefilterMap_/brdfLUT_ を起動時に一度だけ事前計算する
 void Scene::initIbl() {
     /* --- 正距円筒図法の HDR を読み込む --- */
     stbi_set_flip_vertically_on_load(true);
@@ -92,20 +92,20 @@ void Scene::initIbl() {
     captureFBO_.create();
     captureRBO_.create();
     /* 事前計算中だけ変える GL 状態 末尾のベース状態への復帰と対にすること */
-    // 立方体の内側から見るので、通常のカリングでは面が消える
+    // 立方体の内側から見るので 通常のカリングでは面が消える
     glDisable(GL_CULL_FACE);
-    // BRDF LUT は out vec2 でアルファが未定義。切らないと GL_SRC_ALPHA が 0 になり書き込みが消える
+    // BRDF LUT は out vec2 でアルファが未定義 切らないと GL_SRC_ALPHA が 0 になり書き込みが消える
     glDisable(GL_BLEND);
     glBindVertexArray(skyboxVAO_);
 
     /* --- equirectangular -> cubemap --- */
-    // こちらは描き込み先なので、3成分フォーマットを選んではいけない
+    // こちらは描き込み先なので 3成分フォーマットを選んではいけない
     envCubemap_.create();
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap_);
     for (unsigned int i = 0; i < 6; ++i)
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA16F, kEnvCubemapSize, kEnvCubemapSize, 0, GL_RGBA,
                      GL_FLOAT, nullptr);
-    // prefilter がサンプルの粗密に応じてミップを引くので、ミップ付きにしておく
+    // prefilter がサンプルの粗密に応じてミップを引くので ミップ付きにしておく
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -132,7 +132,7 @@ void Scene::initIbl() {
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
-    // ミップの中身を埋める。prefilter がこれを引く
+    // ミップの中身を埋める prefilter がこれを引く
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap_);
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
@@ -232,10 +232,10 @@ void Scene::initIbl() {
 
     /* 冒頭で変えた GL 状態を戻す */
     glEnable(GL_BLEND);
-    // カリングのベース状態は無効。ここで有効にすると床・壁・空が消える
+    // カリングのベース状態は無効 ここで有効にすると床・壁・空が消える
 }
 
-/// プロシージャルジオメトリの VAO/VBO/EBO を構築する。
+/// プロシージャルジオメトリの VAO/VBO/EBO を構築する
 void Scene::initMesh() {
     int stride = sizeof(gl::Vertex);
 
@@ -357,7 +357,7 @@ void Scene::initMesh() {
     glBindVertexArray(0);
 }
 
-/// modelSpawns_ に従って各モデルを読み込む。
+/// modelSpawns_ に従って各モデルを読み込む
 void Scene::initModels() {
     for (const ModelSpawn &spawn : modelSpawns_) {
         try {
@@ -382,7 +382,7 @@ void Scene::initModels() {
     }
 }
 
-/// 壁と立方体から衝突判定用の直方体を作る。
+/// 壁と立方体から衝突判定用の直方体を作る
 void Scene::initColliders() {
     constexpr float half = gl::units::floorHalfExtent;
     // 平面のままだと厚みが 0 で押し出す向きが決まらないので外側へ伸ばす
@@ -397,7 +397,7 @@ void Scene::initColliders() {
         colliders_.Add({center - glm::vec3(cubeHalf), center + glm::vec3(cubeHalf)});
 }
 
-/// デバッグ表示用の円柱ワイヤーフレームを作る。
+/// デバッグ表示用の円柱ワイヤーフレームを作る
 void Scene::initDebugShapes() {
     constexpr int segments = 24;
     constexpr float twoPi = 6.28318530717958647692f;
@@ -431,7 +431,7 @@ void Scene::initDebugShapes() {
     glBindVertexArray(0);
 }
 
-/// 衝突判定の円柱を描く。
+/// 衝突判定の円柱を描く
 void Scene::renderDebugCollision() {
     if (!debugCollision_ || !character_)
         return;
@@ -447,7 +447,7 @@ void Scene::renderDebugCollision() {
     glBindVertexArray(0);
 }
 
-/// 操作対象のモデル行列を現在の位置と向きから作り直す。
+/// 操作対象のモデル行列を現在の位置と向きから作り直す
 void Scene::updatePlayerModelMatrix() {
     if (!character_ || playerModelIndex_ < 0)
         return;
@@ -457,7 +457,7 @@ void Scene::updatePlayerModelMatrix() {
         glm::rotate(glm::mat4(1.0f), character_->Yaw(), glm::vec3(0.0f, 1.0f, 0.0f)) * playerBaseTransform_;
 }
 
-/// テクスチャをロードし、各シェーダーのサンプラー uniform を設定する。
+/// テクスチャをロードし 各シェーダーのサンプラー uniform を設定する
 void Scene::initTextures() {
     cubeTexture_ = cache_.get("resources/textures/bricks2.jpg", true, ColorSpace::SRGB);
     cubeNormalMap_ = cache_.get("resources/textures/bricks2_normal.jpg", true, ColorSpace::Linear);
@@ -528,10 +528,10 @@ void Scene::initTextures() {
     deferredLightingShader_->setInt("irradianceMap", 12);
     deferredLightingShader_->setInt("prefilterMap", 13);
     deferredLightingShader_->setInt("brdfLUT", 14);
-    // ambientStrength は Render() 側、SSAO 系の uniform は initSsao() 側で送る
+    // ambientStrength は Render() 側 SSAO 系の uniform は initSsao() 側で送る
 }
 
-/// メインの HDR フレームバッファとシャドウ用・ブラー用の FBO を構築する。
+/// メインの HDR フレームバッファとシャドウ用・ブラー用の FBO を構築する
 void Scene::initFramebuffer() {
     /* framebuffer configuration */
     framebuffer_.create();
@@ -552,7 +552,7 @@ void Scene::initFramebuffer() {
     unsigned int attachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
     glDrawBuffers(2, attachments);
 
-    /* 深度とステンシル。サンプリングしないのでレンダーバッファ */
+    /* 深度とステンシル サンプリングしないのでレンダーバッファ */
     rbo_.create();
     glBindRenderbuffer(GL_RENDERBUFFER, rbo_);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scrWidth_, scrHeight_);
@@ -561,12 +561,12 @@ void Scene::initFramebuffer() {
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    /* ポイントシャドウ用キューブマップFBO。カラーを持たず深度だけを書く */
+    /* ポイントシャドウ用キューブマップFBO カラーを持たず深度だけを書く */
     for (unsigned int j = 0; j < 4; ++j)
 
     {
         depthMapFBO_[j].create();
-        // 各テクセルに入るのは色ではなく、光源からの正規化距離 [0,1]
+        // 各テクセルに入るのは色ではなく 光源からの正規化距離 [0,1]
         depthCubemap_[j].create();
         shadowColorCubemap_[j].create();
 
@@ -591,7 +591,7 @@ void Scene::initFramebuffer() {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_[j]);
-        // glFramebufferTexture なら6面が1アタッチメントになり、gl_Layer で面を選べる
+        // glFramebufferTexture なら6面が1アタッチメントになり gl_Layer で面を選べる
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap_[j], 0);
         glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, shadowColorCubemap_[j], 0);
         glDrawBuffer(GL_NONE);
@@ -618,7 +618,7 @@ void Scene::initFramebuffer() {
     }
 }
 
-/// View/Projection 行列を格納する UBO を作る。
+/// View/Projection 行列を格納する UBO を作る
 void Scene::initUBO() {
     matricesUBO_.create();
     glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO_);
@@ -627,7 +627,7 @@ void Scene::initUBO() {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-/// Deferred Shading 用の G-Buffer を構築する。
+/// Deferred Shading 用の G-Buffer を構築する
 void Scene::initGBuffer() {
     gBuffer_.create();
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
@@ -638,7 +638,7 @@ void Scene::initGBuffer() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, scrWidth_, scrHeight_, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    // REPEAT だと画面の反対側の値を拾い、画面端に不自然な遮蔽が出る
+    // REPEAT だと画面の反対側の値を拾い 画面端に不自然な遮蔽が出る
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition_, 0);
@@ -673,13 +673,13 @@ void Scene::initGBuffer() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-/// SSAO 用のサンプルカーネル・ノイズテクスチャ・FBO を準備する。
+/// SSAO 用のサンプルカーネル・ノイズテクスチャ・FBO を準備する
 void Scene::initSsao() {
     std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
     std::default_random_engine generator;
 
     /* --- サンプルカーネル --- */
-    // 接空間（+Z が法線方向）における、半球内のサンプル点のテンプレート。
+    // 接空間（+Z が法線方向）における 半球内のサンプル点のテンプレート
     ssaoKernel_.reserve(kSsaoKernelSize);
     for (unsigned int i = 0; i < kSsaoKernelSize; ++i) {
         glm::vec3 sample(randomFloats(generator) * 2.0f - 1.0f, randomFloats(generator) * 2.0f - 1.0f,
@@ -703,7 +703,7 @@ void Scene::initSsao() {
     }
     noiseTexture_.create();
     glBindTexture(GL_TEXTURE_2D, noiseTexture_);
-    // 負の値を保持する必要があるため浮動小数点フォーマット。
+    // 負の値を保持する必要があるため浮動小数点フォーマット
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT, ssaoNoise.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -743,7 +743,7 @@ void Scene::initSsao() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     /* --- シェーダーの uniform 設定 --- */
-    // initTextures() は initSsao() より先に呼ばれるので、カーネル送信はここに置く
+    // initTextures() は initSsao() より先に呼ばれるので カーネル送信はここに置く
     ssaoShader_->use();
     ssaoShader_->setInt("gPosition", 0);
     ssaoShader_->setInt("gNormal", 1);
@@ -773,14 +773,14 @@ void Scene::Render(float deltaTime, float heightScale) {
 
     // 前フレームの frameArena_ 確保をここで無効化する（末尾ではなく先頭でリセット）
     frameArena_.Reset();
-    // 透過窓の並び順は前方描画でも使うので、ここで受け取って持ち回る
+    // 透過窓の並び順は前方描画でも使うので ここで受け取って持ち回る
     auto sorted = updateTransparentInstances();
 
     profiler_.BeginFrame();
 
     // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
     profiler_.Measure(gl::GpuPass::Shadow, [&] { renderShadowPasses(); });
-    updateMatricesUBO(); // [2] view / projection を UBO へ。以降の全パスが参照する
+    updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する
     // [3] 不透明物の幾何情報を G-Buffer へ
     profiler_.Measure(gl::GpuPass::Geometry, [&] { renderGeometryPass(); });
     // [4] G-Buffer から遮蔽率を求めてブラーまで
@@ -799,7 +799,7 @@ void Scene::Render(float deltaTime, float heightScale) {
     profiler_.EndFrame();
 }
 
-// 現在のガラスは乗算／加算ブレンドなので、この並べ替えは正しさには影響しない
+// 現在のガラスは乗算／加算ブレンドなので この並べ替えは正しさには影響しない
 gl::ArraySpan<gl::TransparentDraw> Scene::updateTransparentInstances() {
     auto sorted = frameArena_.Allocate<gl::TransparentDraw>(windowPositions_.size());
     for (unsigned int i = 0; i < windowPositions_.size(); ++i)
@@ -828,7 +828,7 @@ void Scene::updateMatricesUBO() {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-// 深度とガラスの透過色を同じ FBO へ、glDrawBuffer で書き込み先を切り替えて作る
+// 深度とガラスの透過色を同じ FBO へ glDrawBuffer で書き込み先を切り替えて作る
 void Scene::renderShadowPasses() {
     glViewport(0, 0, kShadowWidth, kShadowHeight);
     glEnable(GL_DEPTH_TEST);
@@ -852,7 +852,7 @@ void Scene::renderShadowPasses() {
 
         /* ── Pass 1: Point Shadow Depth Pass ── */
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_[j]);
-        // カラーサブパスと交互に使うので、ループ内で毎回 use() しないと uniform の送り先がずれる
+        // カラーサブパスと交互に使うので ループ内で毎回 use() しないと uniform の送り先がずれる
         pointDepthShader_->use();
         glDrawBuffer(GL_NONE);
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -872,7 +872,7 @@ void Scene::renderShadowPasses() {
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // ガラスを通らない方向 = 減衰なし
         glClear(GL_COLOR_BUFFER_BIT);
-        // 深度テストは残したまま書き込みだけ止め、不透明物より奥のガラスを弾く
+        // 深度テストは残したまま書き込みだけ止め 不透明物より奥のガラスを弾く
         glDepthMask(GL_FALSE);
         glEnable(GL_BLEND);
         glBlendFunc(GL_ZERO, GL_SRC_COLOR);
@@ -893,7 +893,7 @@ void Scene::renderShadowPasses() {
 void Scene::renderGeometryPass() {
     glViewport(0, 0, scrWidth_, scrHeight_); // シャドウ用に変えた viewport を元に戻す
     glEnable(GL_DEPTH_TEST);
-    // ブレンドが有効なままだと、アルファ未定義の出力は書き込みが丸ごと消える
+    // ブレンドが有効なままだと アルファ未定義の出力は書き込みが丸ごと消える
     glDisable(GL_BLEND);
 
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer_);
@@ -902,7 +902,7 @@ void Scene::renderGeometryPass() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /* cube */
-    // POM の穴から裏面が透けるのを防ぐ。片面ポリゴンは消えるので cube の間だけ
+    // POM の穴から裏面が透けるのを防ぐ 片面ポリゴンは消えるので cube の間だけ
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     gbufferCubeShader_->use();
@@ -953,7 +953,7 @@ void Scene::renderSsaoPass() {
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     /* -- SSAO blur pass -- */
-    // 4x4 のノイズをタイル状に敷いた代償の格子模様を、同じ 4x4 の平均で打ち消す
+    // 4x4 のノイズをタイル状に敷いた代償の格子模様を 同じ 4x4 の平均で打ち消す
     glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO_);
     glClear(GL_COLOR_BUFFER_BIT);
     glActiveTexture(GL_TEXTURE0);
@@ -1024,7 +1024,7 @@ void Scene::renderForwardPass(gl::ArraySpan<gl::TransparentDraw> sorted) {
     renderSkybox();
     renderDebugCollision();
 
-    /* 透過窓（ブレンドが必要なのはここだけ。Geometryパスの冒頭で無効化しているので、描画中だけ有効にする）*/
+    /* 透過窓（ブレンドが必要なのはここだけ Geometryパスの冒頭で無効化しているので 描画中だけ有効にする）*/
     glEnable(GL_BLEND);
     renderTransparentWindows(sorted);
     glDisable(GL_BLEND);
@@ -1034,7 +1034,7 @@ void Scene::renderBloomBlur() {
     bool first_iteration = true;
     unsigned int amount = 10;
     blurShader_->use();
-    // 前のパスが FBO へ書いた brightColorBuffer_ を imageLoad で読むため、可視化を挟む
+    // 前のパスが FBO へ書いた brightColorBuffer_ を imageLoad で読むため 可視化を挟む
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     for (unsigned int i = 0; i < amount; ++i) {
         const GLuint src = first_iteration ? brightColorBuffer_.get() : pingpongColorBuffers_[!blurHorizontal_].get();
@@ -1042,24 +1042,24 @@ void Scene::renderBloomBlur() {
         glBindImageTexture(1, pingpongColorBuffers_[blurHorizontal_], 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
         blurShader_->setBool("horizontal", blurHorizontal_);
 
-        // ワークグループはぼかす軸に沿って並べる。もう一方の軸は1行（1列）につき1グループ
+        // ワークグループはぼかす軸に沿って並べる もう一方の軸は1行（1列）につき1グループ
         const unsigned int along = blurHorizontal_ ? scrWidth_ : scrHeight_;
         const unsigned int lines = blurHorizontal_ ? scrHeight_ : scrWidth_;
         glDispatchCompute((along + kBlurTile - 1) / kBlurTile, lines, 1);
-        // 次のパスが今の書き込みを読むので、完了を待たせる
+        // 次のパスが今の書き込みを読むので 完了を待たせる
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
         blurHorizontal_ = !blurHorizontal_;
         if (first_iteration)
             first_iteration = false;
     }
-    // renderToScreen は結果を imageLoad ではなく sampler で読むので、別のビットが要る
+    // renderToScreen は結果を imageLoad ではなく sampler で読むので 別のビットが要る
     glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 }
 
 void Scene::renderToScreen() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // 深度は clear していないので、有効なままだと前フレームの値で全画面クアッドが弾かれる
+    // 深度は clear していないので 有効なままだと前フレームの値で全画面クアッドが弾かれる
     glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -1083,7 +1083,7 @@ void Scene::renderToScreen() {
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-/// pointLights_ を配列 uniform として送る。
+/// pointLights_ を配列 uniform として送る
 void Scene::applyPointLights(gl::Shader &shader) {
     for (const auto &pointLight : pointLights_)
         pointLight.applyToShader(shader, "pointLights[" + std::to_string(&pointLight - pointLights_.data()) + "]");
@@ -1128,7 +1128,7 @@ void Scene::renderSkybox() {
     glDepthFunc(GL_LESS);
 }
 
-/// ガラス窓を透過（乗算）と反射（加算）の2パスに分けて描く。
+/// ガラス窓を透過（乗算）と反射（加算）の2パスに分けて描く
 void Scene::renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted) {
     transparentWindowShader_->use();
     transparentWindowShader_->setVec3("viewPos", camera_->GetViewPosition());

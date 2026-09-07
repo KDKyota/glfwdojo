@@ -11,7 +11,7 @@ Camera::Camera()
       MovementSpeed(CameraDefaults::SPEED),
       MouseSensitivity(CameraDefaults::SENSITIVITY),
       Zoom(CameraDefaults::ZOOM) {
-    // 単位クォータニオンが -Z 向き（YAW = -90 度）にあたるので、そこからの差分で初期姿勢を作る
+    // 単位クォータニオンが -Z 向き（YAW = -90 度）にあたるので そこからの差分で初期姿勢を作る
     Orientation = glm::angleAxis(glm::radians(-(CameraDefaults::YAW + 90.0f)), WorldUp) *
                   glm::angleAxis(glm::radians(CameraDefaults::PITCH), glm::vec3(1.0f, 0.0f, 0.0f));
     UpdateCameraVectors();
@@ -37,7 +37,7 @@ const float &Camera::GetZoomValue() const {
 
 void Camera::UpdateCameraVectors() {
     Front = glm::normalize(Orientation * glm::vec3(0.0f, 0.0f, -1.0f));
-    // Right をワールドの上方向から導くことで、姿勢にロールが残っていても水平線は傾かない
+    // Right をワールドの上方向から導くことで 姿勢にロールが残っていても水平線は傾かない
     Right = glm::normalize(glm::cross(Front, WorldUp));
     Up = glm::normalize(glm::cross(Right, Front));
 };
@@ -47,7 +47,7 @@ float Camera::CurrentPitch() const {
 }
 
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) {
-    // 三人称ではカメラの位置が注視点に縛られるので、直接の移動は受け付けない
+    // 三人称ではカメラの位置が注視点に縛られるので 直接の移動は受け付けない
     if (mode_ == CameraMode::ThirdPerson) return;
 
     float velocity = MovementSpeed * deltaTime;
@@ -81,12 +81,12 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
     }
 
     if (constrainPitch) {
-        // 真上・真下を越えると視界が反転する。回転そのものではなく増分を切り詰める
+        // 真上・真下を越えると視界が反転する 回転そのものではなく増分を切り詰める
         const float current = CurrentPitch();
         pitch = glm::clamp(current + pitch, -limit, limit) - current;
     }
 
-    // ヨーはワールドの上方向まわり（左から）、ピッチはカメラ自身の右方向まわり（右から）に掛ける。
+    // ヨーはワールドの上方向まわり（左から） ピッチはカメラ自身の右方向まわり（右から）に掛ける
     // 両方をローカル軸で掛けるとロールが溜まって水平線が傾いていく
     Orientation = glm::angleAxis(yaw, WorldUp) * Orientation *
                   glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -129,10 +129,10 @@ void Camera::ToggleMode() {
         mode_ = CameraMode::FreeLook;
         return;
     }
-    // 追従先が無いまま切り替えると、移動もできず注視点も無い状態で固まる
+    // 追従先が無いまま切り替えると 移動もできず注視点も無い状態で固まる
     if (!hasFollowTarget_) return;
 
-    // 現在の視線を軌道角へ引き継ぐ。合わせないと切り替えた瞬間に画面が飛ぶ
+    // 現在の視線を軌道角へ引き継ぐ 合わせないと切り替えた瞬間に画面が飛ぶ
     orbitYaw_ = std::atan2(-Front.x, -Front.z);
     orbitPitch_ = std::asin(glm::clamp(Front.y, -1.0f, 1.0f));
     smoothedPivot_ = PivotPosition();
@@ -162,7 +162,7 @@ void Camera::Update(float deltaTime) {
 
     UpdateCameraVectors();
 
-    // 位置が遅れている間は注視点が画面中心からずれるので、向きも slerp で追従させる
+    // 位置が遅れている間は注視点が画面中心からずれるので 向きも slerp で追従させる
     // const glm::vec3 toPivot = PivotPosition() - Position;
     // if (glm::dot(toPivot, toPivot) > 1e-6f)
     // {

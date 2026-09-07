@@ -37,7 +37,6 @@ void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
 // time をはさむ前側のキーの添え字とその区間内での補間率を返す
 template <typename T>
 std::pair<size_t, float> findSegment(const std::vector<AnimationKey<T>> &keys, float time) {
-    // 前後のキーを見て、 キーを判断する
     for (size_t i = 0; i + 1 < keys.size(); ++i) {
         if (time < keys[i + 1].time) {
             const float span = keys[i + 1].time - keys[i].time;
@@ -144,7 +143,7 @@ void Model::uploadBoneMatrices() {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。 その際、同じノードを二回以上送らないように  meshIndexByAiIndex_ で管理
+/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。
 ModelNode Model::processNode(const aiNode *node, const aiScene *scene) {
     ModelNode result;
     result.name = node->mName.C_Str();
@@ -219,9 +218,8 @@ void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
         BoneInfo &info = inserted.first->second;
         if (inserted.second) {
             info.index = static_cast<int>(bones_.size()) - 1;
+            // メッシュ空間からボーン空間への変換（バインドポーズでのボーン位置の逆行列）
             info.offset = toGlm(bone->mOffsetMatrix);
-            // mOfsetMatrix: そのボーンがバインドポーズでどこにあったかの逆行列
-            // 動くときに関節（ジョイントを）原点として考える変換
         }
 
         for (unsigned int w = 0; w < bone->mNumWeights; ++w) {
@@ -352,7 +350,6 @@ void Model::loadAnimations(const aiScene *scene) {
         if (source->mTicksPerSecond != 0.0)
             animation.ticksPerSecond = static_cast<float>(source->mTicksPerSecond);
 
-        // すべてのチャンネル（すべてのフレーム）について操作して、ボーンの動きを取得する
         for (unsigned int c = 0; c < source->mNumChannels; ++c) {
             const aiNodeAnim *channel = source->mChannels[c];
             NodeAnimation node;

@@ -39,7 +39,7 @@ class GpuProfiler {
 
     /// body の GPU 実行時間を計測する
     template <typename F>
-    void Measure(GpuPass pass, F &&body) { // body とは計測したい処理そのもの F && としているので一時オブジェクト（ラムダ式）を代入可能
+    void Measure(GpuPass pass, F &&body) {
         begin(pass);
         body();
         end();
@@ -55,7 +55,7 @@ class GpuProfiler {
     static const char *Name(GpuPass pass);
 
   private:
-    // 2フレーム前を読めば GPU は確実に処理を終えている（余裕を持たせる）
+    // 数フレーム前を読めば GPU は確実に処理を終えている
     static constexpr int kFrameLag = 3;
     // 生の値はフレームごとに大きく揺れるので指数移動平均で均す
     static constexpr float kSmoothing = 0.05f;

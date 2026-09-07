@@ -47,8 +47,6 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     prefilterShader_ = std::make_unique<gl::Shader>("cubemap_capture.vert", "prefilter.frag");
     brdfLUTShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "brdf_lut.frag");
 
-    // cubePositions_ = std::move(cubePositions);
-
     initMesh();
     initDebugShapes();
     initTextures();
@@ -512,7 +510,6 @@ void Scene::initTextures() {
     pointDepthShader_->setInt("diffuseMap", 0);
     pointColorShader_->use();
     pointColorShader_->setInt("diffuseMap", 0);
-    // material_.setUniforms(*shader_);
     blurShader_->use();
     blurShader_->setInt("image", 0);
     /* deferred lighting */
@@ -936,6 +933,7 @@ void Scene::renderGeometryPass() {
     renderModels(*gbufferModelShader_);
 
     /* Transparent window's fisical frame */
+    /* 窓枠 */
     gbufferWindowShader_->use();
     windowMaterial_.applyToShader(*gbufferWindowShader_);
     renderWindow(*gbufferWindowShader_);

@@ -23,7 +23,7 @@ class Window {
      * @param title タイトルバーの文字列。
      */
     Window(int width, int height, const std::string &title);
-    ~Window(); // glfwTerminal関数を呼び出す
+    ~Window();
 
     bool ShouldClose() const;
     void SwapBuffers();

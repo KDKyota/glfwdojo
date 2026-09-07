@@ -21,7 +21,6 @@ enum class CameraMode {
     ThirdPerson, // 注視点のまわりを周回する追従カメラ
 };
 
-// default camera values
 namespace CameraDefaults {
 constexpr float YAW = -90.0f;
 constexpr float PITCH = 0.0f;
@@ -62,7 +61,6 @@ class Camera {
     float orbitPitch_ = 0.0f;
     glm::vec3 smoothedPivot_ = glm::vec3(0.0f); // カメラが周回する中心点
 
-    // camera position
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
@@ -77,7 +75,6 @@ class Camera {
     float CurrentPitch() const;
 
   public:
-    // constructor with vectors
     Camera();
 
     /**
@@ -97,13 +94,8 @@ class Camera {
 
     const float &GetZoomValue() const;
 
-    // process input recievedc from any keyborad-like input system.
     void ProcessKeyboard(Camera_Movement direction, float deltaTime);
-
-    // process input recieved from a mouse input system.
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
-
-    // processes input recieved from a mouse scroll-wheel event.
     void ProcessMouseScroll(float yoffset);
 
     /* ---- 三人称モード ---- */

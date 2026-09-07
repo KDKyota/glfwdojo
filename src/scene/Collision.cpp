@@ -12,26 +12,22 @@ constexpr float kCenterEpsilonSq = 1e-8f;
 constexpr float kSkinWidth = 0.02f;
 
 /// XZ 平面での押し出し量を求める 重なっていなければ false
-bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::vec2 &push) { // ここでいう push とは押し出しベクトル
+bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::vec2 &push) {
     // 注意: 判定と押し出し量で違う半径を使うと壁際で震える
     const float skinRadius = radius + kSkinWidth;
-    // 矩形に関して，円に最も近い点を見つける
+    // 矩形上で円中心に最も近い点と、そこから中心へ向かうベクトル
     const float closestX = std::clamp(center.x, box.min.x, box.max.x);
     const float closestZ = std::clamp(center.z, box.min.z, box.max.z);
     const glm::vec2 offset(center.x - closestX, center.z - closestZ); // 矩形上の最近接点から円の中心へ向かうベクトル
     const float distanceSq = glm::dot(offset, offset);                // 距離の二乗
-
-    /**
-     * ここまでで center.x が既に[box.min.x, box.max.x]の範囲内にあれば
-     * clamp は何もクランプせずに closestX = center.x をそのまま返す
-     * そうなると offset = (0, 0) のゼロベクトルになる
-     * そうなると distanceSq もほぼ 0 になる
-     */
+    const glm::vec2 offset(center.x - closestX, center.z - closestZ);
+    const float distanceSq = glm::dot(offset, offset);
 
     if (distanceSq > skinRadius * skinRadius)
         return false;
 
-    if (distanceSq > kCenterEpsilonSq) { // 中心が矩形の外側にある（ふつうはこの条件分岐を踏む）
+    // distanceSq がほぼ 0 なら中心が矩形の内側にある（offset がゼロベクトルになる）
+    if (distanceSq > kCenterEpsilonSq) {
         const float distance = std::sqrt(distanceSq);
         push = offset / distance * (skinRadius - distance);
         return true;

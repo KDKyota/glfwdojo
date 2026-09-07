@@ -115,7 +115,6 @@ class Scene {
     void initGBuffer();
     void initSsao();
     void initIbl();
-    unsigned int loadTexture(const char *path, bool hasAlpha);
     void initUBO();
 
     // Render() から順に呼ばれるパス FBO とテクスチャで繋がっているので順序に意味がある
@@ -193,7 +192,6 @@ class Scene {
     gl::PbrMaterial glassMaterial_;
 
     /* Shaders */
-    std::unique_ptr<gl::Shader> cubeShader_;
     std::unique_ptr<gl::Shader> transparentWindowShader_;
     std::unique_ptr<gl::Shader> lightCubeShader_;
     std::unique_ptr<gl::Shader> screenShader_;
@@ -262,13 +260,13 @@ class Scene {
     static constexpr unsigned int kPrefilterMipLevels = 5;
     static constexpr unsigned int kBrdfLutSize = 512;
     gl::TextureHandle prefilterMap_;
-    gl::TextureHandle brdfLUT_;
+    gl::TextureHandle brdfLut_;
     gl::FramebufferHandle captureFBO_;
     gl::RenderbufferHandle captureRBO_;
     std::unique_ptr<gl::Shader> equirectToCubemapShader_;
     std::unique_ptr<gl::Shader> irradianceShader_;
     std::unique_ptr<gl::Shader> prefilterShader_;
-    std::unique_ptr<gl::Shader> brdfLUTShader_;
+    std::unique_ptr<gl::Shader> brdfLutShader_;
 
     /* ==== UI から実行時に変更する設定（毎フレーム送る） ==== */
     // 対応表は main.cpp の kDebugModes

@@ -3,7 +3,7 @@
 
 // bool を並べると flip と取り違えるため enum にしている
 /**
- * @brief ピクセル値が sRGB エンコードされているか、リニアなデータかを表す。
+ * @brief ピクセル値が sRGB エンコードされているか リニアなデータかを表す
  */
 enum class ColorSpace {
     Linear,
@@ -11,7 +11,7 @@ enum class ColorSpace {
 };
 
 /**
- * @brief 画像を読み込み、2D テクスチャとして GPU へアップロードするクラス。
+ * @brief 画像を読み込み 2D テクスチャとして GPU へアップロードするクラス
  */
 class Texture {
   private:
@@ -21,13 +21,13 @@ class Texture {
     bool flip_;
     ColorSpace colorSpace_;
 
-    // stbi が返したピクセル列を GL へ送る。ファイル版とメモリ版で共通
+    // stbi が返したピクセル列を GL へ送る ファイル版とメモリ版で共通
     void uploadPixels(unsigned char *pixels, int width, int height, int channels);
 
   public:
-    // colorSpace にデフォルト値を持たせないのは、色かデータかを呼び出し側に必ず選ばせるため
+    // colorSpace にデフォルト値を持たせないのは 色かデータかを呼び出し側に必ず選ばせるため
     Texture(const char *path, const bool flip, const ColorSpace colorSpace);
-    // glb の埋め込みテクスチャ用。data はメモリ上の圧縮画像、key はファイルとして存在しない識別子
+    // glb の埋め込みテクスチャ用 data はメモリ上の圧縮画像 key はファイルとして存在しない識別子
     Texture(const std::string &key, const unsigned char *data, int byteSize, const bool flip,
             const ColorSpace colorSpace);
     ~Texture();

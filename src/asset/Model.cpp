@@ -11,7 +11,7 @@
 
 namespace {
 
-// aiMatrix4x4 は行優先、glm::mat4 は列優先なので転置しながら詰め替える
+// aiMatrix4x4 は行優先 glm::mat4 は列優先なので転置しながら詰め替える
 glm::mat4 toGlm(const aiMatrix4x4 &m) {
     return glm::mat4(m.a1, m.b1, m.c1, m.d1,
                      m.a2, m.b2, m.c2, m.d2,
@@ -19,7 +19,7 @@ glm::mat4 toGlm(const aiMatrix4x4 &m) {
                      m.a4, m.b4, m.c4, m.d4);
 }
 
-/// 空いているボーンスロットへ影響を1件追加する。
+/// 空いているボーンスロットへ影響を1件追加する
 void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
     if (weight <= 0.0f) {
         return;
@@ -31,7 +31,7 @@ void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
             return;
         }
     }
-    // aiProcess_LimitBoneWeights で 4 本へ切り詰めているので、あふれてここへ来ることはない
+    // aiProcess_LimitBoneWeights で 4 本へ切り詰めているので あふれてここへ来ることはない
 }
 
 // time をはさむ前側のキーの添え字とその区間内での補間率を返す
@@ -49,7 +49,7 @@ std::pair<size_t, float> findSegment(const std::vector<AnimationKey<T>> &keys, f
 // アニメーションによる位置とスケールの補完
 glm::vec3 sampleVec3(const std::vector<AnimationKey<glm::vec3>> &keys, float time, const glm::vec3 &fallback) {
     if (keys.empty()) return fallback;
-    // 最初のキーは 0 tick とは限らないので、範囲外は端の値で固定
+    // 最初のキーは 0 tick とは限らないので 範囲外は端の値で固定
     if (time <= keys.front().time) return keys.front().value;
     if (time >= keys.back().time) return keys.back().value;
     const auto [index, factor] = findSegment(keys, time);
@@ -104,14 +104,14 @@ void Model::loadModel(const std::string &path) {
     if (!boneMatrices_.empty()) {
         boneUBO_.create();
         glBindBuffer(GL_UNIFORM_BUFFER, boneUBO_);
-        // シェーダーの配列長は MAX_BONES 固定なので、実際のボーン数に関わらず枠ぶん確保する
+        // シェーダーの配列長は MAX_BONES 固定なので 実際のボーン数に関わらず枠ぶん確保する
         glBufferData(GL_UNIFORM_BUFFER, kMaxBones * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
         uploadBoneMatrices();
     }
 }
 
-/// バインドポーズの AABB をノード階層をたどって求める。
+/// バインドポーズの AABB をノード階層をたどって求める
 void Model::accumulateBounds(const ModelNode &node, const glm::mat4 &parentTransform) {
     const glm::mat4 worldTransform = parentTransform * node.localTransform;
 
@@ -135,15 +135,15 @@ void Model::accumulateBounds(const ModelNode &node, const glm::mat4 &parentTrans
         accumulateBounds(child, worldTransform);
 }
 
-/// boneMatrices_ を UBO へ書き込む。
+/// boneMatrices_ を UBO へ書き込む
 void Model::uploadBoneMatrices() {
     glBindBuffer(GL_UNIFORM_BUFFER, boneUBO_);
-    // std140 の mat4 配列は 64 バイト刻みで、glm::mat4 の並びとそのまま一致する
+    // std140 の mat4 配列は 64 バイト刻みで glm::mat4 の並びとそのまま一致する
     glBufferSubData(GL_UNIFORM_BUFFER, 0, boneMatrices_.size() * sizeof(glm::mat4), boneMatrices_.data());
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-/// aiNode を ModelNode へ変換し、子ノードを再帰的に処理する。
+/// aiNode を ModelNode へ変換し 子ノードを再帰的に処理する
 ModelNode Model::processNode(const aiNode *node, const aiScene *scene) {
     ModelNode result;
     result.name = node->mName.C_Str();
@@ -168,7 +168,7 @@ ModelNode Model::processNode(const aiNode *node, const aiScene *scene) {
     return result;
 }
 
-/// aiMesh から頂点・インデックス・マテリアルを組み立て、Mesh を作る。
+/// aiMesh から頂点・インデックス・マテリアルを組み立て Mesh を作る
 Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     std::vector<gl::Vertex> vertices;
     vertices.reserve(mesh->mNumVertices);
@@ -185,7 +185,7 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
         } else {
             vertex.uv = glm::vec2(0.0f, 0.0f);
         }
-        // UV を持たないメッシュでは CalcTangentSpace が接空間を作れず、零ベクトルのままになる
+        // UV を持たないメッシュでは CalcTangentSpace が接空間を作れず 零ベクトルのままになる
         if (mesh->HasTangentsAndBitangents()) {
             vertex.tangent = {mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z};
             vertex.bitangent = {mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z};
@@ -207,13 +207,13 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     return Mesh(std::move(vertices), std::move(indices), std::move(material), mesh->mNumBones > 0);
 }
 
-/// ボーン情報を集め、各頂点にボーンの影響を書き込む。
+/// ボーン情報を集め 各頂点にボーンの影響を書き込む
 void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
     for (unsigned int i = 0; i < mesh->mNumBones; ++i) {
         const aiBone *bone = mesh->mBones[i];
         const std::string name = bone->mName.C_Str();
 
-        // 同じボーンが複数のメッシュに現れるので、モデル全体で通し番号を振る
+        // 同じボーンが複数のメッシュに現れるので モデル全体で通し番号を振る
         const auto inserted = bones_.try_emplace(name);
         BoneInfo &info = inserted.first->second;
         if (inserted.second) {
@@ -231,7 +231,7 @@ void Model::loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices) {
     }
 }
 
-/// aiMaterial から PBR テクスチャと factor を読み取る。
+/// aiMaterial から PBR テクスチャと factor を読み取る
 gl::PbrMaterial Model::loadMaterial(const aiMaterial *mat, const aiScene *scene) {
     gl::PbrMaterial material;
 
@@ -241,7 +241,7 @@ gl::PbrMaterial Model::loadMaterial(const aiMaterial *mat, const aiScene *scene)
         material.baseColorMap = loadTexture(mat, aiTextureType_DIFFUSE, ColorSpace::SRGB, scene);
     }
 
-    // metallic と roughness は同じ1枚を指す。Assimp の版によってどの型で返るかが違う
+    // metallic と roughness は同じ1枚を指す Assimp の版によってどの型で返るかが違う
     material.metallicRoughnessMap = loadTexture(mat, aiTextureType_GLTF_METALLIC_ROUGHNESS, ColorSpace::Linear, scene);
     if (!material.metallicRoughnessMap) {
         material.metallicRoughnessMap = loadTexture(mat, aiTextureType_METALNESS, ColorSpace::Linear, scene);
@@ -282,7 +282,7 @@ gl::PbrMaterial Model::loadMaterial(const aiMaterial *mat, const aiScene *scene)
     return material;
 }
 
-/// type のテクスチャを TextureCache 経由でロードする。無ければ nullptr。
+/// type のテクスチャを TextureCache 経由でロードする 無ければ nullptr
 std::shared_ptr<Texture> Model::loadTexture(const aiMaterial *mat, aiTextureType type, ColorSpace colorSpace,
                                             const aiScene *scene) {
     if (mat->GetTextureCount(type) == 0) {
@@ -292,10 +292,10 @@ std::shared_ptr<Texture> Model::loadTexture(const aiMaterial *mat, aiTextureType
     aiString reference;
     mat->GetTexture(type, 0, &reference);
 
-    // glb はテクスチャの実体がファイルではなく scene->mTextures にあり、パスは "*0" のような参照になる
+    // glb はテクスチャの実体がファイルではなく scene->mTextures にあり パスは "*0" のような参照になる
     if (const aiTexture *embedded = scene->GetEmbeddedTexture(reference.C_Str())) {
         if (embedded->mHeight != 0) {
-            // 非圧縮の生ピクセル。glb では出てこないので未対応にしておく
+            // 非圧縮の生ピクセル glb では出てこないので未対応にしておく
             std::cerr << "Unsupported uncompressed embedded texture: " << path_ << " " << reference.C_Str()
                       << std::endl;
             return nullptr;
@@ -319,12 +319,12 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
     // 第二引数はノードの親までの累積変換 -> ルートの時点では何もたどらないのでワールド配置の modelMatrix
     drawNode(root_, modelMatrix, skinnedWorldTransform, shader);
 
-    // 影パスのようにモデル以外と共有するシェーダーでは、hasBones を立てたまま抜けるとボーン属性を持たない VAO が既定値 aWeights=(0,0,0,1) を読んで finalBones[0] で変形される
+    // 影パスのようにモデル以外と共有するシェーダーでは hasBones を立てたまま抜けるとボーン属性を持たない VAO が既定値 aWeights=(0,0,0,1) を読んで finalBones[0] で変形される
     shader.setBool("hasBones", false);
 }
 
 void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {
-    // updateBoneMatrices と同じ変換を辿らないと、アニメーションするノードにぶら下がる
+    // updateBoneMatrices と同じ変換を辿らないと アニメーションするノードにぶら下がる
     // 非スキンメッシュだけがバインドポーズに取り残される
     const glm::mat4 worldTransform = parentTransform * nodeTransform(node, animationTime_);
 
@@ -340,7 +340,7 @@ void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, co
     }
 }
 
-/// aiAnimation をすべて読み込み、ノード名で引けるチャンネルにまとめる
+/// aiAnimation をすべて読み込み ノード名で引けるチャンネルにまとめる
 void Model::loadAnimations(const aiScene *scene) {
     for (unsigned int i = 0; i < scene->mNumAnimations; ++i) {
         const aiAnimation *source = scene->mAnimations[i];
@@ -363,7 +363,7 @@ void Model::loadAnimations(const aiScene *scene) {
             node.rotations.reserve(channel->mNumRotationKeys);
             for (unsigned int k = 0; k < channel->mNumRotationKeys; ++k) {
                 const aiQuatKey &key = channel->mRotationKeys[k];
-                // glm::quat の引数順は (w, x, y, z)。aiQuaternion のメンバ並びと違う
+                // glm::quat の引数順は (w, x, y, z) aiQuaternion のメンバ並びと違う
                 node.rotations.push_back({static_cast<float>(key.mTime), glm::quat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z)});
             }
 
@@ -394,13 +394,13 @@ glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
     return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
 }
 
-/// ルートには親がないので、掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
+/// ルートには親がないので 掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
 void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time) {
     const glm::mat4 globalTransform = parentTransform * nodeTransform(node, time);
     const auto found = bones_.find(node.name);
     if (found != bones_.end()) {
         const BoneInfo &info = found->second;
-        // globalInverse を掛けた分、drawNode 側でスキンメッシュに root_.localTransform を掛け直して辻褄を合わせる
+        // globalInverse を掛けた分 drawNode 側でスキンメッシュに root_.localTransform を掛け直して辻褄を合わせる
         boneMatrices_[info.index] = globalInverseTransform_ * globalTransform * info.offset;
     }
     for (const ModelNode &child : node.children)

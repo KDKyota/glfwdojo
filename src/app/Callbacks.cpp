@@ -7,15 +7,15 @@ void error_callback(int error, const char *description) {
 }
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    // UI に文字入力が来ていても必ず効かせる。掴んだカーソルから抜けられなくなるのを防ぐ
+    // UI に文字入力が来ていても必ず効かせる 掴んだカーソルから抜けられなくなるのを防ぐ
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         input->TogglePause();
         // 同じ glfwPollEvents() の中で後続のカーソル移動が届きうる
-        // ここで捨てないと、ポーズ中に動かした分がゲームプレイ復帰の1発目に乗る
+        // ここで捨てないと ポーズ中に動かした分がゲームプレイ復帰の1発目に乗る
         mouse->Reset();
     }
 
-    // 押しっぱなしで連続切り替えされないよう、processInput ではなくこちらで拾う
+    // 押しっぱなしで連続切り替えされないよう processInput ではなくこちらで拾う
     if (key == GLFW_KEY_F && action == GLFW_PRESS && input->IsGameplay())
         camera->ToggleMode();
 }
@@ -25,7 +25,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
 }
 
 void window_focus_callback(GLFWwindow *window, int focused) {
-    // 裏に回ってもカーソルを掴んだままだと、他のウィンドウを操作できなくなる
+    // 裏に回ってもカーソルを掴んだままだと 他のウィンドウを操作できなくなる
     if (!focused)
         input->SetMode(InputMode::Paused);
 }

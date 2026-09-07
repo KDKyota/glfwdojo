@@ -66,7 +66,7 @@ void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severi
 void gl::EnableDebugOutput() {
     GLint flags = 0;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-    // Release では debug context を要求していないので、ここで抜けるのが既定の動作
+    // Release では debug context を要求していないので ここで抜けるのが既定の動作
     if (!(flags & GL_CONTEXT_FLAG_DEBUG_BIT))
         return;
 
@@ -76,10 +76,10 @@ void gl::EnableDebugOutput() {
     glDebugMessageCallback(debugCallback, nullptr);
 
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-    // ドライバが大量に出すため、切らないとログが実用にならない
+    // ドライバが大量に出すため 切らないとログが実用にならない
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
 
-    // NVIDIA が LOW で出す「確保しました」系の報告。性能警告(131218)は残すので個別に指定する
+    // NVIDIA が LOW で出す「確保しました」系の報告 性能警告(131218)は残すので個別に指定する
     const GLuint noisyIds[] = {131169, 131185, 131204};
     glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_OTHER, GL_DONT_CARE,
                           static_cast<GLsizei>(std::size(noisyIds)), noisyIds, GL_FALSE);

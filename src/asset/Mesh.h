@@ -5,7 +5,7 @@
 #include <vector>
 
 /**
- * @brief 1つの VAO/VBO/EBO と PbrMaterial を持つ、描画可能な最小単位。
+ * @brief 1つの VAO/VBO/EBO と PbrMaterial を持つ 描画可能な最小単位
  */
 class Mesh {
   private:
@@ -19,17 +19,17 @@ class Mesh {
     glm::vec3 boundsMax_{0.0f};
 
     void setupMesh();
-    /// 頂点からバインドポーズの AABB を求める。
+    /// 頂点からバインドポーズの AABB を求める
     void computeBounds();
 
   public:
     /**
-     * @brief 頂点・インデックス・マテリアルから Mesh を構築する。
+     * @brief 頂点・インデックス・マテリアルから Mesh を構築する
      *
-     * @param vertices 頂点データ。
-     * @param indices 描画順のインデックス。
-     * @param material 適用する PBR マテリアル。
-     * @param isSkinned ボーンを持つメッシュかどうか。
+     * @param vertices 頂点データ
+     * @param indices 描画順のインデックス
+     * @param material 適用する PBR マテリアル
+     * @param isSkinned ボーンを持つメッシュかどうか
      */
     Mesh(std::vector<gl::Vertex> vertices, std::vector<unsigned int> indices, gl::PbrMaterial material, bool isSkinned);
 
@@ -37,14 +37,14 @@ class Mesh {
     const glm::vec3 &BoundsMin() const { return boundsMin_; }
     const glm::vec3 &BoundsMax() const { return boundsMax_; }
 
-    // GlHandle がコピー禁止・ムーブ可なので、Mesh もそれに従う（std::vector<Mesh> で必要）
+    // GlHandle がコピー禁止・ムーブ可なので Mesh もそれに従う（std::vector<Mesh> で必要）
     Mesh(Mesh &&) noexcept = default;
     Mesh &operator=(Mesh &&) noexcept = default;
 
     /**
-     * @brief マテリアルを適用して描画する。
+     * @brief マテリアルを適用して描画する
      *
-     * @param shader 描画に使うシェーダープログラム。
+     * @param shader 描画に使うシェーダープログラム
      */
     void Draw(gl::Shader &shader) const;
 };

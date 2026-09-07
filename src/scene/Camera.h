@@ -17,14 +17,14 @@ enum class Camera_Movement {
 };
 
 enum class CameraMode {
-    FreeLook,    // 自由視点。シーンの任意の場所を見に行くデバッグ用に残してある
+    FreeLook,    // 自由視点 シーンの任意の場所を見に行くデバッグ用に残してある
     ThirdPerson, // 注視点のまわりを周回する追従カメラ
 };
 
 namespace CameraDefaults {
 constexpr float YAW = -90.0f;
 constexpr float PITCH = 0.0f;
-// メートル毎秒。人の歩行は 1.4、走りは 4.5 前後（gl::units 参照）
+// メートル毎秒 人の歩行は 1.4 走りは 4.5 前後（gl::units 参照）
 constexpr float SPEED = gl::units::freeCameraSpeed;
 constexpr float SENSITIVITY = 0.1f;
 constexpr float ZOOM = 45.0f;
@@ -41,12 +41,12 @@ constexpr float PITCH_LIMIT = 89.0f;
 } // namespace CameraDefaults
 
 /**
- * @brief View Matrix を生成するカメラ。FreeLook（自由視点）と ThirdPerson（追従）の2モードを持つ。
+ * @brief View Matrix を生成するカメラ FreeLook（自由視点）と ThirdPerson（追従）の2モードを持つ
  */
 class Camera {
   private:
     glm::vec3 Position;
-    // 姿勢はクォータニオンで保持し、Front / Right / Up はここから導出する
+    // 姿勢はクォータニオンで保持し Front / Right / Up はここから導出する
     glm::quat Orientation;
     glm::vec3 Front;
     glm::vec3 Up;
@@ -65,7 +65,7 @@ class Camera {
     float MouseSensitivity;
     float Zoom;
 
-    // 注視点の式を一本化する。Update() と ToggleMode() で食い違うと切り替え時だけ縦にずれる
+    // 注視点の式を一本化する Update() と ToggleMode() で食い違うと切り替え時だけ縦にずれる
     glm::vec3 PivotPosition() const;
 
     // Orientation から Front / Right / Up を作り直す
@@ -78,17 +78,17 @@ class Camera {
     Camera();
 
     /**
-     * @brief View Matrix を返す。
+     * @brief View Matrix を返す
      */
     glm::mat4 GetViewMatrix() const;
 
     /**
-     * @brief カメラの位置を返す。
+     * @brief カメラの位置を返す
      */
     glm::vec3 GetViewPosition() const;
 
     /**
-     * @brief カメラの視線方向を返す。
+     * @brief カメラの視線方向を返す
      */
     glm::vec3 GetViewFront() const;
 
@@ -109,9 +109,9 @@ class Camera {
     CameraMode Mode() const;
 
     /**
-     * @brief ThirdPerson モードのカメラ追従と軌道回転を更新する。
+     * @brief ThirdPerson モードのカメラ追従と軌道回転を更新する
      *
-     * @param deltaTime 前フレームからの経過時間。
+     * @param deltaTime 前フレームからの経過時間
      */
     void Update(float deltaTime);
 };

@@ -13,7 +13,7 @@
 #include "asset/Mesh.h"
 #include "gl/TextureCache.h"
 
-// スキニングはノード階層を辿って行列を合成するため、読み込み時に平坦化せず木のまま保持する
+// スキニングはノード階層を辿って行列を合成するため 読み込み時に平坦化せず木のまま保持する
 struct ModelNode {
     std::string name;
     glm::mat4 localTransform{1.0f}; // 親ノードからの相対変換
@@ -26,7 +26,7 @@ struct BoneInfo {
     glm::mat4 offset{1.0f}; // メッシュ空間からボーン空間への変換（aiBone::mOffsetMatrix）
 };
 
-/// キーフレーム1つ。時刻は現実の秒ではなくアニメーションの tick 単位
+/// キーフレーム1つ 時刻は現実の秒ではなくアニメーションの tick 単位
 template <typename T>
 struct AnimationKey {
     float time = 0.0f;
@@ -48,40 +48,40 @@ struct Animation {
     std::unordered_map<std::string, NodeAnimation> channels; // ノード名 -> キー列
 };
 
-// UBO のサイズを決め打ちするための上限。gbuffer_model.vert / point_shadow_depth.vert の MAX_BONES と一致させる
+// UBO のサイズを決め打ちするための上限 gbuffer_model.vert / point_shadow_depth.vert の MAX_BONES と一致させる
 inline constexpr int kMaxBones = 128;
-// ボーンパレット用の UBO のバインディング。0 は Scene の Matrices が使っている
+// ボーンパレット用の UBO のバインディング 0 は Scene の Matrices が使っている
 inline constexpr unsigned int kBoneUBOBinding = 1;
 
 /**
- * @brief Assimp で glTF/glb モデルを読み込み、Mesh の集合とスキニング用のボーン情報を保持する。
+ * @brief Assimp で glTF/glb モデルを読み込み Mesh の集合とスキニング用のボーン情報を保持する
  */
 class Model {
   public:
     /**
-     * @brief モデルを読み込む。
+     * @brief モデルを読み込む
      *
-     * @param path モデルファイルのパス。
-     * @param cache テクスチャの多重ロードを避けるための共有キャッシュ。
+     * @param path モデルファイルのパス
+     * @param cache テクスチャの多重ロードを避けるための共有キャッシュ
      */
     Model(const std::string &path, TextureCache &cache);
 
     /**
-     * @brief ノード階層を辿って全メッシュを描画する。
+     * @brief ノード階層を辿って全メッシュを描画する
      *
-     * @param shader 描画に使うシェーダープログラム。
-     * @param modelMatrix Local → World への変換行列。
+     * @param shader 描画に使うシェーダープログラム
+     * @param modelMatrix Local → World への変換行列
      */
     void Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const;
 
     /**
-     * @brief 再生位置を進め、ボーン行列を作り直す
+     * @brief 再生位置を進め ボーン行列を作り直す
      *
      * @param deltaTime 前フレームからの経過秒
      */
     void UpdateAnimation(float deltaTime);
 
-    /// バインドポーズでの高さを返す。
+    /// バインドポーズでの高さを返す
     float Height() const {
         return boundsMax_.y - boundsMin_.y;
     }
@@ -90,7 +90,7 @@ class Model {
 
     /* ---- ここから下はスキニングのための情報 ---- */
     const ModelNode &RootNode() const { return root_; }
-    // ルートノードの変換の逆行列。掛け忘れるとモデル全体が変な位置とスケールで出る
+    // ルートノードの変換の逆行列 掛け忘れるとモデル全体が変な位置とスケールで出る
     const glm::mat4 &GlobalInverseTransform() const { return globalInverseTransform_; }
     const std::unordered_map<std::string, BoneInfo> &Bones() const { return bones_; }
 
@@ -99,7 +99,7 @@ class Model {
     ModelNode root_;
     glm::mat4 globalInverseTransform_{1.0f};
     std::unordered_map<std::string, BoneInfo> bones_;
-    // 同じ aiMesh を複数のノードが参照しても二重に送らないための、Assimp 番号 → meshes_ 添字の対応表
+    // 同じ aiMesh を複数のノードが参照しても二重に送らないための Assimp 番号 → meshes_ 添字の対応表
     std::unordered_map<unsigned int, unsigned int> meshIndexByAiIndex_;
     std::string path_;
     std::string directory_;
@@ -114,15 +114,15 @@ class Model {
     int activeAnimation_ = -1; // 再生中のアニメーション -1 でなし
     float animationTime_ = 0.0f; // アニメーションの再生時間
 
-    /// Assimp でシーンを読み込む。
+    /// Assimp でシーンを読み込む
     void loadModel(const std::string &path);
-    /// aiNode を ModelNode へ変換する。
+    /// aiNode を ModelNode へ変換する
     ModelNode processNode(const aiNode *node, const aiScene *scene);
-    /// aiMesh から Mesh を組み立てる。
+    /// aiMesh から Mesh を組み立てる
     Mesh processMesh(const aiMesh *mesh, const aiScene *scene);
-    /// aiMesh のボーン情報を頂点へ書き込む。
+    /// aiMesh のボーン情報を頂点へ書き込む
     void loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices);
-    /// aiMaterial から PbrMaterial を組み立てる。
+    /// aiMaterial から PbrMaterial を組み立てる
     gl::PbrMaterial loadMaterial(const aiMaterial *mat, const aiScene *scene);
     std::shared_ptr<Texture> loadTexture(const aiMaterial *mat, aiTextureType type, ColorSpace colorSpace,
                                          const aiScene *scene);
@@ -130,18 +130,18 @@ class Model {
      * @brief ノードを描画する
      * @param [in] node 今書こうとしているノード
      * @param [in] parentTransform このノードの親までの累積変換
-     * @param [in] skinnedWorldTransform スキンメッシュに使うワールド変換（modelMatrix * root_.localTransform、全ノード共通）
+     * @param [in] skinnedWorldTransform スキンメッシュに使うワールド変換（modelMatrix * root_.localTransform 全ノード共通）
      * @param [in] shader 描画に使うシェーダ
      */
     void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const;
-    /// boneMatrices_ を UBO へ書き込む。
+    /// boneMatrices_ を UBO へ書き込む
     void uploadBoneMatrices();
-    /// バインドポーズの AABB をノード階層をたどって求める。
+    /// バインドポーズの AABB をノード階層をたどって求める
     void accumulateBounds(const ModelNode &node, const glm::mat4 &parentTransform);
     /// aiAnimation をすべて読み込む
     void loadAnimations(const aiScene *scene);
-    /// チャンネルがあれば時刻 time のローカル変換を作り、なければバインドポーズを返す
+    /// チャンネルがあれば時刻 time のローカル変換を作り なければバインドポーズを返す
     glm::mat4 nodeTransform(const ModelNode &node, float time) const;
-    /// ノード階層をたどり、各ボーンの最終変換行列を計算する
+    /// ノード階層をたどり 各ボーンの最終変換行列を計算する
     void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time);
 };

@@ -7,11 +7,11 @@
 
 namespace gl {
 /**
- * @brief glTF の Metallic-Roughness ワークフローに基づく PBR マテリアル。
+ * @brief glTF の Metallic-Roughness ワークフローに基づく PBR マテリアル
  */
 struct PbrMaterial {
     float metallic = 0.0f;
-    // 0.0 だと GGX の分布が発散するので、UI 側でも 0 まで下げないこと
+    // 0.0 だと GGX の分布が発散するので UI 側でも 0 まで下げないこと
     float roughness = 0.5f;
 
     /* ---- glTF のマテリアル テクスチャを持たないマテリアルでは factor だけが効く ---- */
@@ -25,9 +25,9 @@ struct PbrMaterial {
     std::shared_ptr<Texture> emissiveMap;
 
     /**
-     * @brief metallic/roughness のスカラー値のみを送る。
+     * @brief metallic/roughness のスカラー値のみを送る
      *
-     * テクスチャを持たないマテリアル用。
+     * テクスチャを持たないマテリアル用
      */
     void applyToShader(const Shader &shader) const {
         shader.setFloat("metallic", metallic);
@@ -35,9 +35,9 @@ struct PbrMaterial {
     }
 
     /**
-     * @brief テクスチャマップと factor をすべて送る。
+     * @brief テクスチャマップと factor をすべて送る
      *
-     * テクスチャを持つマテリアル専用。
+     * テクスチャを持つマテリアル専用
      */
     void bindMaps(const Shader &shader) const {
         shader.setVec3("baseColorFactor", baseColorFactor);
@@ -50,7 +50,7 @@ struct PbrMaterial {
     }
 
   private:
-    // map が無ければ hasXxxMap フラグだけ送り、シェーダー側で factor にフォールバックさせる。
+    // map が無ければ hasXxxMap フラグだけ送り シェーダー側で factor にフォールバックさせる
     static void bindMap(const Shader &shader, const std::shared_ptr<Texture> &map, const char *sampler,
                         const char *presenceFlag, unsigned int unit) {
         shader.setBool(presenceFlag, static_cast<bool>(map));

@@ -1,4 +1,4 @@
-// デバッグ用の単色塗り。ライティングもトーンマッピングも通さない。
+// デバッグ用の単色塗り ライティングもトーンマッピングも通さない
 #version 460 core
 out vec4 FragColor;
 layout(location = 1) out vec4 BrightColor;

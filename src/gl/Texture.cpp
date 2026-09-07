@@ -57,7 +57,6 @@ Texture::~Texture() {
     }
 }
 
-// ムーブコントラクタ
 Texture::Texture(Texture &&other) noexcept
     : id_(other.id_), path_(std::move(other.path_)), flip_(other.flip_), colorSpace_(other.colorSpace_) {
     other.id_ = 0;
@@ -65,8 +64,7 @@ Texture::Texture(Texture &&other) noexcept
 
 Texture &Texture::operator=(Texture &&other) noexcept {
     if (this != &other) {
-        glDeleteTextures(1, &id_); // 自身が持っているリソースをまずは解放
-        // その後値をコピー
+        glDeleteTextures(1, &id_);
         id_ = other.id_;
         path_ = std::move(other.path_);
         flip_ = other.flip_;

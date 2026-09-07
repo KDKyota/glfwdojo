@@ -7,7 +7,7 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kInputEpsilon = 1e-4f; // 0 より大きいけど十分に小さい数
 
-/// 角度差を -π〜π に作り直す（170° と -190° は同じ角度なのでそろえるための関数）
+/// 角度を -π〜π の範囲へ正規化する。
 float wrapAngle(float radians) {
     while (radians > kPi)
         radians -= 2.0f * kPi;
@@ -27,7 +27,7 @@ void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float
     if (!isMoving_)
         return;
 
-    // 注意: foward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
+    // 注意: forward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
     const glm::vec3 forward = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
     const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
 
@@ -43,7 +43,7 @@ void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float
 
 void Character::turnTowards(const glm::vec3 &direction, float deltaTime) {
     const float targetYaw = std::atan2(direction.x, direction.z);
-    // 注意: ここで差を折り返さないと 180 度付近で逆回りするゾ！
+    // 注意: ここで差を折り返さないと 180 度付近で逆回りする
     const float delta = wrapAngle(targetYaw - yaw_);
     const float blend = 1.0f - std::exp(-CharacterDefaults::TURN_STIFFNESS * deltaTime);
     yaw_ = wrapAngle(yaw_ + delta * blend);

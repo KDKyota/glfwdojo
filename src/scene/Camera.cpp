@@ -132,12 +132,9 @@ void Camera::ToggleMode() {
     // 追従先が無いまま切り替えると、移動もできず注視点も無い状態で固まる
     if (!hasFollowTarget_) return;
 
-    // 現在の視線を軌道角へ引き継ぐ
-    // こうしないと切り替えた瞬間に画面が飛ぶぞ！（長州力風）
+    // 現在の視線を軌道角へ引き継ぐ。合わせないと切り替えた瞬間に画面が飛ぶ
     orbitYaw_ = std::atan2(-Front.x, -Front.z);
     orbitPitch_ = std::asin(glm::clamp(Front.y, -1.0f, 1.0f));
-    // 補完の初期化
-    // 合わせておかないとおかしな挙動になる
     smoothedPivot_ = PivotPosition();
 
     mode_ = CameraMode::ThirdPerson;

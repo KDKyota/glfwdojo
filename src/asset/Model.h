@@ -99,8 +99,8 @@ class Model {
     ModelNode root_;
     glm::mat4 globalInverseTransform_{1.0f};
     std::unordered_map<std::string, BoneInfo> bones_;
-    // 同じ aiMesh を複数のノードが参照していても二重に GPU へ送らないための対応表
-    std::unordered_map<unsigned int, unsigned int> meshIndexByAiIndex_; // map の一つ目のint が　Assimp の番号 二つ目が meshes_ の添え字
+    // 同じ aiMesh を複数のノードが参照しても二重に送らないための、Assimp 番号 → meshes_ 添字の対応表
+    std::unordered_map<unsigned int, unsigned int> meshIndexByAiIndex_;
     std::string path_;
     std::string directory_;
     TextureCache &cache_;

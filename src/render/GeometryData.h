@@ -8,22 +8,21 @@
 
 namespace gl {
 struct Vertex {
-    glm::vec3 position;                           // 頂点座標(x, y, z)
-    glm::vec3 normal;                             // 法線ベクトル(x, y, z)
-    glm::vec2 uv;                                 // テクスチャ座標(x, y)
-    glm::vec3 tangent;                            // 接線ベクトル(x, y, z)
-    glm::vec3 bitangent;                          // 従法線ベクトル(x, y, z)
-    int m_BoneIDs[MAX_BONE_INFLUENCE] = {0};      // ボーンID
-    float m_Weights[MAX_BONE_INFLUENCE] = {0.0f}; // ボーンの重み
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 uv;
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
+    int m_BoneIDs[MAX_BONE_INFLUENCE] = {0};
+    float m_Weights[MAX_BONE_INFLUENCE] = {0.0f};
 };
 
-// 透過色入りのテクスチャ用
 /**
  * @brief 透明オブジェクトを奥から手前へ描くための、カメラ距離によるソート用情報。
  */
 struct TransparentDraw {
     float distance;
-    unsigned int index; // 透過オブジェクトに一意につく番号
+    unsigned int index;
 };
 
 inline const std::vector<glm::vec3> cubePositions = {
@@ -82,7 +81,8 @@ inline const std::vector<glm::vec3> skyboxVertices{
     glm::vec3(-1.0f, -1.0f, 1.0f),
     glm::vec3(1.0f, -1.0f, 1.0f)};
 
-inline const float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+// NDC 全面を覆うクアッド
+inline const float quadVertices[] = {
     // positions   // texCoords
     -1.0f, 1.0f, 0.0f, 1.0f,
     -1.0f, -1.0f, 0.0f, 0.0f,
@@ -200,7 +200,6 @@ inline const std::array<Vertex, 4> rawtransparentVertices =
 
 inline const std::array<unsigned int, 6> transparentIndices = {0, 1, 2, 2, 3, 0};
 
-// 3頂点の座標(v0, v1, v2)から法線ベクトルを計算する関数
 glm::vec3 calcNormal(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 
 /**
@@ -212,9 +211,8 @@ glm::vec3 calcNormal(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &
 std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec2 &uv0, const glm::vec2 uv1, const glm::vec2 uv2);
 
 // 「1面 = 4頂点」の並びを前提に、面ごとに法線を計算して4頂点へ割り当てる
-template <std::size_t N> // Nは頂点数（インデックス数）
+template <std::size_t N>
 std::array<Vertex, N> calculateFaceNormals(std::array<Vertex, N> vertices) {
-    // Nが4の倍数であることをコンパイル時にチェック(falseならエラー)
     static_assert(N % 4 == 0, "calculateFaceNormals expects 4 vertices per face");
 
     for (std::size_t i = 0; i < N; i += 4) {
@@ -233,7 +231,6 @@ std::array<Vertex, N> calculateFaceNormals(std::array<Vertex, N> vertices) {
 }
 
 template <std::size_t N>
-// TangentとBitangentを計算する関数
 std::array<Vertex, N> calculateTangentBitangent(std::array<Vertex, N> vertices) {
     static_assert(N % 4 == 0, "calculateTangentBitangent expects 4 vertices per face");
 

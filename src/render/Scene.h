@@ -153,10 +153,9 @@ class Scene {
     static constexpr unsigned int SHADOW_WIDTH = 1024,
                                   SHADOW_HEIGHT = 1024; // depthCubemap_ 各面の解像度
     int scrWidth_, scrHeight_;
-    // 1.0 だと光源から1m以内の物体が影を落とさなくなる。深度は実距離を farPlane で割って
-    // 書くので、near を小さくしても精度は落ちない
+    // 深度は実距離を farPlane で正規化して書くので、near を小さくしても精度は落ちない
     static constexpr float shadowNearPlane_ = 0.1f;
-    static constexpr float shadowFarPlane_ = 50.0f; // 光源視点の投影のfar plane。シェーダー側の farPlane uniform
+    static constexpr float shadowFarPlane_ = 50.0f; // シェーダー側の farPlane uniform と一致させる
 
     /* メッシュのVAO / VBO / EBO */
     gl::VertexArrayHandle cubeVAO_, planeVAO_, transparentVAO_, quadVAO_, skyboxVAO_, wallVAO_;
@@ -197,16 +196,13 @@ class Scene {
     std::unique_ptr<gl::Shader> cubeShader_;
     std::unique_ptr<gl::Shader> transparentwindowShader_;
     std::unique_ptr<gl::Shader> lightcubeShader_;
-    // std::unique_ptr<gl::Shader> shaderSingleColor_;
     std::unique_ptr<gl::Shader> screenshader_;
-    // std::unique_ptr<gl::Shader> glasscubeShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
     gl::GpuProfiler profiler_;
 
-    // frameArena_ 用の見積もり
-    // 用途を増やしたら内訳をここに1行足すこと！
+    // frameArena_ の見積もり。用途を増やしたら内訳を1行足すこと
     //  updateTransparentInstances(): TransparentDraw × 窓の上限数
-    static constexpr std::size_t kMaxTransparentWindows = 8; // 現在は6枚だが、増減の余地を見て少し余裕を持たせる
+    static constexpr std::size_t kMaxTransparentWindows = 8; // 現在6枚。増減の余地を見て余裕を持たせる
     static constexpr std::size_t kFrameArenaBytes = sizeof(gl::TransparentDraw) * kMaxTransparentWindows;
 
     // 寿命が1フレームのデータ用。汎用アロケータの毎フレーム確保/解放を避ける
@@ -218,7 +214,7 @@ class Scene {
     // 操作対象のモデル 読み込めていなければ -1
     int playerModelIndex_ = -1;
     // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う
-    glm::mat4 playerBaseTransform_{1.0f}; // モデル行列は通常 T・R_yaw・R・S 最後の二つは最初から変わらないので一つにする
+    glm::mat4 playerBaseTransform_{1.0f}; // yaw 以外の回転とスケールを畳んだ行列
     // models_ と添字が一対一で対応する。読み込みに失敗したモデルは両方に積まれない
     std::vector<glm::mat4> modelMatrices_; // 描画用のモデルのデータ（どこにどの向きで描くか）
     std::shared_ptr<Camera> camera_;
@@ -240,9 +236,6 @@ class Scene {
     std::unique_ptr<gl::Shader> gbufferCubeShader_;
     std::unique_ptr<gl::Shader> gbufferModelShader_;
     std::unique_ptr<gl::Shader> deferredLightingShader_;
-
-    // gl::DirectionalLight directionalLight_;
-    // gl::SpotLight spotlight_;
 
     /* Textures */
     std::shared_ptr<Texture> cubeTexture_;
@@ -309,7 +302,7 @@ class Scene {
     float heightScale_ = 0.0f;
     float exposure_ = 2.0f; // HDR 値自体は変えないので Bloom の閾値や AO のコントラストに影響しない
 
-    int viewLoc_ = -1; // viewのローケーション番号(初期値-1)
+    int viewLoc_ = -1; // view uniform のロケーション
     bool blurEnable_ = true;
     bool horizontal_ = true;
     std::vector<glm::vec3> transparent_positions_; // 透過オブジェクトのモデル行列を格納する配列

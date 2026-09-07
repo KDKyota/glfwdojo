@@ -1,7 +1,7 @@
-// 透過窓のガラス部分を前方描画するシェーダー。
-// 窓枠は gbuffer_window.frag が Deferred 側で描くので、ここでは alpha >= 0.5 を discard する。
+// 透過窓のガラス部分を前方描画するシェーダー
+// 窓枠は gbuffer_window.frag が Deferred 側で描くので ここでは alpha >= 0.5 を discard する
 //
-// サンプラー配列をループ変数で添字するため 4.60 が必要。330 以前は定数式のみ許され、
+// サンプラー配列をループ変数で添字するため 4.60 が必要 330 以前は定数式のみ許され
 // Mesa などではコンパイルエラーになる（NVIDIA/AMD は黙って通してしまう）
 #version 460 core
 
@@ -14,7 +14,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 
-uniform sampler2D texture1;
+uniform sampler2D diffuseMap;
 
 // ミップの各レベルが roughness に対応する鏡面反射用の環境光
 uniform samplerCube prefilterMap;
@@ -30,21 +30,21 @@ uniform float metallic;
 uniform float roughness;
 
 void main() {
-    // 板ポリなので裏面が実際に見える。反転しないと裏から見たとき直接光が 0 になる
+    // 板ポリなので裏面が実際に見える 反転しないと裏から見たとき直接光が 0 になる
     vec3 normal = normalize(Normal);
     if (!gl_FrontFacing)
         normal = -normal;
 
     vec3 viewDir = normalize(viewPos - FragPos);
 
-    vec4 texColor = texture(texture1, TexCoords);
+    vec4 texColor = texture(diffuseMap, TexCoords);
     // transparent windowのガラス部分だけをレンダリングする
     if (texColor.a >= 0.5 || texColor.a < 0.01)
         discard;
 
     const vec3 F0 = vec3(0.04);
     float NdotV = max(dot(normal, viewDir), 0.0);
-    // 面全体として何割を反射に回すか。透過パスの (1.0 - fresnel) と対になっている
+    // 面全体として何割を反射に回すか 透過パスの (1.0 - fresnel) と対になっている
     vec3 fresnel = fresnelSchlick(NdotV, F0);
 
     if (reflectionPass) // 反射(足し算)
@@ -60,15 +60,15 @@ void main() {
                                                    vec3(0.0), roughness, metallic, F0, shadow);
         }
 
-        // 環境の映り込み。反射に回したエネルギーの行き先はここ
+        // 環境の映り込み 反射に回したエネルギーの行き先はここ
         vec3 kS = fresnelSchlickRoughness(NdotV, F0, roughness);
         vec3 R = reflect(-viewDir, normal);
         vec3 prefiltered = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, roughness)).rg;
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y);
 
-        // BRDF 内の fresnelSchlick が既にフレネルを含むので、ここでは掛けない
-        // 直接光は素通し、環境の映り込みだけ Deferred 側と同じ係数で揃える
+        // BRDF 内の fresnelSchlick が既にフレネルを含むので ここでは掛けない
+        // 直接光は素通し 環境の映り込みだけ Deferred 側と同じ係数で揃える
         vec3 result = reflected + specularIBL * ambientStrength;
 
         float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));

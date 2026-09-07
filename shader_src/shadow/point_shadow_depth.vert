@@ -1,11 +1,11 @@
-// Point Light 用シャドウマップの深度パス。ワールド座標のまま geometry shader へ渡す。
+// Point Light 用シャドウマップの深度パス ワールド座標のまま geometry shader へ渡す
 #version 460 core
 layout(location = 0) in vec3 aPos;
 layout(location = 2) in vec2 aTexCoords;
-// 有効化していないVAOでは既定値 (0,0,0) が読まれて無効化される。この依存は意図的
+// 有効化していないVAOでは既定値 (0,0,0) が読まれて無効化される この依存は意図的
 layout(location = 5) in vec3 aOffset;
 // スキン 3D モデル用
-layout(location = 6) in ivec4 aBoneIDs;
+layout(location = 6) in ivec4 aBoneIds;
 layout(location = 7) in vec4 aWeights;
 
 const int MAX_BONES = 128; // Model.h の kMaxBones と一致させる
@@ -27,7 +27,7 @@ void main()
         mat4 skin = mat4(0.0);
         float totalWeight = 0.0;
         for (int i = 0; i < 4; ++i) {
-            skin += finalBones[aBoneIDs[i]] * aWeights[i];
+            skin += finalBones[aBoneIds[i]] * aWeights[i];
             totalWeight += aWeights[i];
         }
         if (totalWeight < 1e-5)

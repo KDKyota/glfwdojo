@@ -1,4 +1,4 @@
-// 窓の「枠」だけを G-Buffer に書くシェーダー。ガラス部分は discard して glass.frag に任せる。
+// 窓の「枠」だけを G-Buffer に書くシェーダー ガラス部分は discard して glass.frag に任せる
 #version 460 core
 
 layout(location = 0) out vec3 gPosition;

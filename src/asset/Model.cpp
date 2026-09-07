@@ -24,10 +24,10 @@ void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
     if (weight <= 0.0f) {
         return;
     }
-    for (int i = 0; i < MAX_BONE_INFLUENCE; ++i) {
-        if (vertex.m_Weights[i] == 0.0f) {
-            vertex.m_BoneIDs[i] = boneIndex;
-            vertex.m_Weights[i] = weight;
+    for (int i = 0; i < gl::kMaxBoneInfluence; ++i) {
+        if (vertex.boneWeights[i] == 0.0f) {
+            vertex.boneIds[i] = boneIndex;
+            vertex.boneWeights[i] = weight;
             return;
         }
     }

@@ -80,4 +80,4 @@ void Texture::bind(unsigned int unit) const {
     glBindTexture(GL_TEXTURE_2D, id_);
 }
 
-unsigned int Texture::getID() const { return id_; }
+unsigned int Texture::getId() const { return id_; }

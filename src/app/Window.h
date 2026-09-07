@@ -27,7 +27,7 @@ class Window {
 
     bool ShouldClose() const;
     void SwapBuffers();
-    void PolleEvents();
+    void PollEvents();
     /**
      * @brief GLFWwindow の生ポインタを返す。
      */

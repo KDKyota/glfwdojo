@@ -53,13 +53,13 @@ void Mesh::setupMesh() {
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, bitangent));
 
     // location 5 は使わない。
-    // point_shadow_depth.vert の aOffset（インスタンス位置）がそこを読み、有効化していなければ既定値 (0,0,0) になるという依存に合わせている
+    // location 5 は使わない。point_shadow_depth.vert の aOffset がそこを読み、未有効化で既定値 (0,0,0) になる依存に合わせている
     glEnableVertexAttribArray(6);
     // 整数として渡すので I 付き。GL_INT を glVertexAttribPointer で送ると float に変換されて壊れる
-    glVertexAttribIPointer(6, MAX_BONE_INFLUENCE, GL_INT, stride, (void *)offsetof(gl::Vertex, m_BoneIDs));
+    glVertexAttribIPointer(6, gl::kMaxBoneInfluence, GL_INT, stride, (void *)offsetof(gl::Vertex, boneIds));
 
     glEnableVertexAttribArray(7);
-    glVertexAttribPointer(7, MAX_BONE_INFLUENCE, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, m_Weights));
+    glVertexAttribPointer(7, gl::kMaxBoneInfluence, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, boneWeights));
 
     glBindVertexArray(0);
 }

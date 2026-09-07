@@ -25,9 +25,9 @@ class Scene {
      * @brief シーンを初期化する。
      *
      * @param camera 描画に使うカメラ。
-     * @param srcWindow,scrHeight 画面解像度。
+     * @param scrWidth,scrHeight 画面解像度。
      */
-    Scene(std::shared_ptr<Camera> camera, int srcWindow, int scrHeight);
+    Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight);
 
     /**
      * @brief 1フレーム分の描画を行う。
@@ -113,8 +113,8 @@ class Scene {
     void updatePlayerModelMatrix();
     void initFramebuffer();
     void initGBuffer();
-    void initSSAO();
-    void initIBL();
+    void initSsao();
+    void initIbl();
     unsigned int loadTexture(const char *path, bool hasAlpha);
     void initUBO();
 
@@ -128,7 +128,7 @@ class Scene {
     /// 不透明オブジェクトを G-Buffer へ描く。
     void renderGeometryPass();
     /// SSAO を計算する。
-    void renderSSAOPass();
+    void renderSsaoPass();
     /// G-Buffer の深度をデフォルト FBO へコピーする。
     void blitGeometryDepth();
     /// Deferred Shading のライティングを合成する。
@@ -146,16 +146,16 @@ class Scene {
     void renderLightCubes();
     void renderSkybox();
     void renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted);
-    void renderWindow(gl::Shader &shader); // 窓枠用
+    void renderWindows(gl::Shader &shader);
     void renderWalls(gl::Shader &shader);
     void renderModels(gl::Shader &shader);
 
-    static constexpr unsigned int SHADOW_WIDTH = 1024,
-                                  SHADOW_HEIGHT = 1024; // depthCubemap_ 各面の解像度
+    static constexpr unsigned int kShadowWidth = 1024,
+                                  kShadowHeight = 1024; // depthCubemap_ 各面の解像度
     int scrWidth_, scrHeight_;
     // 深度は実距離を farPlane で正規化して書くので、near を小さくしても精度は落ちない
-    static constexpr float shadowNearPlane_ = 0.1f;
-    static constexpr float shadowFarPlane_ = 50.0f; // シェーダー側の farPlane uniform と一致させる
+    static constexpr float kShadowNearPlane = 0.1f;
+    static constexpr float kShadowFarPlane = 50.0f; // シェーダー側の farPlane uniform と一致させる
 
     /* メッシュのVAO / VBO / EBO */
     gl::VertexArrayHandle cubeVAO_, planeVAO_, transparentVAO_, quadVAO_, skyboxVAO_, wallVAO_;
@@ -165,12 +165,12 @@ class Scene {
     gl::BufferHandle cubeEBO_, planeEBO_, transparentEBO_, wallEBO_;
     /* フレームバッファ */
     gl::FramebufferHandle framebuffer_;
-    gl::TextureHandle textureColorbuffer_;
+    gl::TextureHandle textureColorBuffer_;
     gl::RenderbufferHandle rbo_;
     // point shadow のデプスパス専用（depthCubemap_ と shadowColorCubemap_ をアタッチ）
     std::array<gl::FramebufferHandle, 4> depthMapFBO_;
     std::array<gl::FramebufferHandle, 2> pingpongFBO_;
-    std::array<gl::TextureHandle, 2> pingpongColorbuffers_;
+    std::array<gl::TextureHandle, 2> pingpongColorBuffers_;
     gl::TextureHandle brightColorBuffer_;
 
     /* UBO */
@@ -194,9 +194,9 @@ class Scene {
 
     /* Shaders */
     std::unique_ptr<gl::Shader> cubeShader_;
-    std::unique_ptr<gl::Shader> transparentwindowShader_;
-    std::unique_ptr<gl::Shader> lightcubeShader_;
-    std::unique_ptr<gl::Shader> screenshader_;
+    std::unique_ptr<gl::Shader> transparentWindowShader_;
+    std::unique_ptr<gl::Shader> lightCubeShader_;
+    std::unique_ptr<gl::Shader> screenShader_;
     std::unique_ptr<gl::Shader> skyboxShader_;
     gl::GpuProfiler profiler_;
 
@@ -224,7 +224,7 @@ class Scene {
     std::unique_ptr<gl::Shader> wallShader_;
     std::unique_ptr<gl::Shader> blurShader_; // Bloom のぼかし（Compute）
     // blur.comp の local_size_x と一致させること
-    static constexpr unsigned int BLUR_TILE = 256;
+    static constexpr unsigned int kBlurTile = 256;
     std::unique_ptr<gl::Shader> debugLineShader_; // 衝突判定の可視化用
     gl::VertexArrayHandle debugCylinderVAO_;
     gl::BufferHandle debugCylinderVBO_;
@@ -251,16 +251,16 @@ class Scene {
     std::array<gl::TextureHandle, 4> shadowColorCubemap_;
 
     /* IBL */
-    static constexpr unsigned int ENV_CUBEMAP_SIZE = 512;
+    static constexpr unsigned int kEnvCubemapSize = 512;
     // 畳み込み後は極めて低周波なので、解像度を上げても情報が増えない
-    static constexpr unsigned int IRRADIANCE_SIZE = 32;
+    static constexpr unsigned int kIrradianceSize = 32;
     gl::TextureHandle hdrTexture_; // 正距円筒図法のまま読み込んだ元画像
     gl::TextureHandle envCubemap_; // 上を6面へ焼き直したもの。背景と IBL の共通ソース
     gl::TextureHandle irradianceMap_;
     // ミップの各レベルが roughness 0.0 / 0.25 / 0.5 / 0.75 / 1.0 に対応する
-    static constexpr unsigned int PREFILTER_SIZE = 128;
-    static constexpr unsigned int PREFILTER_MIP_LEVELS = 5;
-    static constexpr unsigned int BRDF_LUT_SIZE = 512;
+    static constexpr unsigned int kPrefilterSize = 128;
+    static constexpr unsigned int kPrefilterMipLevels = 5;
+    static constexpr unsigned int kBrdfLutSize = 512;
     gl::TextureHandle prefilterMap_;
     gl::TextureHandle brdfLUT_;
     gl::FramebufferHandle captureFBO_;
@@ -291,27 +291,22 @@ class Scene {
     std::unique_ptr<gl::Shader> ssaoShader_;
     std::unique_ptr<gl::Shader> ssaoBlurShader_;
 
-    static constexpr unsigned int SSAO_KERNEL_SIZE = 64;
-    static constexpr float SSAO_RADIUS = 0.6f; // 遮蔽を探す半径。目安は物体サイズの 0.2〜1.0 倍
-    static constexpr float SSAO_BIAS = 0.03f;  // 自己遮蔽によるアクネ対策。RADIUS に比例させる
-    static constexpr float SSAO_POWER = 2.0f;  // AO のコントラスト。実用範囲は 1.5〜3.0
+    static constexpr unsigned int kSsaoKernelSize = 64;
+    static constexpr float kSsaoRadius = 0.6f; // 遮蔽を探す半径。目安は物体サイズの 0.2〜1.0 倍
+    static constexpr float kSsaoBias = 0.03f;  // 自己遮蔽によるアクネ対策。半径に比例させる
+    static constexpr float kSsaoPower = 2.0f;  // AO のコントラスト。実用範囲は 1.5〜3.0
     float ambientStrength_ = 0.18f;            // SSAO が掛かるのはこの項だけ
     float bloomStrength_ = 1.0f;
 
-    float elapsedTime_ = 0.0f;
     float heightScale_ = 0.0f;
     float exposure_ = 2.0f; // HDR 値自体は変えないので Bloom の閾値や AO のコントラストに影響しない
 
-    int viewLoc_ = -1; // view uniform のロケーション
-    bool blurEnable_ = true;
-    bool horizontal_ = true;
-    std::vector<glm::vec3> transparent_positions_; // 透過オブジェクトのモデル行列を格納する配列
-
-    static constexpr float animationTime_ = 5.0f;
-    std::vector<glm::vec3> cubePositions_;
+    // Bloom のガウシアンブラーで縦横を交互に切り替えるフラグ
+    bool blurHorizontal_ = true;
+    std::vector<glm::vec3> transparentPositions_; // 奥から手前へ並べ替えた窓の位置
 
     /* シーン固有の配置データ */
-    const std::vector<glm::vec3> cube_pos_ = {
+    const std::vector<glm::vec3> cubePositions_ = {
         glm::vec3(-1.0f, 0.0f, -1.0f),
         glm::vec3(2.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 0.0f, 2.5f), // 近接配置（中心間 1.2 = 隙間 0.2）
@@ -349,7 +344,7 @@ class Scene {
           1.0f, 0.14f, 0.07f}}};
 
     // これは検証用なので後々消してもいい
-    const std::vector<glm::vec3> windows_pos_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
-                                                 glm::vec3(0.0f, 0.0f, 0.7f), glm::vec3(-0.3f, 0.0f, -2.3f),
-                                                 glm::vec3(0.5f, 0.0f, -0.6f), glm::vec3(-15.0f, 0.0f, -8.0f)};
+    const std::vector<glm::vec3> windowPositions_ = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
+                                                     glm::vec3(0.0f, 0.0f, 0.7f), glm::vec3(-0.3f, 0.0f, -2.3f),
+                                                     glm::vec3(0.5f, 0.0f, -0.6f), glm::vec3(-15.0f, 0.0f, -8.0f)};
 };

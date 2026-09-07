@@ -4,17 +4,19 @@
 #include <array>
 #include "core/SceneUnits.h"
 
-#define MAX_BONE_INFLUENCE 4
-
 namespace gl {
+
+// 1頂点に影響するボーンの最大数。gl::Vertex の枠と各シェーダーの配列長に一致させる
+inline constexpr int kMaxBoneInfluence = 4;
+
 struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 uv;
     glm::vec3 tangent;
     glm::vec3 bitangent;
-    int m_BoneIDs[MAX_BONE_INFLUENCE] = {0};
-    float m_Weights[MAX_BONE_INFLUENCE] = {0.0f};
+    int boneIds[kMaxBoneInfluence] = {0};
+    float boneWeights[kMaxBoneInfluence] = {0.0f};
 };
 
 /**
@@ -24,18 +26,6 @@ struct TransparentDraw {
     float distance;
     unsigned int index;
 };
-
-inline const std::vector<glm::vec3> cubePositions = {
-    glm::vec3(0.0f, 0.0f, 0.0f),
-    glm::vec3(2.0f, 5.0f, -15.0f),
-    glm::vec3(-1.5f, -2.2f, -2.5f),
-    glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3(2.4f, -0.4f, -3.5f),
-    glm::vec3(-1.7f, 3.0f, -7.5f),
-    glm::vec3(1.3f, -2.0f, -2.5f),
-    glm::vec3(1.5f, 2.0f, -2.5f),
-    glm::vec3(1.5f, 0.2f, -1.5f),
-    glm::vec3(-1.3f, 1.0f, -1.5f)};
 
 inline const std::vector<glm::vec3> skyboxVertices{
     // positions
@@ -93,7 +83,7 @@ inline const float quadVertices[] = {
     1.0f, 1.0f, 1.0f, 1.0f};
 
 // EBO 用に重複を除いた頂点配列（1面 = 4頂点 x 6面 = 24頂点）
-inline const std::array<Vertex, 24> rawVertices =
+inline const std::array<Vertex, 24> rawCubeVertices =
     {{
         // back face (z = -0.5)
         {{0.5f, 0.5f, -0.5f}, {}, {1.0f, 1.0f}},
@@ -173,24 +163,24 @@ inline const std::array<unsigned int, 36> cubeIndices =
         20, // top
 };
 
-inline constexpr float floorHalf = units::floorHalfExtent;
+inline constexpr float kFloorHalf = units::floorHalfExtent;
 // タイル1枚の実寸から繰り返し回数を導くので、床を広げてもテクセル密度は変わらない
-inline constexpr float floorUv = 2.0f * units::floorHalfExtent / units::floorTileSize;
+inline constexpr float kFloorUv = 2.0f * units::floorHalfExtent / units::floorTileSize;
 
 // EBO用に重複を除いた頂点配列(床)
-inline const std::array<Vertex, 4> rawplaneVertices =
+inline const std::array<Vertex, 4> rawPlaneVertices =
     {{
         // positions // normal vectors // texture Coords
-        {{-floorHalf, units::floorY, floorHalf}, {}, {0.0f, 0.0f}},
-        {{floorHalf, units::floorY, floorHalf}, {}, {floorUv, 0.0f}},
-        {{floorHalf, units::floorY, -floorHalf}, {}, {floorUv, floorUv}},
-        {{-floorHalf, units::floorY, -floorHalf}, {}, {0.0f, floorUv}},
+        {{-kFloorHalf, units::floorY, kFloorHalf}, {}, {0.0f, 0.0f}},
+        {{kFloorHalf, units::floorY, kFloorHalf}, {}, {kFloorUv, 0.0f}},
+        {{kFloorHalf, units::floorY, -kFloorHalf}, {}, {kFloorUv, kFloorUv}},
+        {{-kFloorHalf, units::floorY, -kFloorHalf}, {}, {0.0f, kFloorUv}},
     }};
 
 inline const std::array<unsigned int, 6> planeIndices = {0, 1, 2, 2, 3, 0};
 
 // EBO用に重複を除いた頂点配列(4頂点の四角形)
-inline const std::array<Vertex, 4> rawtransparentVertices =
+inline const std::array<Vertex, 4> rawTransparentVertices =
     {{
         {{0.0f, 0.5f, 0.0f}, {}, {0.0f, 0.0f}},
         {{0.0f, -0.5f, 0.0f}, {}, {0.0f, 1.0f}},
@@ -212,8 +202,8 @@ std::array<glm::vec3, 2> calcTangentBitangent(const glm::vec3 &v0, const glm::ve
 
 // 「1面 = 4頂点」の並びを前提に、面ごとに法線を計算して4頂点へ割り当てる
 template <std::size_t N>
-std::array<Vertex, N> calculateFaceNormals(std::array<Vertex, N> vertices) {
-    static_assert(N % 4 == 0, "calculateFaceNormals expects 4 vertices per face");
+std::array<Vertex, N> calcFaceNormals(std::array<Vertex, N> vertices) {
+    static_assert(N % 4 == 0, "calcFaceNormals expects 4 vertices per face");
 
     for (std::size_t i = 0; i < N; i += 4) {
         glm::vec3 n = calcNormal(
@@ -231,8 +221,8 @@ std::array<Vertex, N> calculateFaceNormals(std::array<Vertex, N> vertices) {
 }
 
 template <std::size_t N>
-std::array<Vertex, N> calculateTangentBitangent(std::array<Vertex, N> vertices) {
-    static_assert(N % 4 == 0, "calculateTangentBitangent expects 4 vertices per face");
+std::array<Vertex, N> calcFaceTangentBitangents(std::array<Vertex, N> vertices) {
+    static_assert(N % 4 == 0, "calcFaceTangentBitangents expects 4 vertices per face");
 
     for (std::size_t i = 0; i < N; i += 4) {
         auto [tangent, bitangent] = calcTangentBitangent(
@@ -253,25 +243,25 @@ std::array<Vertex, N> calculateTangentBitangent(std::array<Vertex, N> vertices) 
     return vertices;
 }
 
-inline const std::array<Vertex, 24> cubeVertices = calculateTangentBitangent(calculateFaceNormals(rawVertices));
-inline const std::array<Vertex, 4> planeVertices = calculateFaceNormals(rawplaneVertices);
-inline const std::array<Vertex, 4> transparentVertices = calculateFaceNormals(rawtransparentVertices);
+inline const std::array<Vertex, 24> cubeVertices = calcFaceTangentBitangents(calcFaceNormals(rawCubeVertices));
+inline const std::array<Vertex, 4> planeVertices = calcFaceNormals(rawPlaneVertices);
+inline const std::array<Vertex, 4> transparentVertices = calcFaceNormals(rawTransparentVertices);
 
-inline constexpr float wallUvU = 2.0f * units::floorHalfExtent / units::wallTileSize;
-inline constexpr float wallUvV = (units::wallTopY - units::floorY) / units::wallTileSize;
+inline constexpr float kWallUvU = 2.0f * units::floorHalfExtent / units::wallTileSize;
+inline constexpr float kWallUvV = (units::wallTopY - units::floorY) / units::wallTileSize;
 
 // 壁（z=-25 と z=+25 の2枚）。T×B = N が成立するよう解析的に設定
 inline const std::array<Vertex, 8> wallVertices = {{
     // z=-25 の壁 (法線: +z,  T: +x, B: +y)
-    {{-floorHalf, units::floorY, -floorHalf}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-    {{floorHalf, units::floorY, -floorHalf}, {0.0f, 0.0f, 1.0f}, {wallUvU, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-    {{floorHalf, units::wallTopY, -floorHalf}, {0.0f, 0.0f, 1.0f}, {wallUvU, wallUvV}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-    {{-floorHalf, units::wallTopY, -floorHalf}, {0.0f, 0.0f, 1.0f}, {0.0f, wallUvV}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-kFloorHalf, units::floorY, -kFloorHalf}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{kFloorHalf, units::floorY, -kFloorHalf}, {0.0f, 0.0f, 1.0f}, {kWallUvU, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{kFloorHalf, units::wallTopY, -kFloorHalf}, {0.0f, 0.0f, 1.0f}, {kWallUvU, kWallUvV}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-kFloorHalf, units::wallTopY, -kFloorHalf}, {0.0f, 0.0f, 1.0f}, {0.0f, kWallUvV}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
     // z=+25 の壁 (法線: -z,  T: -x, B: +y)
-    {{floorHalf, units::floorY, floorHalf}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-    {{-floorHalf, units::floorY, floorHalf}, {0.0f, 0.0f, -1.0f}, {wallUvU, 0.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-    {{-floorHalf, units::wallTopY, floorHalf}, {0.0f, 0.0f, -1.0f}, {wallUvU, wallUvV}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-    {{floorHalf, units::wallTopY, floorHalf}, {0.0f, 0.0f, -1.0f}, {0.0f, wallUvV}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{kFloorHalf, units::floorY, kFloorHalf}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-kFloorHalf, units::floorY, kFloorHalf}, {0.0f, 0.0f, -1.0f}, {kWallUvU, 0.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-kFloorHalf, units::wallTopY, kFloorHalf}, {0.0f, 0.0f, -1.0f}, {kWallUvU, kWallUvV}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{kFloorHalf, units::wallTopY, kFloorHalf}, {0.0f, 0.0f, -1.0f}, {0.0f, kWallUvV}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
 }};
 
 inline const std::array<unsigned int, 12> wallIndices = {

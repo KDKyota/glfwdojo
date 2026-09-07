@@ -6,9 +6,9 @@
  */
 class MouseState {
   private:
-    bool FirstMouse = true;
-    float LastX = 800.0f / 2.0f;
-    float LastY = 600.0f / 2.0f;
+    bool firstMouse_ = true;
+    float lastX_ = 800.0f / 2.0f;
+    float lastY_ = 600.0f / 2.0f;
 
   public:
     /**

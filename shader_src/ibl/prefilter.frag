@@ -1,4 +1,4 @@
-// 環境マップを roughness ごとにぼかし、ミップの各レベルへ焼く。起動時に1回だけ
+// 環境マップを roughness ごとにぼかし ミップの各レベルへ焼く 起動時に1回だけ
 #version 460 core
 
 in vec3 LocalPos;
@@ -13,7 +13,7 @@ uniform float envResolution;
 
 void main() {
     vec3 N = normalize(LocalPos);
-    // 視線＝法線＝反射方向と仮定する。分割和近似の主な誤差源はここ
+    // 視線＝法線＝反射方向と仮定する 分割和近似の主な誤差源はここ
     vec3 R = N;
     vec3 V = R;
 
@@ -30,7 +30,7 @@ void main() {
         if (NdotL <= 0.0)
             continue;
 
-        // サンプルが疎な方向ほど粗いミップを引き、ちらつく白い点を抑える
+        // サンプルが疎な方向ほど粗いミップを引き ちらつく白い点を抑える
         float D = DistributionGGX(N, H, roughness);
         float NdotH = max(dot(N, H), 0.0);
         float HdotV = max(dot(H, V), 0.0);

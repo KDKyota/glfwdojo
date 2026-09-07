@@ -1,5 +1,5 @@
-// F0 に掛けるスケールとバイアスを (dot(N,V), roughness) の表として焼く。
-// 環境にも材質の色にも依存しない普遍的なテーブルなので、起動時に1回だけ
+// F0 に掛けるスケールとバイアスを (dot(N,V), roughness) の表として焼く
+// 環境にも材質の色にも依存しない普遍的なテーブルなので 起動時に1回だけ
 #version 460 core
 
 in vec2 TexCoords;
@@ -8,7 +8,7 @@ out vec2 FragColor;
 #include "pbr_common.glsl"
 
 vec2 IntegrateBRDF(float NdotV, float roughness) {
-    // 法線を +Z に固定し、NdotV から視線を逆算する
+    // 法線を +Z に固定し NdotV から視線を逆算する
     vec3 V = vec3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
     vec3 N = vec3(0.0, 0.0, 1.0);
 

@@ -18,8 +18,6 @@ bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::
     // 矩形上で円中心に最も近い点と、そこから中心へ向かうベクトル
     const float closestX = std::clamp(center.x, box.min.x, box.max.x);
     const float closestZ = std::clamp(center.z, box.min.z, box.max.z);
-    const glm::vec2 offset(center.x - closestX, center.z - closestZ); // 矩形上の最近接点から円の中心へ向かうベクトル
-    const float distanceSq = glm::dot(offset, offset);                // 距離の二乗
     const glm::vec2 offset(center.x - closestX, center.z - closestZ);
     const float distanceSq = glm::dot(offset, offset);
 

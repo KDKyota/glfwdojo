@@ -1,4 +1,4 @@
-// レンガキューブ用の G-Buffer 書き込みシェーダー。Parallax Occlusion Mapping で凹凸を出す。
+// レンガキューブ用の G-Buffer 書き込みシェーダー Parallax Occlusion Mapping で凹凸を出す
 #version 460 core
 
 layout (location = 0) out vec3 gPosition;
@@ -45,8 +45,8 @@ void main()
 }
 
 
-// Steep Parallax Mapping。main() では使われていない（比較用に残してある）。
-// 視線レイを層に分割し、ハイトマップの深さを追い越した層の座標を返す
+// Steep Parallax Mapping main() では使われていない（比較用に残してある）
+// 視線レイを層に分割し ハイトマップの深さを追い越した層の座標を返す
 vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
 	// 斜めから見るほど階段状のアーティファクトが目立つのでレイヤー数を増やす
@@ -54,7 +54,7 @@ vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 	const float maxLayers = 32.0;
 	float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
 
-	// 1レイヤー分の深さと、現在調べているレイヤーの累積深度（0.0〜1.0）
+	// 1レイヤー分の深さと 現在調べているレイヤーの累積深度（0.0〜1.0）
 	float layerDepth = 1.0 / numLayers;
 	float currentLayerDepth = 0.0;
 
@@ -66,7 +66,7 @@ vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 	vec2 currentTexCoords = texCoords;
 	float currentDepthMapValue = texture(heightMap, currentTexCoords).r;
 
-	// 「レイヤーの深さ」が「ハイトマップの深さ」を追い越すまで、視線を奥へ進めていく
+	// 「レイヤーの深さ」が「ハイトマップの深さ」を追い越すまで 視線を奥へ進めていく
 	while (currentLayerDepth < currentDepthMapValue)
 	{
 		currentTexCoords -= deltaTexCoords;
@@ -77,8 +77,8 @@ vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 	return currentTexCoords;
 }
 
-// Parallax Occlusion Mapping: SteepParallaxMapping と同じ層探索を行った上で、
-// 衝突した層と1つ手前の層を線形補間し、階段状のアーティファクトを滑らかにする
+// Parallax Occlusion Mapping: SteepParallaxMapping と同じ層探索を行った上で
+// 衝突した層と1つ手前の層を線形補間し 階段状のアーティファクトを滑らかにする
 vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir)
 {
 	const float minLayers = 8.0;
@@ -105,11 +105,11 @@ vec2 ParallaxOcclusionMapping(vec2 texCoords, vec3 viewDir)
 	// 衝突が検出される直前（1つ手前）のテクスチャ座標を復元する
 	vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
 
-	// ハイトマップの深さとレイヤーの深さの差。負なら表面より奥
+	// ハイトマップの深さとレイヤーの深さの差 負なら表面より奥
 	float afterDepth = currentDepthMapValue - currentLayerDepth;
 	float beforeDepth = texture(heightMap, prevTexCoords).r - currentLayerDepth + layerDepth;
 
-	// 2つの深度差の比率から、実際の交点に近いテクスチャ座標を線形補間で求める
+	// 2つの深度差の比率から 実際の交点に近いテクスチャ座標を線形補間で求める
 	float weight = afterDepth / (afterDepth - beforeDepth);
 	vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 

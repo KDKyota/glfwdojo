@@ -68,9 +68,9 @@ flowchart TD
 
 | 変数 | 宣言場所 | 役割 |
 |---|---|---|
-| `SHADOW_WIDTH`, `SHADOW_HEIGHT` | `Scene.h` | `depthCubemap_` の各面の解像度（1024×1024）。大きいほど影の輪郭が精細になるが、GPU負荷とメモリが増える |
-| `shadowNearPlane_` | `Scene.h` | 光源視点の透視投影の near plane |
-| `shadowFarPlane_` | `Scene.h` | 光源視点の透視投影の far plane。**シェーダー側 `farPlane` uniform と必ず同じ値にする必要がある**（正規化・逆正規化の基準が食い違うと影が壊れる） |
+| `kShadowWidth`, `kShadowHeight` | `Scene.h` | `depthCubemap_` の各面の解像度（1024×1024）。大きいほど影の輪郭が精細になるが、GPU負荷とメモリが増える |
+| `kShadowNearPlane` | `Scene.h` | 光源視点の透視投影の near plane |
+| `kShadowFarPlane` | `Scene.h` | 光源視点の透視投影の far plane。**シェーダー側 `farPlane` uniform と必ず同じ値にする必要がある**（正規化・逆正規化の基準が食い違うと影が壊れる） |
 | `depthMapFBO_` | `Scene.h` | 深度専用フレームバッファ。カラーバッファは持たず `depthCubemap_` のみをアタッチ |
 | `depthCubemap_` | `Scene.h` | 6面ぶんの `GL_DEPTH_COMPONENT` キューブマップ。各テクセルには「光源からの正規化距離」が入る（色ではない） |
 | `lightPos`（`Render()`内） | `Scene.cpp` | シャドウを落とす点光源のワールド座標。6方向すべての `lookAt` の視点原点になる |

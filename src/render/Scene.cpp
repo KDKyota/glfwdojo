@@ -45,7 +45,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
         std::make_unique<gl::Shader>("cubemap_capture.vert", "equirectangular_to_cubemap.frag");
     irradianceShader_ = std::make_unique<gl::Shader>("cubemap_capture.vert", "irradiance_convolution.frag");
     prefilterShader_ = std::make_unique<gl::Shader>("cubemap_capture.vert", "prefilter.frag");
-    brdfLUTShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "brdf_lut.frag");
+    brdfLutShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "brdf_lut.frag");
 
     initMesh();
     initDebugShapes();
@@ -60,7 +60,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     profiler_.Init();
 }
 
-/// IBL 用の irradianceMap_/prefilterMap_/brdfLUT_ を起動時に一度だけ事前計算する
+/// IBL 用の irradianceMap_/prefilterMap_/brdfLut_ を起動時に一度だけ事前計算する
 void Scene::initIbl() {
     /* --- 正距円筒図法の HDR を読み込む --- */
     stbi_set_flip_vertically_on_load(true);
@@ -206,8 +206,8 @@ void Scene::initIbl() {
     glBindVertexArray(0);
 
     /* --- BRDF LUT（環境にも材質の色にも依存しない普遍的な表） --- */
-    brdfLUT_.create();
-    glBindTexture(GL_TEXTURE_2D, brdfLUT_);
+    brdfLut_.create();
+    glBindTexture(GL_TEXTURE_2D, brdfLut_);
     // 返すのはスケールとバイアスの2値なので2成分で足りる
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, kBrdfLutSize, kBrdfLutSize, 0, GL_RG, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -217,9 +217,9 @@ void Scene::initIbl() {
 
     glBindRenderbuffer(GL_RENDERBUFFER, captureRBO_);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, kBrdfLutSize, kBrdfLutSize);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUT_, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLut_, 0);
     glViewport(0, 0, kBrdfLutSize, kBrdfLutSize);
-    brdfLUTShader_->use();
+    brdfLutShader_->use();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glBindVertexArray(quadVAO_);
     glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -484,7 +484,7 @@ void Scene::initTextures() {
     gbufferWindowShader_->use();
     gbufferWindowShader_->setInt("diffuseMap", 0);
     transparentWindowShader_->use();
-    transparentWindowShader_->setInt("texture1", 0);
+    transparentWindowShader_->setInt("diffuseMap", 0);
     for (unsigned int i = 0; i < 4; ++i)
         transparentWindowShader_->setInt("shadowMap[" + std::to_string(i) + "]", 3 + i);
     // deferredLightingShader_ と割り当てを揃える
@@ -504,8 +504,8 @@ void Scene::initTextures() {
     /* depth */
     debugDepthShader_->use();
     debugDepthShader_->setInt("depthMap", 0);
-    debugDepthShader_->setFloat("near_plane", kShadowNearPlane);
-    debugDepthShader_->setFloat("far_plane", kShadowFarPlane);
+    debugDepthShader_->setFloat("nearPlane", kShadowNearPlane);
+    debugDepthShader_->setFloat("farPlane", kShadowFarPlane);
     pointDepthShader_->use();
     pointDepthShader_->setInt("diffuseMap", 0);
     pointColorShader_->use();
@@ -1001,7 +1001,7 @@ void Scene::renderDeferredLightingPass() {
     glActiveTexture(GL_TEXTURE13);
     glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap_);
     glActiveTexture(GL_TEXTURE14);
-    glBindTexture(GL_TEXTURE_2D, brdfLUT_);
+    glBindTexture(GL_TEXTURE_2D, brdfLut_);
     deferredLightingShader_->use();
     deferredLightingShader_->setVec3("viewPos", camera_->GetViewPosition());
     // UI から変わる値なので毎フレーム送る
@@ -1142,7 +1142,7 @@ void Scene::renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted) 
     glActiveTexture(GL_TEXTURE13);
     glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap_);
     glActiveTexture(GL_TEXTURE14);
-    glBindTexture(GL_TEXTURE_2D, brdfLUT_);
+    glBindTexture(GL_TEXTURE_2D, brdfLut_);
     applyPointLights(*transparentWindowShader_);
 
     glDepthMask(GL_FALSE);

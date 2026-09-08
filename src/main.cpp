@@ -115,6 +115,9 @@ int main(void) {
                 ImGui::Checkbox("Invert", &scene->DebugCheckerInvert());
                 ImGui::Separator();
 
+                ImGui::SliderFloat(("SDF azimuth"), &scene->sdfDebugAzimuthDegrees(), -180.0f, 180.0f);
+                ImGui::SliderFloat("SDF elevation", &scene->sdfDebugElevationDegrees(), 0.0f, 90.0f);
+
                 ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
                 // IBL 化で基準が「空の平均輝度」に変わり 1.0 では足りなくなった
                 ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 5.0f);

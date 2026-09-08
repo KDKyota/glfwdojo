@@ -58,7 +58,7 @@ vec2 SteepParallaxMapping(vec2 texCoords, vec3 viewDir)
 	float layerDepth = 1.0 / numLayers;
 	float currentLayerDepth = 0.0;
 
-	// viewDir.xy / viewDir.z が「奥に1進んだときの横方向の移動量」
+	// viewDir.xy / viewDir.z が奥に1進んだときの横方向の移動量
 	vec2 P = viewDir.xy / viewDir.z * heightScale;
 	vec2 deltaTexCoords = P / numLayers;
 

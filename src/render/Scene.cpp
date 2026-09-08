@@ -1008,6 +1008,10 @@ void Scene::renderDeferredLightingPass() {
     deferredLightingShader_->setInt("debugMode", debugMode_);
     deferredLightingShader_->setFloat("ssaoStrength", ssaoStrength_);
     deferredLightingShader_->setFloat("ambientStrength", ambientStrength_);
+    const float azimuth = glm::radians(sdfDebugAzimuthDegrees_);
+    const float elevation = glm::radians(sdfDebugElevationDegrees_);
+    deferredLightingShader_->setVec3(("sdfDebugDir"), {glm::cos(elevation) * glm::cos(azimuth), glm::sin(elevation),
+                                                       glm::cos(elevation) * glm::sin(azimuth)});
     applyPointLights(*deferredLightingShader_);
     glBindVertexArray(quadVAO_);
     glDrawArrays(GL_TRIANGLES, 0, 6);

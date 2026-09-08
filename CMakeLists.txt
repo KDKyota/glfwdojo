@@ -72,6 +72,7 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/lighting_common.glsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/pbr_common.glsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/shadow_common.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/sdf_common.glsl
     # shadow
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/point_shadow_color.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/shadow/point_shadow_depth.frag

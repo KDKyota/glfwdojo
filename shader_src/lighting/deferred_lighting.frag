@@ -1,11 +1,13 @@
 // Deferred Shading の合成パス debugMode != 0 のときは中間バッファを可視化する
 #version 460 core
+
+#include "sdf_common.glsl"
+#include "lighting_common.glsl"
 out vec4 FragColor;
 layout(location = 1) out vec4 BrightColor;
 
 in vec2 TexCoords;
 
-#include "lighting_common.glsl"
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
@@ -26,6 +28,9 @@ uniform vec3 viewPos;
 uniform int debugMode;
 
 uniform float ssaoStrength;
+
+// debugMode 14 でレイを飛ばす方向(ImGui から変更可能にする)
+uniform vec3 sdfDebugDir; 
 
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
@@ -158,7 +163,17 @@ void main() {
     } else if (debugMode == 13) {
         // 画面全体に LUT を貼る 左下が暗く右上が明るい赤緑のグラデーションが正解
         FragColor = vec4(texture(brdfLUT, TexCoords).rg, 0.0, 1.0);
-    } else {
+	} else if (debugMode == 14) {
+		// SDF関数のデバッグ
+        if (dot(Normal, Normal) < 0.5) { 
+            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        } else {
+            int steps;
+            float visibility = sdfVisibility(FragPos, normalize(Normal), sdfDebugDir, 1.0, 0.0)), steps);
+            FragColor = vec4(vec3(visibility), 1.0);
+        }
+    }
+     else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）
     }
 }

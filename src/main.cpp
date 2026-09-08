@@ -1,4 +1,4 @@
-﻿#include "app/Callbacks.h"
+#include "app/Callbacks.h"
 #include "scene/Camera.h"
 #include "app/Gui.h"
 #include "app/InputState.h"
@@ -102,7 +102,7 @@ int main(void) {
                     "6: Split view", "7: SSAO", "8: Shadow color[0]",
                     "9: G-Buffer Metallic", "10: G-Buffer Roughness",
                     "11: IBL Irradiance", "12: IBL Prefilter",
-                    "13: IBL BRDF LUT"};
+                    "13: IBL BRDF LUT", "14: SDF visibility"};
                 ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
                              IM_ARRAYSIZE(kDebugModes));
 

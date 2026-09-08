@@ -53,6 +53,12 @@ class Scene {
     float &SsaoStrength() {
         return ssaoStrength_;
     }
+    float &sdfDebugAzimuthDegrees() {
+        return sdfDebugAzimuthDegrees_;
+    }
+    float &sdfDebugElevationDegrees() {
+        return sdfDebugElevationDegrees_;
+    }
     float &Exposure() {
         return exposure_;
     }
@@ -279,6 +285,9 @@ class Scene {
     bool debugCollision_ = false;
     // SSAO の効き具合（0.0 = 無効, 1.0 = そのまま適用）
     float ssaoStrength_ = 1.0f;
+    // SDF レイマーチの検証用
+    float sdfDebugAzimuthDegrees_ = 0.0f;
+    float sdfDebugElevationDegrees_ = 45.0f;
 
     /* SSAO */
     gl::FramebufferHandle ssaoFBO_, ssaoBlurFBO_;

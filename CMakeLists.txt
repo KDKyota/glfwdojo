@@ -116,15 +116,18 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug/debug_line.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/debug/debug_line.vert)
 
-add_custom_command(
-  TARGET glfwdojo
-  POST_BUILD
+# POST_BUILD にするとリンクが走ったときしかコピーされず GLSL だけの編集が反映されない
+add_custom_target(
+  copy_assets ALL
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCES}
           $<TARGET_FILE_DIR:glfwdojo>
   COMMAND
     ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resources
     $<TARGET_FILE_DIR:glfwdojo>/resources
+  DEPENDS ${SHADER_SOURCES}
   COMMENT "Copying shaders and resources")
+# exe の出力先が確定してからコピーする
+add_dependencies(copy_assets glfwdojo)
 
 # シェーダーと resources/ は exe の隣にコピーされ、コード側は相対パスで開くので
 # WORKING_DIRECTORY を exe のフォルダにしないと読み込みに失敗する
@@ -133,6 +136,6 @@ add_custom_target(
   COMMAND $<TARGET_FILE:glfwdojo>
   WORKING_DIRECTORY $<TARGET_FILE_DIR:glfwdojo>
   USES_TERMINAL)
-add_dependencies(run glfwdojo)
+add_dependencies(run copy_assets)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

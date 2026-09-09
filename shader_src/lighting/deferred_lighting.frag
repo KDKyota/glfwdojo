@@ -169,8 +169,8 @@ void main() {
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
             int steps;
-            float visibility = sdfVisibility(FragPos, normalize(Normal), sdfDebugDir, steps);
-            FragColor = vec4(vec3(visibility), 1.0);
+            float skyVisibility = sdfSkyVisibility(FragPos, normalize(Normal));
+            FragColor = vec4(vec3(skyVisibility), 1.0);
         }
     }
      else {

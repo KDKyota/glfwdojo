@@ -3,12 +3,14 @@ BasedOnStyle: Microsoft
 ColumnLimit: 120
 # 開き括弧を改行せず同じ行に置く (K&R風: void func() { ... })
 BreakBeforeBraces: Attach
-# 1行で書いた短いブロックを展開せずそのまま残す (中の空白は自動で補われる)
+# 1行 getter や短い関数はそのまま残す
 AllowShortFunctionsOnASingleLine: All
-AllowShortBlocksOnASingleLine: Always
-AllowShortIfStatementsOnASingleLine: AllIfsAndElse
-AllowShortLoopsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
+# ブロックとループ本体は常に展開する (GLSL の for 本体が1行に潰れて読みにくいため)
+AllowShortBlocksOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+# 単文の if は1行可 else が付く場合は展開する
+AllowShortIfStatementsOnASingleLine: WithoutElse
 # include の自動ソートを無効にする。glad は他の OpenGL ヘッダより先に
 # 展開されないとコンパイルが通らず、アルファベット順では GLFW が先に来てしまう
 SortIncludes: Never

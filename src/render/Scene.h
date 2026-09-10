@@ -137,6 +137,8 @@ class Scene {
     void renderGeometryPass();
     /// SSAO を計算する
     void renderSsaoPass();
+    /// SDF レイマーチで拡散 IBL の可視性を焼く
+    void renderSdfOcclusionPass();
     /// G-Buffer の深度をデフォルト FBO へコピーする
     void blitGeometryDepth();
     /// Deferred Shading のライティングを合成する
@@ -298,6 +300,12 @@ class Scene {
     gl::FramebufferHandle ssaoFBO_, ssaoBlurFBO_;
     gl::TextureHandle ssaoColorBuffer_, ssaoColorBufferBlur_; // GL_R8
     gl::TextureHandle noiseTexture_;                          // 4x4 GL_RGBA16F
+
+    /* SDF による中距離遮蔽 */
+    gl::FramebufferHandle sdfOcclusionFBO_;
+    gl::TextureHandle sdfOcclusionBuffer_; // GL_R8
+    std::unique_ptr<gl::Shader> sdfOcclusionShader_;
+
     std::vector<glm::vec3> ssaoKernel_;                       // 接空間のサンプル点
 
     std::unique_ptr<gl::Shader> ssaoShader_;

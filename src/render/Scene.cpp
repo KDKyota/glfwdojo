@@ -40,6 +40,9 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     ssaoShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "ssao.frag");
     ssaoBlurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "ssao_blur.frag");
 
+    /* SDF による中距離遮蔽 */
+    sdfOcclusionShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "sdf_occlusion.frag");
+
     /* IBL */
     equirectToCubemapShader_ =
         std::make_unique<gl::Shader>("cubemap_capture.vert", "equirectangular_to_cubemap.frag");
@@ -528,7 +531,12 @@ void Scene::initTextures() {
     deferredLightingShader_->setInt("irradianceMap", 12);
     deferredLightingShader_->setInt("prefilterMap", 13);
     deferredLightingShader_->setInt("brdfLUT", 14);
+    deferredLightingShader_->setInt("sdfOcclusion", 15);
     // ambientStrength は Render() 側 SSAO 系の uniform は initSsao() 側で送る
+
+    sdfOcclusionShader_->use();
+    sdfOcclusionShader_->setInt("gPosition", 0);
+    sdfOcclusionShader_->setInt("gNormal", 1);
 }
 
 /// メインの HDR フレームバッファとシャドウ用・ブラー用の FBO を構築する
@@ -698,7 +706,7 @@ void Scene::initSsao() {
     std::vector<glm::vec3> ssaoNoise;
     ssaoNoise.reserve(16);
     for (unsigned int i = 0; i < 16; ++i) {
-        // z = 0 にするのは「Z軸まわりの回転」にしたいから
+        // z = 0 にするのはZ軸まわりの回転にしたいから
         ssaoNoise.emplace_back(randomFloats(generator) * 2.0f - 1.0f, randomFloats(generator) * 2.0f - 1.0f, 0.0f);
     }
     noiseTexture_.create();
@@ -739,6 +747,20 @@ void Scene::initSsao() {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBufferBlur_, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::SSAO_BLUR:: Framebuffer is not complete!" << std::endl;
+
+    /* --- SDF 遮蔽パスの出力先 SSAO と同じくスカラー1本なので R8 --- */
+    sdfOcclusionFBO_.create();
+    glBindFramebuffer(GL_FRAMEBUFFER, sdfOcclusionFBO_);
+    sdfOcclusionBuffer_.create();
+    glBindTexture(GL_TEXTURE_2D, sdfOcclusionBuffer_);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, scrWidth_, scrHeight_, 0, GL_RED, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sdfOcclusionBuffer_, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::SDF_OCCLUSION:: Framebuffer is not complete!" << std::endl;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -785,6 +807,8 @@ void Scene::Render(float deltaTime, float heightScale) {
     profiler_.Measure(gl::GpuPass::Geometry, [&] { renderGeometryPass(); });
     // [4] G-Buffer から遮蔽率を求めてブラーまで
     profiler_.Measure(gl::GpuPass::Ssao, [&] { renderSsaoPass(); });
+    // [4.5] SSAO が届かない数m規模の遮蔽を SDF から求める
+    profiler_.Measure(gl::GpuPass::SdfOcclusion, [&] { renderSdfOcclusionPass(); });
     // [5] G-Buffer の深度を framebuffer_ へ複製（前方描画の深度テスト用）
     profiler_.Measure(gl::GpuPass::BlitDepth, [&] { blitGeometryDepth(); });
     // [6] G-Buffer + 影 + AO を合成
@@ -966,6 +990,23 @@ void Scene::renderSsaoPass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+// SSAO が届かない数m規模の遮蔽を SDF のレイマーチで求める
+void Scene::renderSdfOcclusionPass() {
+    glBindFramebuffer(GL_FRAMEBUFFER, sdfOcclusionFBO_);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gPosition_);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gNormal_);
+    sdfOcclusionShader_->use();
+    glBindVertexArray(quadVAO_);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glEnable(GL_DEPTH_TEST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 // これがないと後続の前方描画が不透明物と前後判定できない
 void Scene::blitGeometryDepth() {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer_);
@@ -1002,6 +1043,8 @@ void Scene::renderDeferredLightingPass() {
     glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap_);
     glActiveTexture(GL_TEXTURE14);
     glBindTexture(GL_TEXTURE_2D, brdfLut_);
+    glActiveTexture(GL_TEXTURE15);
+    glBindTexture(GL_TEXTURE_2D, sdfOcclusionBuffer_);
     deferredLightingShader_->use();
     deferredLightingShader_->setVec3("viewPos", camera_->GetViewPosition());
     // UI から変わる値なので毎フレーム送る

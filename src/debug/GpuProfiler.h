@@ -13,6 +13,7 @@ enum class GpuPass {
     Shadow,
     Geometry,
     Ssao,
+    SdfOcclusion,
     BlitDepth,
     Lighting,
     Forward,

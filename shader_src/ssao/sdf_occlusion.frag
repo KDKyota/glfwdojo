@@ -20,8 +20,8 @@ void main() {
     }
 
     // 全画素で同じ 16 方向を使うと階調の境目が縞になるので法線まわりに回す
-    vec2 noiseScale = vec2(textureSize(gPosition, 0)) / 4.0;
-    float angle = texture(texNoise, TexCoords * noiseScale).x * PI;
+    // gPosition の解像度から作るとこのパスが半解像度のときタイル周期がずれる
+    float angle = texture(texNoise, gl_FragCoord.xy / 4.0).x * PI;
     vec2 rotation = vec2(cos(angle), sin(angle));
 
     FragColor = sdfSkyVisibility(texture(gPosition, TexCoords).rgb, normalize(normal), rotation);

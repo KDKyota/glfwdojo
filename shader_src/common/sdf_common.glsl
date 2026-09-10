@@ -82,11 +82,15 @@ float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent) {
 
 const int SDF_HEMISPHERE_SAMPLES = 16;
 // Normal 周りの半球を cosine 重みでサンプル詩平均化姿勢を返す
-float sdfSkyVisibility ( vec3 pos, vec3 normal) {
+// rotation は法線まわりの回転 (cos, sin) 全画素で同じ向きだと縞が出るのでピクセルごとに散らす
+float sdfSkyVisibility ( vec3 pos, vec3 normal, vec2 rotation) {
     // ここでの up はワールドの上ではなく cross がゼロにならないためのもの
     vec3 up = abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = normalize(cross(up, normal));
-    vec3 bitangent = cross(normal, tangent);
+    vec3 t0 = normalize(cross(up, normal));
+    vec3 b0 = cross(normal, t0);
+    // 基底ごと法線まわりに回す 半球の覆い方は変わらず回転角だけが画素ごとに変わる
+    vec3 tangent = t0 * rotation.x + b0 * rotation.y;
+    vec3 bitangent = -t0 * rotation.y + b0 * rotation.x;
 
     float visible = 0.0;
     for (int i = 0; i < SDF_HEMISPHERE_SAMPLES; ++i) {

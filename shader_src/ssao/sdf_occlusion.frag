@@ -9,6 +9,7 @@ in vec2 TexCoords;
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
+uniform sampler2D texNoise; // 4x4 のランダム回転ベクトル SSAO と共用
 
 void main() {
     vec3 normal = texture(gNormal, TexCoords).rgb;
@@ -17,5 +18,11 @@ void main() {
         FragColor = 1.0;
         return;
     }
-    FragColor = sdfSkyVisibility(texture(gPosition, TexCoords).rgb, normalize(normal));
+
+    // 全画素で同じ 16 方向を使うと階調の境目が縞になるので法線まわりに回す
+    vec2 noiseScale = vec2(textureSize(gPosition, 0)) / 4.0;
+    float angle = texture(texNoise, TexCoords * noiseScale).x * PI;
+    vec2 rotation = vec2(cos(angle), sin(angle));
+
+    FragColor = sdfSkyVisibility(texture(gPosition, TexCoords).rgb, normalize(normal), rotation);
 }

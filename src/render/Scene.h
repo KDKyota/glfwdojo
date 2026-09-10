@@ -302,6 +302,9 @@ class Scene {
     gl::TextureHandle noiseTexture_;                          // 4x4 GL_RGBA16F
 
     /* SDF による中距離遮蔽 */
+    // sdf_common.glsl の SDF_MAX_BOXES と一致させること
+    static constexpr int kSdfMaxBoxes = 8;
+    gl::BufferHandle sdfSceneUBO_;
     gl::FramebufferHandle sdfOcclusionFBO_, sdfOcclusionBlurFBO_;
     gl::TextureHandle sdfOcclusionBuffer_, sdfOcclusionBufferBlur_; // GL_R8
     std::unique_ptr<gl::Shader> sdfOcclusionShader_;

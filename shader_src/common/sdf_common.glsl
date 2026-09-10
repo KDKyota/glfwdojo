@@ -4,26 +4,17 @@
 
 #include "pbr_common.glsl"
 
-// TODO: Scene.h の cubePosition_ と SceneUnits.h の写し 検証後に UBO へ流す
-// 厚さゼロの板ポリに厚さをつける
-const int SDF_WALL_COUNT = 2;
-const vec3 sdfWallCenters[2] = vec3[](vec3(0.0, 4.75, -25.0), vec3(0.0, 4.75, 25.0));
-const vec3 SDF_WALL_HALF_SIZE = vec3(25.0, 5.25, 0.1);
+// 配列長は Scene.h の kSdfMaxBoxes と一致させること
+const int SDF_MAX_BOXES = 8;
 
-const int SDF_BOX_COUNT = 7;
-const vec3 sdfBoxCenters[7] = 
-    vec3[](vec3(-1.0, 0.0, -1.0), 
-    vec3(2.0, 0.0, 0.0),
-    vec3(0.0, 0.0, 2.5),
-    vec3(1.2, 0.0, 2.5),
-    vec3(-1.0, 1.0, -1.0),
-    vec3(0.0, 0.0, -20.0),
-    vec3(0.0, 0.0, 20.0));
+layout(std140, binding = 2) uniform SdfScene {
+    vec4 boxCenters[SDF_MAX_BOXES];
+    vec4 wallCenters[2];
+    vec4 boxHalfSize;
+    vec4 wallHalfSize;
+    vec4 sceneParams;
+};
 
-const vec3 SDF_BOX_HALF_SIZE = vec3(0.5);
-const float SDF_FLOOR_Y = -0.5;
-
-const float SDF_MAX_DIST = 50.0;
 const int SDF_MAX_STEPS = 96;
 const float SDF_HIT_EPSILON = 0.002; // 衝突の閾値
 const float SDF_NORMAL_BIAS = 0.02; // 自己交差になるのを防ぐバイアス
@@ -37,12 +28,14 @@ float sdBox (vec3 p, vec3 center, vec3 halfSize) {
 
 // シーン全体で最も近い面までの距離を計算
 float sceneSDF (vec3 p) {
-    float dist = p.y - SDF_FLOOR_Y; 
-    for (int i = 0; i < SDF_BOX_COUNT; ++i) {
-        dist = min(dist, sdBox(p, sdfBoxCenters[i], SDF_BOX_HALF_SIZE));
+    float dist = p.y - sceneParams.x;
+    int boxCount = int(sceneParams.y);
+    for (int i = 0; i < boxCount; ++i) {
+        dist = min(dist, sdBox(p, boxCenters[i].xyz, boxHalfSize.xyz));
     }
-    for (int i = 0; i < SDF_WALL_COUNT; ++i) { 
-        dist = min(dist, sdBox(p, sdfWallCenters[i], SDF_WALL_HALF_SIZE));
+    int wallCount = int(sceneParams.z);
+    for (int i = 0; i < wallCount; ++i) {
+        dist = min(dist, sdBox(p, wallCenters[i].xyz, wallHalfSize.xyz));
     }
     return dist;
 }
@@ -56,31 +49,40 @@ float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
         if (d < SDF_HIT_EPSILON) 
             return 0.0;
         t += d;
-        if (t > SDF_MAX_DIST) 
+        if (t > sceneParams.w) 
             return 1.0;
     }
     return 0.0;
 }
 
 // 注意：coneTangent が実質的な円錐の角度になるので、0 だと実質的に線になる
-// コーントレースで途中どれだけ絞られたかを返す
+// コーントレースで途中での最小距離を返す
 float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent) {
     vec3 origin = pos + normal * SDF_NORMAL_BIAS;
     float res = 1.0;
     float t = 0.0;
+    float prevD = 1e20;
     for (int i = 0; i < SDF_MAX_STEPS; ++i) {
         float d = sceneSDF(origin + dir * t);
         if (d < SDF_HIT_EPSILON) return 0.0;
 
-        // 空きスペース d がその距離での円錐半径をどれだけ満たせるか
-        res = min(res, d / max(t * coneTangent, 1e-4));
+        // 止まった地点だけで測ると最接近点を取り逃がして縞が出る
+        float y = d * d / (2.0 * prevD);
+        float tClosest = t - y;
+        // 最接近点が出発点より手前なら面から離れていく途中なので判定しない
+        if (tClosest > 0.0) {
+            float closest = sqrt(max(d * d - y * y, 0.0));
+            res = min(res, closest / max(tClosest * coneTangent, 1e-4));
+        }
+
+        prevD = d;
         t += d;
-        if (t > SDF_MAX_DIST) return res;
+        if (t > sceneParams.w) return res;
     }
-    return 0.0;
+    return res;
 }
 
-const int SDF_HEMISPHERE_SAMPLES = 16;
+const int SDF_HEMISPHERE_SAMPLES = 8;
 // Normal 周りの半球を cosine 重みでサンプル詩平均化姿勢を返す
 // rotation は法線まわりの回転 (cos, sin) 全画素で同じ向きだと縞が出るのでピクセルごとに散らす
 float sdfSkyVisibility ( vec3 pos, vec3 normal, vec2 rotation) {

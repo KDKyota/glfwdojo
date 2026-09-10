@@ -631,12 +631,45 @@ void Scene::initFramebuffer() {
     }
 }
 
-/// View/Projection 行列を格納する UBO を作る
+/// 全パスで共有する UBO を作る View/Projection と SDF のシーン形状
 void Scene::initUBO() {
     matricesUBO_.create();
     glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO_);
     glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), nullptr, GL_STATIC_DRAW);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, matricesUBO_);
+
+    struct SdfSceneBlock {
+        glm::vec4 boxCenters[kSdfMaxBoxes];
+        glm::vec4 wallCenters[2];
+        glm::vec4 boxHalfSize;
+        glm::vec4 wallHalfSize;
+        glm::vec4 sceneParams;
+    } block{};
+
+    if (cubePositions_.size() > kSdfMaxBoxes)
+        throw std::runtime_error("Too many cubes for the SDF UBO");
+    for (std::size_t i = 0; i < cubePositions_.size(); ++i)
+        block.boxCenters[i] = glm::vec4(cubePositions_[i], 0.0f);
+    block.boxHalfSize = glm::vec4(0.5f);
+
+    // 厚さゼロの板ポリは内外が定義できないので薄い箱で近似する
+    constexpr float wallHalfThickness = 0.1f;
+    constexpr float wallCenterY = (gl::units::floorY + gl::units::wallTopY) * 0.5f;
+    constexpr float wallHalfHeight = (gl::units::wallTopY - gl::units::floorY) * 0.5f;
+    block.wallCenters[0] = glm::vec4(0.0f, wallCenterY, -gl::units::floorHalfExtent, 0.0f);
+    block.wallCenters[1] = glm::vec4(0.0f, wallCenterY, gl::units::floorHalfExtent, 0.0f);
+    block.wallHalfSize =
+        glm::vec4(gl::units::floorHalfExtent, wallHalfHeight, wallHalfThickness, 0.0f);
+
+    // w はレイがシーンを確実に抜けきる距離
+    block.sceneParams = glm::vec4(gl::units::floorY, static_cast<float>(cubePositions_.size()),
+                                  2.0f, gl::units::floorHalfExtent * 2.0f);
+
+    sdfSceneUBO_.create();
+    glBindBuffer(GL_UNIFORM_BUFFER, sdfSceneUBO_);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(block), &block, GL_STATIC_DRAW);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 2, sdfSceneUBO_);
+
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -758,7 +791,7 @@ void Scene::initSsao() {
     glBindFramebuffer(GL_FRAMEBUFFER, sdfOcclusionFBO_);
     sdfOcclusionBuffer_.create();
     glBindTexture(GL_TEXTURE_2D, sdfOcclusionBuffer_);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, scrWidth_, scrHeight_, 0, GL_RED, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, scrWidth_/2, scrHeight_/2, 0, GL_RED, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -772,7 +805,7 @@ void Scene::initSsao() {
     glBindFramebuffer(GL_FRAMEBUFFER, sdfOcclusionBlurFBO_);
     sdfOcclusionBufferBlur_.create();
     glBindTexture(GL_TEXTURE_2D, sdfOcclusionBufferBlur_);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, scrWidth_, scrHeight_, 0, GL_RED, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, scrWidth_ / 2, scrHeight_ / 2, 0, GL_RED, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -821,7 +854,7 @@ void Scene::Render(float deltaTime, float heightScale) {
 
     // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
     profiler_.Measure(gl::GpuPass::Shadow, [&] { renderShadowPasses(); });
-    updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する
+    updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO は定数の集まりなのでupdateしない
     // [3] 不透明物の幾何情報を G-Buffer へ
     profiler_.Measure(gl::GpuPass::Geometry, [&] { renderGeometryPass(); });
     // [4] G-Buffer から遮蔽率を求めてブラーまで
@@ -1011,6 +1044,7 @@ void Scene::renderSsaoPass() {
 
 // SSAO が届かない数m規模の遮蔽を SDF のレイマーチで求める
 void Scene::renderSdfOcclusionPass() {
+    glViewport(0, 0, scrWidth_ / 2, scrHeight_ / 2);
     glBindFramebuffer(GL_FRAMEBUFFER, sdfOcclusionFBO_);
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
@@ -1036,6 +1070,7 @@ void Scene::renderSdfOcclusionPass() {
 
     glEnable(GL_DEPTH_TEST);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, scrWidth_, scrHeight_);
 }
 
 // これがないと後続の前方描画が不透明物と前後判定できない

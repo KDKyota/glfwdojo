@@ -54,13 +54,18 @@ void main() {
         vec3 kS = fresnelSchlickRoughness(NdotV, F0, Roughness);
         vec3 kD = (1.0 - kS) * (1.0 - Metallic);
 
-        vec3 diffuseIBL = texture(irradianceMap, Normal).rgb * Albedo;
+        // SSAO はcm SDF は m で守備範囲が違うので両方をかける
+        float skyVisibility = mix(1.0, sdfSkyVisibility(FragPos, normalize(Normal)), sdfOcclusionStrength);
+        vec3 diffuseIBL = texture(irradianceMap, Normal).rgb * Albedo * skyVisibility;
 
         // 反射方向の環境光を roughness に応じたミップから引き LUT で反射率を補正する
         vec3 R = reflect(-viewDir, Normal);
         vec3 prefiltered = textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
-        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y);
+
+        float specConeTangent = Roughness * Roughness;
+        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent), sdfOcclusionStrength);
+        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している
         vec3 result = (kD * diffuseIBL + specularIBL) * AmbientOcclusion * ambientStrength;
@@ -168,7 +173,6 @@ void main() {
         if (dot(Normal, Normal) < 0.5) { 
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
-            int steps;
             float skyVisibility = sdfSkyVisibility(FragPos, normalize(Normal));
             FragColor = vec4(vec3(skyVisibility), 1.0);
         }

@@ -9,6 +9,7 @@ out vec4 FragColor;
 layout(location = 1) out vec4 BrightColor;
 
 #include "lighting_common.glsl"
+#include "sdf_common.glsl"
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -65,7 +66,9 @@ void main() {
         vec3 R = reflect(-viewDir, normal);
         vec3 prefiltered = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, roughness)).rg;
-        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y);
+        float specConeTangent = roughness * roughness;
+        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normal, R, specConeTangent), sdfOcclusionStrength);
+        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // BRDF 内の fresnelSchlick が既にフレネルを含むので ここでは掛けない
         // 直接光は素通し 環境の映り込みだけ Deferred 側と同じ係数で揃える

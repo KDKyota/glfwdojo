@@ -46,6 +46,7 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 /* ==== IBL の事前計算専用（毎フレームは使わない） ==== */
 
 // ビット反転で作る低食い違い量列
+// ビットを逆列にして、少数として読む
 float RadicalInverse_VdC(uint bits) {
     bits = (bits << 16u) | (bits >> 16u);
     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -55,6 +56,7 @@ float RadicalInverse_VdC(uint bits) {
     return float(bits) * 2.3283064365386963e-10;
 }
 
+// [0, 1) の値を均等に散らばるように作る
 vec2 Hammersley(uint i, uint N) {
     return vec2(float(i) / float(N), RadicalInverse_VdC(i));
 }

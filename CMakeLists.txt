@@ -64,8 +64,7 @@ target_compile_options(frame_arena_bench
                        PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 target_include_directories(frame_arena_bench PRIVATE src)
 
-# シェーダーはパス単位でディレクトリを分けている。コピー時に exe の隣へフラットに展開されるので
-# ファイル名はディレクトリをまたいで一意に保つこと
+# シェーダーはパス単位でディレクトリを分けている。コピー時に exe の隣へフラットに展開されるので ファイル名はディレクトリをまたいで一意に保つこと
 set(SHADER_SOURCES
     # common
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/common/fragment_quad.vert
@@ -94,6 +93,7 @@ set(SHADER_SOURCES
     # ssao
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/ssao.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/ssao_blur.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/sdf_occlusion.frag
     # lighting
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting/deferred_lighting.frag
     # forward
@@ -129,8 +129,8 @@ add_custom_target(
 # exe の出力先が確定してからコピーする
 add_dependencies(copy_assets glfwdojo)
 
-# シェーダーと resources/ は exe の隣にコピーされ、コード側は相対パスで開くので
-# WORKING_DIRECTORY を exe のフォルダにしないと読み込みに失敗する
+# シェーダーと resources/ は exe の隣にコピーされ、コード側は相対パスで開くので WORKING_DIRECTORY を exe
+# のフォルダにしないと読み込みに失敗する
 add_custom_target(
   run
   COMMAND $<TARGET_FILE:glfwdojo>

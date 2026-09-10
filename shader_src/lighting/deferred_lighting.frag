@@ -20,6 +20,8 @@ uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
 // (dot(N,V), roughness) -> F0 に掛けるスケールとバイアス
 uniform sampler2D brdfLUT;
+// SDF レイマーチで焼いた拡散側の可視性 鏡面は視線依存なので焼けずここには入らない
+uniform sampler2D sdfOcclusion;
 const float MAX_REFLECTION_LOD = 4.0;
 
 uniform vec3 viewPos;
@@ -55,7 +57,7 @@ void main() {
         vec3 kD = (1.0 - kS) * (1.0 - Metallic);
 
         // SSAO はcm SDF は m で守備範囲が違うので両方をかける
-        float skyVisibility = mix(1.0, sdfSkyVisibility(FragPos, normalize(Normal)), sdfOcclusionStrength);
+        float skyVisibility = mix(1.0, texture(sdfOcclusion, TexCoords).r, sdfOcclusionStrength);
         vec3 diffuseIBL = texture(irradianceMap, Normal).rgb * Albedo * skyVisibility;
 
         // 反射方向の環境光を roughness に応じたミップから引き LUT で反射率を補正する
@@ -173,8 +175,7 @@ void main() {
         if (dot(Normal, Normal) < 0.5) { 
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
-            float skyVisibility = sdfSkyVisibility(FragPos, normalize(Normal));
-            FragColor = vec4(vec3(skyVisibility), 1.0);
+            FragColor = vec4(vec3(texture(sdfOcclusion, TexCoords).r), 1.0);
         }
     }
      else {

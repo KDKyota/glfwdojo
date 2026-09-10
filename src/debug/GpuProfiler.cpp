@@ -6,7 +6,7 @@ namespace {
 
 // GpuPass の並びと一致させること ずれても動いてしまい表示だけが入れ替わる
 constexpr const char *kPassNames[] = {
-    "Shadow", "Geometry", "SSAO", "BlitDepth", "Lighting", "Forward", "Bloom", "ToScreen",
+    "Shadow", "Geometry", "SSAO", "SdfOccl", "BlitDepth", "Lighting", "Forward", "Bloom", "ToScreen",
 };
 static_assert(std::size(kPassNames) == gl::GpuProfiler::kPassCount, "GpuPass と名前配列の数が合っていない");
 

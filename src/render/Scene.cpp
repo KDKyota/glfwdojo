@@ -537,6 +537,7 @@ void Scene::initTextures() {
     sdfOcclusionShader_->use();
     sdfOcclusionShader_->setInt("gPosition", 0);
     sdfOcclusionShader_->setInt("gNormal", 1);
+    sdfOcclusionShader_->setInt("texNoise", 2);
 }
 
 /// メインの HDR フレームバッファとシャドウ用・ブラー用の FBO を構築する
@@ -999,6 +1000,8 @@ void Scene::renderSdfOcclusionPass() {
     glBindTexture(GL_TEXTURE_2D, gPosition_);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, gNormal_);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, noiseTexture_);
     sdfOcclusionShader_->use();
     glBindVertexArray(quadVAO_);
     glDrawArrays(GL_TRIANGLES, 0, 6);

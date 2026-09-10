@@ -18,7 +18,10 @@ layout(std140, binding = 2) uniform SdfScene {
 const int SDF_MAX_STEPS = 96;
 const float SDF_HIT_EPSILON = 0.002; // 衝突の閾値
 const float SDF_NORMAL_BIAS = 0.02; // 自己交差になるのを防ぐバイアス
-const float SDF_DIFFUSE_CONE_TANGENT = 0.4; // 1 本が受け持つ立体角に相当する太さ
+// 半球の立体角 2π を N 本で負担するので 1 本当たり 2π/N
+// cosΘ = 1 - 1/N
+// N = 8 なので $\theta = 28.9° -> tan\theta = 0.55$
+const float SDF_DIFFUSE_CONE_TANGENT = 0.55; // 1 本が受け持つ立体角に相当する太さ
 
 // 点から箱までの最短距離距離を計算
 float sdBox (vec3 p, vec3 center, vec3 halfSize) {
@@ -79,18 +82,16 @@ float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent) {
         t += d;
         if (t > sceneParams.w) return res;
     }
-    return res;
+    return 0.0;
 }
 
 const int SDF_HEMISPHERE_SAMPLES = 8;
 // Normal 周りの半球を cosine 重みでサンプル詩平均化姿勢を返す
-// rotation は法線まわりの回転 (cos, sin) 全画素で同じ向きだと縞が出るのでピクセルごとに散らす
 float sdfSkyVisibility ( vec3 pos, vec3 normal, vec2 rotation) {
     // ここでの up はワールドの上ではなく cross がゼロにならないためのもの
     vec3 up = abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
     vec3 t0 = normalize(cross(up, normal));
     vec3 b0 = cross(normal, t0);
-    // 基底ごと法線まわりに回す 半球の覆い方は変わらず回転角だけが画素ごとに変わる
     vec3 tangent = t0 * rotation.x + b0 * rotation.y;
     vec3 bitangent = -t0 * rotation.y + b0 * rotation.x;
 

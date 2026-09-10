@@ -12,7 +12,7 @@ layout(std140, binding = 2) uniform SdfScene {
     vec4 wallCenters[2];
     vec4 boxHalfSize;
     vec4 wallHalfSize;
-    vec4 sceneParams;
+    vec4 sceneParams; // x: floorY, y: sizeof cubePositions, z: 2.0, w: floor's size
 };
 
 const int SDF_MAX_STEPS = 96;

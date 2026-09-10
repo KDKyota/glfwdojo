@@ -42,6 +42,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
 
     /* SDF による中距離遮蔽 */
     sdfOcclusionShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "sdf_occlusion.frag");
+    sdfOcclusionBlurShader_ = std::make_unique<gl::Shader>("fragment_quad.vert", "sdf_occlusion_blur.frag");
 
     /* IBL */
     equirectToCubemapShader_ =
@@ -538,6 +539,9 @@ void Scene::initTextures() {
     sdfOcclusionShader_->setInt("gPosition", 0);
     sdfOcclusionShader_->setInt("gNormal", 1);
     sdfOcclusionShader_->setInt("texNoise", 2);
+
+    sdfOcclusionBlurShader_->use();
+    sdfOcclusionBlurShader_->setInt("sdfOcclusionInput", 0);
 }
 
 /// メインの HDR フレームバッファとシャドウ用・ブラー用の FBO を構築する
@@ -762,6 +766,20 @@ void Scene::initSsao() {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sdfOcclusionBuffer_, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::SDF_OCCLUSION:: Framebuffer is not complete!" << std::endl;
+
+    /* --- SDF 遮蔽のブラーパスの出力先 --- */
+    sdfOcclusionBlurFBO_.create();
+    glBindFramebuffer(GL_FRAMEBUFFER, sdfOcclusionBlurFBO_);
+    sdfOcclusionBufferBlur_.create();
+    glBindTexture(GL_TEXTURE_2D, sdfOcclusionBufferBlur_);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, scrWidth_, scrHeight_, 0, GL_RED, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sdfOcclusionBufferBlur_, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::SDF_OCCLUSION_BLUR:: Framebuffer is not complete!" << std::endl;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -1006,6 +1024,16 @@ void Scene::renderSdfOcclusionPass() {
     glBindVertexArray(quadVAO_);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
+    /* -- blur pass -- */
+    // 回転が残したノイズを 4x4 の平均で均す 実質のサンプル数がここで増える
+    glBindFramebuffer(GL_FRAMEBUFFER, sdfOcclusionBlurFBO_);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, sdfOcclusionBuffer_);
+    sdfOcclusionBlurShader_->use();
+    glBindVertexArray(quadVAO_);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
     glEnable(GL_DEPTH_TEST);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1047,7 +1075,7 @@ void Scene::renderDeferredLightingPass() {
     glActiveTexture(GL_TEXTURE14);
     glBindTexture(GL_TEXTURE_2D, brdfLut_);
     glActiveTexture(GL_TEXTURE15);
-    glBindTexture(GL_TEXTURE_2D, sdfOcclusionBuffer_);
+    glBindTexture(GL_TEXTURE_2D, sdfOcclusionBufferBlur_);
     deferredLightingShader_->use();
     deferredLightingShader_->setVec3("viewPos", camera_->GetViewPosition());
     // UI から変わる値なので毎フレーム送る

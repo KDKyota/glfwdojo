@@ -94,6 +94,8 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/ssao.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/ssao_blur.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/sdf_occlusion.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/sdf_occlusion_blur.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/sdf_occlusion_blur.frag
     # lighting
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting/deferred_lighting.frag
     # forward

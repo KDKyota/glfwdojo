@@ -302,9 +302,10 @@ class Scene {
     gl::TextureHandle noiseTexture_;                          // 4x4 GL_RGBA16F
 
     /* SDF による中距離遮蔽 */
-    gl::FramebufferHandle sdfOcclusionFBO_;
-    gl::TextureHandle sdfOcclusionBuffer_; // GL_R8
+    gl::FramebufferHandle sdfOcclusionFBO_, sdfOcclusionBlurFBO_;
+    gl::TextureHandle sdfOcclusionBuffer_, sdfOcclusionBufferBlur_; // GL_R8
     std::unique_ptr<gl::Shader> sdfOcclusionShader_;
+    std::unique_ptr<gl::Shader> sdfOcclusionBlurShader_;
 
     std::vector<glm::vec3> ssaoKernel_;                       // 接空間のサンプル点
 

@@ -1008,6 +1008,7 @@ void Scene::renderDeferredLightingPass() {
     deferredLightingShader_->setInt("debugMode", debugMode_);
     deferredLightingShader_->setFloat("ssaoStrength", ssaoStrength_);
     deferredLightingShader_->setFloat("ambientStrength", ambientStrength_);
+    deferredLightingShader_->setFloat("sdfOcclusionStrength", sdfOcclusionStrength_);
     const float azimuth = glm::radians(sdfDebugAzimuthDegrees_);
     const float elevation = glm::radians(sdfDebugElevationDegrees_);
     deferredLightingShader_->setVec3(("sdfDebugDir"), {glm::cos(elevation) * glm::cos(azimuth), glm::sin(elevation),
@@ -1138,6 +1139,7 @@ void Scene::renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted) 
     transparentWindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentWindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
     transparentWindowShader_->setFloat("ambientStrength", ambientStrength_);
+    transparentWindowShader_->setFloat("sdfOcclusionStrength", sdfOcclusionStrength_);
     glassMaterial_.applyToShader(*transparentWindowShader_);
     for (unsigned int j = 0; j < 4; ++j) {
         glActiveTexture(GL_TEXTURE8 + j);

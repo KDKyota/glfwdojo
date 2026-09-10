@@ -53,6 +53,9 @@ class Scene {
     float &SsaoStrength() {
         return ssaoStrength_;
     }
+    float &SdfOcclusionStrength() {
+        return sdfOcclusionStrength_;
+    }
     float &sdfDebugAzimuthDegrees() {
         return sdfDebugAzimuthDegrees_;
     }
@@ -285,6 +288,8 @@ class Scene {
     bool debugCollision_ = false;
     // SSAO の効き具合（0.0 = 無効, 1.0 = そのまま適用）
     float ssaoStrength_ = 1.0f;
+    // SDF による中距離遮蔽の聞き具合
+    float sdfOcclusionStrength_ = 1.0f;
     // SDF レイマーチの検証用
     float sdfDebugAzimuthDegrees_ = 0.0f;
     float sdfDebugElevationDegrees_ = 45.0f;

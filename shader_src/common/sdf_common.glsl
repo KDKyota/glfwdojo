@@ -27,6 +27,7 @@ const float SDF_MAX_DIST = 50.0;
 const int SDF_MAX_STEPS = 96;
 const float SDF_HIT_EPSILON = 0.002; // 衝突の閾値
 const float SDF_NORMAL_BIAS = 0.02; // 自己交差になるのを防ぐバイアス
+const float SDF_DIFFUSE_CONE_TANGENT = 0.4; // 1 本が受け持つ立体角に相当する太さ
 
 // 点から箱までの最短距離距離を計算
 float sdBox (vec3 p, vec3 center, vec3 halfSize) {
@@ -58,12 +59,31 @@ float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
         if (t > SDF_MAX_DIST) 
             return 1.0;
     }
-    return 1.0;
+    return 0.0;
+}
+
+// 注意：coneTangent が実質的な円錐の角度になるので、0 だと実質的に線になる
+// コーントレースで途中どれだけ絞られたかを返す
+float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent) {
+    vec3 origin = pos + normal * SDF_NORMAL_BIAS;
+    float res = 1.0;
+    float t = 0.0;
+    for (int i = 0; i < SDF_MAX_STEPS; ++i) {
+        float d = sceneSDF(origin + dir * t);
+        if (d < SDF_HIT_EPSILON) return 0.0;
+
+        // 空きスペース d がその距離での円錐半径をどれだけ満たせるか
+        res = min(res, d / max(t * coneTangent, 1e-4));
+        t += d;
+        if (t > SDF_MAX_DIST) return res;
+    }
+    return 0.0;
 }
 
 const int SDF_HEMISPHERE_SAMPLES = 16;
 // Normal 周りの半球を cosine 重みでサンプル詩平均化姿勢を返す
 float sdfSkyVisibility ( vec3 pos, vec3 normal) {
+    // ここでの up はワールドの上ではなく cross がゼロにならないためのもの
     vec3 up = abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
     vec3 tangent = normalize(cross(up, normal));
     vec3 bitangent = cross(normal, tangent);
@@ -77,10 +97,10 @@ float sdfSkyVisibility ( vec3 pos, vec3 normal) {
         vec3 local = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
         vec3 dir = tangent * local.x + bitangent * local.y + normal * local.z;
 
-        int steps;
-        visible += sdfVisibility(pos, normal, dir, steps);
+        visible += sdfConeVisibility(pos, normal, dir, SDF_DIFFUSE_CONE_TANGENT);
     }
     return visible / float(SDF_HEMISPHERE_SAMPLES);
 }
+
 
 #endif

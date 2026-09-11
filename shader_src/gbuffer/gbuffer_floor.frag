@@ -36,9 +36,7 @@ void main()
       gAlbedoRoughness.a = roughness;
 
       if (checkerFloor) {
-            vec2 tile = floor(FragPos.xz / checkerTileSize);
-            bool odd = mod(tile.x + tile.y, 2.0) >= 1.0;
-            gAlbedoRoughness.rgb = vec3((odd != checkerInvert) ? 1.0 : 0.0);
+            gAlbedoRoughness.rgb = vec3(checkerInvert ? 0.0 : 1.0);
       }
 #endif
 }

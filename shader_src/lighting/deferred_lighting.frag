@@ -43,6 +43,11 @@ void main() {
 
     if (debugMode == 0) {
         // ---- 通常のライティング ----
+        if (dot(Normal, Normal) < 0.5) {
+            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+        }
         float AmbientOcclusion =
             mix(1.0, texture(ssao, TexCoords).r, ssaoStrength);
 
@@ -81,6 +86,9 @@ void main() {
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
             float shadow = ShadowCalculation(FragPos, Normal, lightDir,
                     pointLights[i].position, shadowMap[i]);
+            float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
+                                                       pointLights[i].sourceRadius);
+            shadow = max(shadow, sdfShadow * sdfShadowStrength);
             // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
             vec3 transmit =
                 texture(shadowColor[i], FragPos - pointLights[i].position).rgb;

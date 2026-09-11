@@ -56,6 +56,12 @@ class Scene {
     float &SdfOcclusionStrength() {
         return sdfOcclusionStrength_;
     }
+    float &SdfShadowStrength() {
+        return sdfShadowStrength_;
+    }
+    bool &ShadowMapStaticCasters() {
+        return shadowMapStaticCasters_;
+    }
     float &sdfDebugAzimuthDegrees() {
         return sdfDebugAzimuthDegrees_;
     }
@@ -292,6 +298,9 @@ class Scene {
     float ssaoStrength_ = 1.0f;
     // SDF による中距離遮蔽の聞き具合
     float sdfOcclusionStrength_ = 1.0f;
+    // SDF ソフトシャドウの聞き具合
+    float sdfShadowStrength_ = 1.0f;
+    bool shadowMapStaticCasters_ = false; // 床とキューブと壁をシャドウマップにも描くか
     // SDF レイマーチの検証用
     float sdfDebugAzimuthDegrees_ = 0.0f;
     float sdfDebugElevationDegrees_ = 45.0f;

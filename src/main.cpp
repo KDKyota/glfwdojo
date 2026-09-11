@@ -131,6 +131,8 @@ int main(void) {
 
                 ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
                 ImGui::SliderFloat("SDF occlusion", &scene->SdfOcclusionStrength(), 0.0f, 1.0f);
+                ImGui::SliderFloat("SDF shadow", &scene->SdfShadowStrength(), 0.0f, 1.0f);
+                ImGui::Checkbox("Static casters in shadow map", &scene->ShadowMapStaticCasters());
                 // IBL 化で基準が「空の平均輝度」に変わり 1.0 では足りなくなった
                 ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 5.0f);
                 ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);

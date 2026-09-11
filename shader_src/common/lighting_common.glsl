@@ -13,6 +13,8 @@ uniform float ambientStrength;
 // SDF による中間距離遮蔽の聞き具合 Deferred とガラスで同じ値に統一
 uniform float sdfOcclusionStrength;
 
+uniform float sdfShadowStrength;
+
 // この光源からの直接光だけを返す 環境光は呼び出し側で一括して足す
 // ガラスのように拡散反射を持たせたくない場合は albedo に 0 を渡す
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,

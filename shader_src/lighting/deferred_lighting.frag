@@ -32,7 +32,7 @@ uniform int debugMode;
 uniform float ssaoStrength;
 
 // debugMode 14 でレイを飛ばす方向(ImGui から変更可能にする)
-uniform vec3 sdfDebugDir; 
+uniform vec3 sdfDebugDir;
 
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
@@ -172,13 +172,21 @@ void main() {
         FragColor = vec4(texture(brdfLUT, TexCoords).rg, 0.0, 1.0);
 	} else if (debugMode == 14) {
 		// SDF関数のデバッグ
-        if (dot(Normal, Normal) < 0.5) { 
+        if (dot(Normal, Normal) < 0.5) { // オブジェクトと HDR を区別して処理
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
             FragColor = vec4(vec3(texture(sdfOcclusion, TexCoords).r), 1.0);
         }
-    }
-     else {
+    } else if (debugMode == 15) {
+        // ソフトシャドウのデバッグ
+        if (dot(Normal, Normal) < 0.5) {
+            FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        } else {
+            float visibility =
+                sdfLightVisibility(FragPos, normalize(Normal), pointLights[0].position, pointLights[0].sourceRadius);
+            FragColor = vec4(vec3(visibility), 1.0);
+        }
+    } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）
     }
 }

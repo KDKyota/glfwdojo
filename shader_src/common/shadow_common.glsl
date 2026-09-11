@@ -17,7 +17,8 @@ struct PointLight {
     vec3 specular;
 
     // PointLight::calcRadius() が減衰式から逆算して送ってくる
-    float radius;
+    float radius; // 光が届く距離
+    float sourceRadius; // 半影の幅を決める光源の半径
 };
 
 uniform PointLight pointLights[NR_LIGHTS];

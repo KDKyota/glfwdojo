@@ -1,6 +1,7 @@
 #pragma once
 #include "gl/Shader.h"
 #include "scene/Camera.h"
+#include <cstddef>
 #include <vector>
 #include <glm/glm.hpp>
 
@@ -55,5 +56,10 @@ struct SpotLight {
     // position/direction はカメラに追従させる（ヘッドライト的な使い方）ため camera を受け取る
     void applyToShader(const Shader &shader, const std::string &name, const Camera &camera) const;
 };
+
+/**
+ * @brief 点光源の配列を pointLights[i] という名前の uniform として送る
+ */
+void applyPointLights(const Shader &shader, const PointLight *lights, std::size_t count);
 
 } // namespace gl

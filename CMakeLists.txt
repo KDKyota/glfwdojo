@@ -21,10 +21,13 @@ add_executable(
   src/app/Mouse.cpp
   src/app/Window.cpp
   # gl: GL リソースの薄いラッパ
+  src/gl/NoiseTexture.cpp
+  src/gl/RenderTarget.cpp
   src/gl/Shader.cpp
   src/gl/Texture.cpp
   src/gl/TextureCache.cpp
   # debug: 計測とデバッグ出力
+  src/debug/CollisionDebugDraw.cpp
   src/debug/GpuProfiler.cpp
   src/debug/GlDebug.cpp
   # render: 描画パイプライン
@@ -32,6 +35,23 @@ add_executable(
   src/render/Lighting.cpp
   src/render/Material.cpp
   src/render/Scene.cpp
+  src/render/SceneGeometry.cpp
+  # render/targets: パス同士を繋ぐ FBO とテクスチャ
+  src/render/targets/GBuffer.cpp
+  src/render/targets/HdrTarget.cpp
+  src/render/targets/OcclusionTarget.cpp
+  src/render/targets/ShadowCubeTargets.cpp
+  # render/pass: Render() から順に呼ばれる各パス
+  src/render/pass/ShadowPass.cpp
+  src/render/pass/GeometryPass.cpp
+  src/render/pass/SsaoPass.cpp
+  src/render/pass/SdfOcclusionPass.cpp
+  src/render/pass/DeferredLightingPass.cpp
+  src/render/pass/ForwardPass.cpp
+  src/render/pass/BloomPass.cpp
+  src/render/pass/TonemapPass.cpp
+  # render/ibl: 起動時に一度だけ焼く
+  src/render/ibl/IblBaker.cpp
   # asset: 読み込んだモデル
   src/asset/Mesh.cpp
   src/asset/Model.cpp
@@ -39,6 +59,7 @@ add_executable(
   src/scene/Camera.cpp
   src/scene/Character.cpp
   src/scene/Collision.cpp
+  src/scene/SceneModels.cpp
   third_party/stb_image_impl.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)

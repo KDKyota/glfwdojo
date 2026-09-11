@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace gl {
 float PointLight::calcRadius() const {
@@ -44,5 +45,9 @@ void SpotLight::applyToShader(const Shader &shader, const std::string &name, con
     shader.setFloat(name + ".constant", constant);
     shader.setFloat(name + ".linear", linear);
     shader.setFloat(name + ".quadratic", quadratic);
+}
+void applyPointLights(const Shader &shader, const PointLight *lights, std::size_t count) {
+    for (std::size_t i = 0; i < count; ++i)
+        lights[i].applyToShader(shader, "pointLights[" + std::to_string(i) + "]");
 }
 } // namespace gl

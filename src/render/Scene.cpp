@@ -656,8 +656,8 @@ void Scene::initUBO() {
     constexpr float wallHalfThickness = 0.1f;
     constexpr float wallCenterY = (gl::units::floorY + gl::units::wallTopY) * 0.5f;
     constexpr float wallHalfHeight = (gl::units::wallTopY - gl::units::floorY) * 0.5f;
-    block.wallCenters[0] = glm::vec4(0.0f, wallCenterY, -gl::units::floorHalfExtent, 0.0f);
-    block.wallCenters[1] = glm::vec4(0.0f, wallCenterY, gl::units::floorHalfExtent, 0.0f);
+    block.wallCenters[0] = glm::vec4(0.0f, wallCenterY, -gl::units::floorHalfExtent - wallHalfThickness, 0.0f);
+    block.wallCenters[1] = glm::vec4(0.0f, wallCenterY, gl::units::floorHalfExtent + wallHalfThickness, 0.0f);
     block.wallHalfSize =
         glm::vec4(gl::units::floorHalfExtent, wallHalfHeight, wallHalfThickness, 0.0f);
 

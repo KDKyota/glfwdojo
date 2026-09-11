@@ -16,6 +16,7 @@ struct PointLight {
     float constant = 1.0f;
     float linear = 0.02f;
     float quadratic = 0.001f;
+    float sourceRadius = 0.1f; // 半影の幅を決める光源の半径 
 
     // 明るさが 5/256 未満になる距離 diffuse から一意に決まる派生値なので都度計算する
     /**

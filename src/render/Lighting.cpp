@@ -23,6 +23,7 @@ void PointLight::applyToShader(const Shader &shader, const std::string &name) co
     shader.setFloat(name + ".linear", linear);
     shader.setFloat(name + ".quadratic", quadratic);
     shader.setFloat(name + ".radius", calcRadius());
+    shader.setFloat(name + ".sourceRadius", sourceRadius);
 }
 
 void DirectionalLight::applyToShader(const Shader &shader, const std::string &name) const {

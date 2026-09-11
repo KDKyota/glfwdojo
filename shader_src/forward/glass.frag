@@ -67,7 +67,7 @@ void main() {
         vec3 prefiltered = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, roughness)).rg;
         float specConeTangent = roughness * roughness;
-        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normal, R, specConeTangent), sdfOcclusionStrength);
+        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normal, R, specConeTangent, sceneParams.w), sdfOcclusionStrength);
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // BRDF 内の fresnelSchlick が既にフレネルを含むので ここでは掛けない

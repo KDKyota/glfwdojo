@@ -66,7 +66,7 @@ void main() {
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
 
         float specConeTangent = Roughness * Roughness;
-        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent), sdfOcclusionStrength);
+        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している

@@ -114,45 +114,46 @@ int main(void) {
                     "14: SDF visibility",
                     "15: SDF soft shadow (light 0)"
                 };
-                ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
+                gl::RenderSettings &settings = scene->Settings();
+                ImGui::Combo("View", &settings.debugMode, kDebugModes,
                              IM_ARRAYSIZE(kDebugModes));
 
                 // G-Buffer や AO を見るときはトーンマッピングを切らないと階調が潰れる
                 ImGui::Checkbox("Raw output (skip tonemap/bloom)",
-                                &scene->DebugRawOutput());
-                ImGui::Checkbox("Show collision shape", &scene->DebugCollision());
-                ImGui::Checkbox("Checker floor", &scene->DebugCheckerFloor());
+                                &settings.debugRawOutput);
+                ImGui::Checkbox("Show collision shape", &settings.debugCollision);
+                ImGui::Checkbox("Checker floor", &settings.debugCheckerFloor);
                 ImGui::SameLine();
-                ImGui::Checkbox("Invert", &scene->DebugCheckerInvert());
+                ImGui::Checkbox("Invert", &settings.debugCheckerInvert);
                 ImGui::Separator();
 
-                ImGui::SliderFloat(("SDF azimuth"), &scene->sdfDebugAzimuthDegrees(), -180.0f, 180.0f);
-                ImGui::SliderFloat("SDF elevation", &scene->sdfDebugElevationDegrees(), -90.0f, 90.0f);
+                ImGui::SliderFloat(("SDF azimuth"), &settings.sdfDebugAzimuthDegrees, -180.0f, 180.0f);
+                ImGui::SliderFloat("SDF elevation", &settings.sdfDebugElevationDegrees, -90.0f, 90.0f);
 
-                ImGui::SliderFloat("SSAO strength", &scene->SsaoStrength(), 0.0f, 1.0f);
-                ImGui::SliderFloat("SDF occlusion", &scene->SdfOcclusionStrength(), 0.0f, 1.0f);
-                ImGui::SliderFloat("SDF shadow", &scene->SdfShadowStrength(), 0.0f, 1.0f);
-                ImGui::Checkbox("Static casters in shadow map", &scene->ShadowMapStaticCasters());
+                ImGui::SliderFloat("SSAO strength", &settings.ssaoStrength, 0.0f, 1.0f);
+                ImGui::SliderFloat("SDF occlusion", &settings.sdfOcclusionStrength, 0.0f, 1.0f);
+                ImGui::SliderFloat("SDF shadow", &settings.sdfShadowStrength, 0.0f, 1.0f);
+                ImGui::Checkbox("Static casters in shadow map", &settings.shadowMapStaticCasters);
                 // IBL 化で基準が「空の平均輝度」に変わり 1.0 では足りなくなった
-                ImGui::SliderFloat("Ambient", &scene->AmbientStrength(), 0.0f, 5.0f);
-                ImGui::SliderFloat("Direct light", &scene->DirectLightStrength(), 0.0f, 1.0f);
-                ImGui::SliderFloat("Bloom", &scene->BloomStrength(), 0.0f, 2.0f);
-                ImGui::SliderFloat("Exposure", &scene->Exposure(), 0.05f, 5.0f);
+                ImGui::SliderFloat("Ambient", &settings.ambientStrength, 0.0f, 5.0f);
+                ImGui::SliderFloat("Direct light", &settings.directLightStrength, 0.0f, 1.0f);
+                ImGui::SliderFloat("Bloom", &settings.bloomStrength, 0.0f, 2.0f);
+                ImGui::SliderFloat("Exposure", &settings.exposure, 0.05f, 5.0f);
                 ImGui::Separator();
 
                 // metallic は物理的には 0 か 1 の二択 中間は錆びた鉄のような混在時のみ
-                ImGui::SliderFloat("Metallic: cube", &scene->CubeMaterial().metallic, 0.0f, 1.0f);
-                ImGui::SliderFloat("Metallic: floor", &scene->FloorMaterial().metallic, 0.0f, 1.0f);
-                ImGui::SliderFloat("Metallic: wall", &scene->WallMaterial().metallic, 0.0f, 1.0f);
-                ImGui::SliderFloat("Metallic: window", &scene->WindowMaterial().metallic, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic: cube", &settings.cubeMaterial.metallic, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic: floor", &settings.floorMaterial.metallic, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic: wall", &settings.wallMaterial.metallic, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic: window", &settings.windowMaterial.metallic, 0.0f, 1.0f);
                 ImGui::Separator();
 
                 // 下限を 0 にしない GGX の分布が発散して真っ白な点が出る
-                ImGui::SliderFloat("Roughness: cube", &scene->CubeMaterial().roughness, 0.05f, 1.0f);
-                ImGui::SliderFloat("Roughness: floor", &scene->FloorMaterial().roughness, 0.05f, 1.0f);
-                ImGui::SliderFloat("Roughness: wall", &scene->WallMaterial().roughness, 0.05f, 1.0f);
-                ImGui::SliderFloat("Roughness: window", &scene->WindowMaterial().roughness, 0.05f, 1.0f);
-                ImGui::SliderFloat("Roughness: glass", &scene->GlassMaterial().roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: cube", &settings.cubeMaterial.roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: floor", &settings.floorMaterial.roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: wall", &settings.wallMaterial.roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: window", &settings.windowMaterial.roughness, 0.05f, 1.0f);
+                ImGui::SliderFloat("Roughness: glass", &settings.glassMaterial.roughness, 0.05f, 1.0f);
             }
             ImGui::End();
         }

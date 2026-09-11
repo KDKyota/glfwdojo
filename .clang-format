@@ -3,8 +3,8 @@ BasedOnStyle: Microsoft
 ColumnLimit: 120
 # 開き括弧を改行せず同じ行に置く (K&R風: void func() { ... })
 BreakBeforeBraces: Attach
-# 1行 getter や短い関数はそのまま残す
-AllowShortFunctionsOnASingleLine: All
+# class 内の1行 getter は残すが GLSL の関数は畳ませない (GLSL は全て非メンバ関数)
+AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortCaseLabelsOnASingleLine: true
 # ブロックとループ本体は常に展開する (GLSL の for 本体が1行に潰れて読みにくいため)
 AllowShortBlocksOnASingleLine: Never
@@ -14,3 +14,11 @@ AllowShortIfStatementsOnASingleLine: WithoutElse
 # include の自動ソートを無効にする。glad は他の OpenGL ヘッダより先に
 # 展開されないとコンパイルが通らず、アルファベット順では GLFW が先に来てしまう
 SortIncludes: Never
+# 以下は Microsoft ベースの既定値だが clang-format のバージョン更新で
+# 既定が変わっても diff が動かないよう明示的に固定する
+Standard: c++17
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+PointerAlignment: Right
+ReferenceAlignment: Pointer

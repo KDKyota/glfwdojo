@@ -74,6 +74,9 @@ class Scene {
     float &AmbientStrength() {
         return ambientStrength_;
     }
+    float &DirectLightStrength() {
+        return directLightStrength_;
+    }
     float &BloomStrength() {
         return bloomStrength_;
     }
@@ -329,6 +332,7 @@ class Scene {
     static constexpr float kSsaoBias = 0.03f;  // 自己遮蔽によるアクネ対策 半径に比例させる
     static constexpr float kSsaoPower = 2.0f;  // AO のコントラスト 実用範囲は 1.5〜3.0
     float ambientStrength_ = 0.18f;            // SSAO が掛かるのはこの項だけ
+    float directLightStrength_ = 1.0f;         // IBL と直接光を切り分けて確認するための係数
     float bloomStrength_ = 1.0f;
 
     float heightScale_ = 0.0f;

@@ -10,6 +10,9 @@
 // Deferred と前方描画のガラスで同じ値を使うためここで一本化する
 uniform float ambientStrength;
 
+// 直接光の強さ ambientStrength と切り分けて片方だけを見るために使う
+uniform float directLightStrength;
+
 // SDF による中間距離遮蔽の聞き具合 Deferred とガラスで同じ値に統一
 uniform float sdfOcclusionStrength;
 

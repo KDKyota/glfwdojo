@@ -1119,6 +1119,7 @@ void Scene::renderDeferredLightingPass() {
     deferredLightingShader_->setInt("debugMode", debugMode_);
     deferredLightingShader_->setFloat("ssaoStrength", ssaoStrength_);
     deferredLightingShader_->setFloat("ambientStrength", ambientStrength_);
+    deferredLightingShader_->setFloat("directLightStrength", directLightStrength_);
     deferredLightingShader_->setFloat("sdfOcclusionStrength", sdfOcclusionStrength_);
     deferredLightingShader_->setFloat("sdfShadowStrength", sdfShadowStrength_);
     const float azimuth = glm::radians(sdfDebugAzimuthDegrees_);
@@ -1251,6 +1252,7 @@ void Scene::renderTransparentWindows(gl::ArraySpan<gl::TransparentDraw> sorted) 
     transparentWindowShader_->setVec3("viewPos", camera_->GetViewPosition());
     transparentWindowShader_->setMat3("normalMatrix", glm::mat3(1.0f));
     transparentWindowShader_->setFloat("ambientStrength", ambientStrength_);
+    transparentWindowShader_->setFloat("directLightStrength", directLightStrength_);
     transparentWindowShader_->setFloat("sdfOcclusionStrength", sdfOcclusionStrength_);
     transparentWindowShader_->setFloat("sdfShadowStrength", sdfShadowStrength_);
     glassMaterial_.applyToShader(*transparentWindowShader_);

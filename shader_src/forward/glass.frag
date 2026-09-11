@@ -74,8 +74,8 @@ void main() {
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // BRDF 内の fresnelSchlick が既にフレネルを含むので ここでは掛けない
-        // 直接光は素通し 環境の映り込みだけ Deferred 側と同じ係数で揃える
-        vec3 result = reflected + specularIBL * ambientStrength;
+        // 直接光と環境の映り込みを別々の係数にして片方だけを確認できるようにする
+        vec3 result = reflected * directLightStrength + specularIBL * ambientStrength;
 
         float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
         if (brightness > 1.0)

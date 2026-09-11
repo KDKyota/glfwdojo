@@ -92,7 +92,7 @@ void main() {
             // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
             vec3 transmit =
                 texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
-            result += transmit * CalcPointLight(pointLights[i], Normal, FragPos, viewDir,
+            result += directLightStrength * transmit * CalcPointLight(pointLights[i], Normal, FragPos, viewDir,
                         Albedo, Roughness, Metallic, F0, shadow);
         }
 

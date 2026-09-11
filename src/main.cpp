@@ -97,12 +97,23 @@ int main(void) {
                 ImGui::Separator();
 
                 static const char *kDebugModes[] = {
-                    "0: Normal lighting", "1: Shadow (light 0)", "2: shadowMap[0] raw",
-                    "3: G-Buffer Albedo", "4: G-Buffer Normal", "5: G-Buffer Position",
-                    "6: Split view", "7: SSAO", "8: Shadow color[0]",
-                    "9: G-Buffer Metallic", "10: G-Buffer Roughness",
-                    "11: IBL Irradiance", "12: IBL Prefilter",
-                    "13: IBL BRDF LUT", "14: SDF visibility"};
+                    "0: Normal lighting",
+                    "1: Shadow (light 0)",
+                    "2: shadowMap[0] raw",
+                    "3: G-Buffer Albedo",
+                    "4: G-Buffer Normal",
+                    "5: G-Buffer Position",
+                    "6: Split view",
+                    "7: SSAO",
+                    "8: Shadow color[0]",
+                    "9: G-Buffer Metallic",
+                    "10: G-Buffer Roughness",
+                    "11: IBL Irradiance",
+                    "12: IBL Prefilter",
+                    "13: IBL BRDF LUT",
+                    "14: SDF visibility",
+                    "15: SDF soft shadow (light 0)"
+                };
                 ImGui::Combo("View", &scene->DebugMode(), kDebugModes,
                              IM_ARRAYSIZE(kDebugModes));
 

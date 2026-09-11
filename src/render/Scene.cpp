@@ -661,7 +661,7 @@ void Scene::initUBO() {
     block.wallHalfSize =
         glm::vec4(gl::units::floorHalfExtent, wallHalfHeight, wallHalfThickness, 0.0f);
 
-    // w はレイがシーンを確実に抜けきる距離
+    // w はレイがシーンを確実に抜けきる距離（床の横幅）
     block.sceneParams = glm::vec4(gl::units::floorY, static_cast<float>(cubePositions_.size()),
                                   2.0f, gl::units::floorHalfExtent * 2.0f);
 

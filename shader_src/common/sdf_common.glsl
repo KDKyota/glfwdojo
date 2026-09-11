@@ -49,10 +49,10 @@ float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
     float t = 0.0;
     for (steps = 0; steps < SDF_MAX_STEPS; ++steps) {
         float d = sceneSDF(origin + dir * t);
-        if (d < SDF_HIT_EPSILON) 
+        if (d < SDF_HIT_EPSILON)
             return 0.0;
         t += d;
-        if (t > sceneParams.w) 
+        if (t > sceneParams.w)
             return 1.0;
     }
     return 0.0;
@@ -60,7 +60,7 @@ float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
 
 // 注意：coneTangent が実質的な円錐の角度になるので、0 だと実質的に線になる
 // コーントレースで途中での最小距離を返す
-float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent) {
+float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax) { // `tMax` は tをどこまで伸ばしたら打ち切るかという値
     vec3 origin = pos + normal * SDF_NORMAL_BIAS;
     float res = 1.0;
     float t = 0.0;
@@ -80,7 +80,7 @@ float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent) {
 
         prevD = d;
         t += d;
-        if (t > sceneParams.w) return res;
+        if (t > tMax) return res;
     }
     return 0.0;
 }
@@ -104,7 +104,7 @@ float sdfSkyVisibility ( vec3 pos, vec3 normal, vec2 rotation) {
         vec3 local = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
         vec3 dir = tangent * local.x + bitangent * local.y + normal * local.z;
 
-        visible += sdfConeVisibility(pos, normal, dir, SDF_DIFFUSE_CONE_TANGENT);
+        visible += sdfConeVisibility(pos, normal, dir, SDF_DIFFUSE_CONE_TANGENT, sceneParams.w);
     }
     return visible / float(SDF_HEMISPHERE_SAMPLES);
 }

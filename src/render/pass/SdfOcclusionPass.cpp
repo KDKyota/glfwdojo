@@ -15,6 +15,8 @@ namespace {
 constexpr int kSdfMaxBoxes = 8;
 // sdf_common.glsl が参照する UBO の binding
 constexpr GLuint kSceneUboBinding = 2;
+// main.cpp の kDebugModes と対応させること
+constexpr int kDebugModeStepCount = 16;
 
 } // namespace
 
@@ -67,7 +69,7 @@ void SdfOcclusionPass::uploadSceneUbo() {
 }
 
 void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
-                               const SceneGeometry &geometry) {
+                               const SceneGeometry &geometry, const RenderSettings &settings) {
     glViewport(0, 0, target.Width(), target.Height());
     glBindFramebuffer(GL_FRAMEBUFFER, target.Fbo());
     glClear(GL_COLOR_BUFFER_BIT);
@@ -79,6 +81,7 @@ void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbu
     glActiveTexture(GL_TEXTURE0 + texunit::kNoise);
     glBindTexture(GL_TEXTURE_2D, noise.Get());
     shader_.use();
+    shader_.setBool("debugShowSteps", settings.debugMode == kDebugModeStepCount);
     geometry.DrawScreenQuad();
 
     /* -- blur pass -- */

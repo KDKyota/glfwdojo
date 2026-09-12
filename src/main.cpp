@@ -112,7 +112,8 @@ int main(void) {
                     "12: IBL Prefilter",
                     "13: IBL BRDF LUT",
                     "14: SDF visibility",
-                    "15: SDF soft shadow (light 0)"
+                    "15: SDF soft shadow (light 0)",
+                    "16: SDF steps"
                 };
                 gl::RenderSettings &settings = scene->Settings();
                 ImGui::Combo("View", &settings.debugMode, kDebugModes,

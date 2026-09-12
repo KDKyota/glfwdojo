@@ -78,8 +78,9 @@ void Scene::Render(float deltaTime, float heightScale) {
     // [4] G-Buffer から遮蔽率を求めてブラーまで
     profiler_.Measure(gl::GpuPass::Ssao, [&] { ssaoPass_.Execute(ssaoTarget_, gBuffer_, noise_, geometry_); });
     // [4.5] SSAO が届かない数m規模の遮蔽を SDF から求める
-    profiler_.Measure(gl::GpuPass::SdfOcclusion,
-                      [&] { sdfOcclusionPass_.Execute(sdfOcclusionTarget_, gBuffer_, noise_, geometry_); });
+    profiler_.Measure(gl::GpuPass::SdfOcclusion, [&] {
+        sdfOcclusionPass_.Execute(sdfOcclusionTarget_, gBuffer_, noise_, geometry_, settings_);
+    });
     // [5] G-Buffer の深度を hdrTarget_ へ複製（前方描画の深度テスト用）
     profiler_.Measure(gl::GpuPass::BlitDepth, [&] { gBuffer_.BlitDepthTo(hdrTarget_.Fbo()); });
     // [6] G-Buffer + 影 + AO を合成

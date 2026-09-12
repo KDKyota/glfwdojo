@@ -8,7 +8,6 @@ layout(location = 1) out vec4 BrightColor;
 
 in vec2 TexCoords;
 
-
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoRoughness;
@@ -74,7 +73,7 @@ void main() {
         float specVisibility = 0.0;
         if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
             specVisibility =
-                mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+                mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, SDF_DISCONTINUE_DIST), sdfOcclusionStrength);
         } else {
             specVisibility = 1.0;
         }
@@ -201,6 +200,13 @@ void main() {
             float visibility =
                 sdfLightVisibility(FragPos, normalize(Normal), pointLights[0].position, pointLights[0].sourceRadius);
             FragColor = vec4(vec3(visibility), 1.0);
+        }
+    } else if (debugMode == 16) {
+        // AO パスのステップ数を正規化して表示 白いほど SDF_MAX_STEPS に近い（重い）
+        if (dot(Normal, Normal) < 0.5) {
+            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        } else {
+            FragColor = vec4(vec3(texture(sdfOcclusion, TexCoords).r), 1.0);
         }
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）

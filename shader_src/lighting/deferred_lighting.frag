@@ -71,7 +71,13 @@ void main() {
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
 
         float specConeTangent = Roughness * Roughness;
-        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+        float specVisibility = 0.0;
+        if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
+            specVisibility =
+                mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+        } else {
+            specVisibility = 1.0;
+        }
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している
@@ -86,9 +92,11 @@ void main() {
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
             float shadow = ShadowCalculation(FragPos, Normal, lightDir,
                     pointLights[i].position, shadowMap[i]);
-            float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
-                                                       pointLights[i].sourceRadius);
-            shadow = max(shadow, sdfShadow * sdfShadowStrength);
+            if (sdfShadowStrength > 0.0) { // 処理効率工場のための条件
+                float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
+                                                           pointLights[i].sourceRadius);
+                shadow = max(shadow, sdfShadow * sdfShadowStrength);
+            }
             // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
             vec3 transmit =
                 texture(shadowColor[i], FragPos - pointLights[i].position).rgb;

@@ -15,7 +15,9 @@ layout(std140, binding = 2) uniform SdfScene {
     vec4 sceneParams; // x: floorY, y: sizeof cubePositions, z: 2.0, w: floor's size
 };
 
-const int SDF_MAX_STEPS = 96;
+const int SDF_MAX_STEPS = 48;
+
+const float SDF_STEP_HEATMAP_REF = 96.0;
 const float SDF_HIT_EPSILON = 0.002; // 衝突の閾値
 const float SDF_NORMAL_BIAS = 0.02; // 自己交差になるのを防ぐバイアス
 // 半球の立体角 2π を N 本で負担するので 1 本当たり 2π/N

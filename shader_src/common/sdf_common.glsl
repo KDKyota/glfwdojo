@@ -38,12 +38,12 @@ float sdBox (vec3 p, vec3 center, vec3 halfSize) {
 // シーン全体で最も近い面までの距離を計算
 float sceneSDF (vec3 p) {
     float dist = p.y - sceneParams.x;
-    int boxCount = int(sceneParams.y);
-    for (int i = 0; i < boxCount; ++i) {
+    // int boxCount = int(sceneParams.y);
+    for (int i = 0; i < SDF_MAX_BOXES; ++i) {
         dist = min(dist, sdBox(p, boxCenters[i].xyz, boxHalfSize.xyz));
     }
-    int wallCount = int(sceneParams.z);
-    for (int i = 0; i < wallCount; ++i) {
+    //int wallCount = int(sceneParams.z);
+    for (int i = 0; i < 2; ++i) {
         dist = min(dist, sdBox(p, wallCenters[i].xyz, wallHalfSize.xyz));
     }
     return dist;

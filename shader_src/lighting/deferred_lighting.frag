@@ -8,7 +8,6 @@ layout(location = 1) out vec4 BrightColor;
 
 in vec2 TexCoords;
 
-
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoRoughness;
@@ -23,6 +22,7 @@ uniform sampler2D brdfLUT;
 // SDF レイマーチで焼いた拡散側の可視性 鏡面は視線依存なので焼けずここには入らない
 uniform sampler2D sdfOcclusion;
 const float MAX_REFLECTION_LOD = 4.0;
+const float SDF_ROUGHNESS_THRESHOLD = 0.7; // Roughness の値によっては sdfConeVisibility() を実行しない
 
 uniform vec3 viewPos;
 
@@ -70,8 +70,20 @@ void main() {
         vec3 prefiltered = textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
 
-        float specConeTangent = Roughness * Roughness;
-        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+        float specVisibility = 0.0;
+        // Roughness が大きいものは specVisibility を計算してもあまりメリットがない
+        if (Roughness < SDF_ROUGHNESS_THRESHOLD){
+            float specConeTangent = Roughness * Roughness;
+            if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
+                // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
+                specVisibility =
+                    mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+            } else
+                specVisibility = 1.0;
+        } else
+            // そもそも roughness が大きいなら広い範囲を平均している skyVisibility で済む
+            specVisibility = skyVisibility;
+
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している
@@ -86,9 +98,11 @@ void main() {
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
             float shadow = ShadowCalculation(FragPos, Normal, lightDir,
                     pointLights[i].position, shadowMap[i]);
-            float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
-                                                       pointLights[i].sourceRadius);
-            shadow = max(shadow, sdfShadow * sdfShadowStrength);
+            if (sdfShadowStrength > 0.0) { // 処理効率工場のための条件
+                float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
+                                                           pointLights[i].sourceRadius);
+                shadow = max(shadow, sdfShadow * sdfShadowStrength);
+            }
             // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
             vec3 transmit =
                 texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
@@ -193,6 +207,13 @@ void main() {
             float visibility =
                 sdfLightVisibility(FragPos, normalize(Normal), pointLights[0].position, pointLights[0].sourceRadius);
             FragColor = vec4(vec3(visibility), 1.0);
+        }
+    } else if (debugMode == 16) {
+        // AO パスのステップ数を正規化して表示 白いほど SDF_MAX_STEPS に近い（重い）
+        if (dot(Normal, Normal) < 0.5) {
+            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        } else {
+            FragColor = vec4(vec3(texture(sdfOcclusion, TexCoords).r), 1.0);
         }
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）

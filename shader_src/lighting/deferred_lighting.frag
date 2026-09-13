@@ -22,6 +22,7 @@ uniform sampler2D brdfLUT;
 // SDF レイマーチで焼いた拡散側の可視性 鏡面は視線依存なので焼けずここには入らない
 uniform sampler2D sdfOcclusion;
 const float MAX_REFLECTION_LOD = 4.0;
+const float SDF_ROUGHNESS_THRESHOLD = 0.7; // Roughness の値によっては sdfConeVisibility() を実行しない
 
 uniform vec3 viewPos;
 
@@ -69,15 +70,20 @@ void main() {
         vec3 prefiltered = textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
 
-        float specConeTangent = Roughness * Roughness;
         float specVisibility = 0.0;
-        if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
-            // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
-            specVisibility =
-                mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
-        } else {
-            specVisibility = 1.0;
-        }
+        // Roughness が大きいものは specVisibility を計算してもあまりメリットがない
+        if (Roughness < SDF_ROUGHNESS_THRESHOLD){
+            float specConeTangent = Roughness * Roughness;
+            if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
+                // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
+                specVisibility =
+                    mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+            } else
+                specVisibility = 1.0;
+        } else
+            // そもそも roughness が大きいなら広い範囲を平均している skyVisibility で済む
+            specVisibility = skyVisibility;
+
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している

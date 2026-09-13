@@ -15,6 +15,8 @@ namespace {
 constexpr int kSdfMaxBoxes = 8;
 // sdf_common.glsl が参照する UBO の binding
 constexpr GLuint kSceneUboBinding = 2;
+// main.cpp の kDebugModes と対応させること
+constexpr int kDebugModeStepCount = 16;
 
 } // namespace
 
@@ -33,7 +35,7 @@ SdfOcclusionPass::SdfOcclusionPass()
 }
 
 void SdfOcclusionPass::uploadSceneUbo() {
-    struct SdfSceneBlock {
+    struct SdfSceneBlock { // UBO として送信する構造体
         glm::vec4 boxCenters[kSdfMaxBoxes];
         glm::vec4 wallCenters[2];
         glm::vec4 boxHalfSize;
@@ -43,11 +45,15 @@ void SdfOcclusionPass::uploadSceneUbo() {
 
     if (layout::cubePositions.size() > kSdfMaxBoxes)
         throw std::runtime_error("Too many cubes for the SDF UBO");
+    constexpr float kUnusedBoxFarAway = 1e5f; // 未使用の箱は遠方へ飛ばす（見えなくする）
+    for (auto &center : block.boxCenters) {
+        center = glm::vec4(kUnusedBoxFarAway);
+    }
     for (std::size_t i = 0; i < layout::cubePositions.size(); ++i)
         block.boxCenters[i] = glm::vec4(layout::cubePositions[i], 0.0f);
     block.boxHalfSize = glm::vec4(0.5f);
 
-    // 厚さゼロの板ポリは内外が定義できないので薄い箱で近似する
+    // 厚さゼロの板ポリは内外が定義できないので薄い厚みで近似する
     constexpr float wallHalfThickness = 0.1f;
     constexpr float wallCenterY = (units::floorY + units::wallTopY) * 0.5f;
     constexpr float wallHalfHeight = (units::wallTopY - units::floorY) * 0.5f;
@@ -67,7 +73,7 @@ void SdfOcclusionPass::uploadSceneUbo() {
 }
 
 void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
-                               const SceneGeometry &geometry) {
+                               const SceneGeometry &geometry, const RenderSettings &settings) {
     glViewport(0, 0, target.Width(), target.Height());
     glBindFramebuffer(GL_FRAMEBUFFER, target.Fbo());
     glClear(GL_COLOR_BUFFER_BIT);
@@ -79,6 +85,7 @@ void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbu
     glActiveTexture(GL_TEXTURE0 + texunit::kNoise);
     glBindTexture(GL_TEXTURE_2D, noise.Get());
     shader_.use();
+    shader_.setBool("debugShowSteps", settings.debugMode == kDebugModeStepCount);
     geometry.DrawScreenQuad();
 
     /* -- blur pass -- */

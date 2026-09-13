@@ -72,8 +72,9 @@ void main() {
         float specConeTangent = Roughness * Roughness;
         float specVisibility = 0.0;
         if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
+            // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
             specVisibility =
-                mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, SDF_DISCONTINUE_DIST), sdfOcclusionStrength);
+                mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
         } else {
             specVisibility = 1.0;
         }

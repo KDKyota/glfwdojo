@@ -27,5 +27,5 @@ void main() {
 
     int maxSteps;
     float visibility = sdfSkyVisibility(texture(gPosition, TexCoords).rgb, normalize(normal), rotation, maxSteps);
-    FragColor = debugShowSteps ? float(maxSteps) / float(SDF_MAX_STEPS) : visibility;
+    FragColor = debugShowSteps ? float(maxSteps) / SDF_STEP_HEATMAP_REF : visibility;
 }

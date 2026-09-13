@@ -35,7 +35,7 @@ SdfOcclusionPass::SdfOcclusionPass()
 }
 
 void SdfOcclusionPass::uploadSceneUbo() {
-    struct SdfSceneBlock {
+    struct SdfSceneBlock { // UBO として送信する構造体
         glm::vec4 boxCenters[kSdfMaxBoxes];
         glm::vec4 wallCenters[2];
         glm::vec4 boxHalfSize;
@@ -45,11 +45,15 @@ void SdfOcclusionPass::uploadSceneUbo() {
 
     if (layout::cubePositions.size() > kSdfMaxBoxes)
         throw std::runtime_error("Too many cubes for the SDF UBO");
+    constexpr float kUnusedBoxFarAway = 1e5f; // 未使用の箱は遠方へ飛ばす（見えなくする）
+    for (auto &center : block.boxCenters) {
+        center = glm::vec4(kUnusedBoxFarAway);
+    }
     for (std::size_t i = 0; i < layout::cubePositions.size(); ++i)
         block.boxCenters[i] = glm::vec4(layout::cubePositions[i], 0.0f);
     block.boxHalfSize = glm::vec4(0.5f);
 
-    // 厚さゼロの板ポリは内外が定義できないので薄い箱で近似する
+    // 厚さゼロの板ポリは内外が定義できないので薄い厚みで近似する
     constexpr float wallHalfThickness = 0.1f;
     constexpr float wallCenterY = (units::floorY + units::wallTopY) * 0.5f;
     constexpr float wallHalfHeight = (units::wallTopY - units::floorY) * 0.5f;

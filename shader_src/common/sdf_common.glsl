@@ -104,7 +104,7 @@ float sdfLightVisibility(vec3 pos, vec3 normal, vec3 lightPos, float sourceRadiu
     return sdfConeVisibility(pos, normal, toLight / distToLight, sourceRadius / distToLight, distToLight);
 }
 
-const int SDF_HEMISPHERE_SAMPLES = 8;
+const int SDF_HEMISPHERE_SAMPLES = 4;
 // Normal 周りの半球を cosine 重みでサンプル詩平均化姿勢を返す maxSteps に 8 方向中の最大ステップ数を書き出す
 float sdfSkyVisibility ( vec3 pos, vec3 normal, vec2 rotation, out int maxSteps) {
     // ここでの up はワールドの上ではなく cross がゼロにならないためのもの

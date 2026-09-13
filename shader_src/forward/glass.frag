@@ -70,7 +70,8 @@ void main() {
         vec3 prefiltered = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, roughness)).rg;
         float specConeTangent = roughness * roughness;
-        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normal, R, specConeTangent, SDF_DISCONTINUE_DIST), sdfOcclusionStrength);
+        // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
+        float specVisibility = mix(1.0, sdfConeVisibility(FragPos, normal, R, specConeTangent, sceneParams.w), sdfOcclusionStrength);
         vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
 
         // BRDF 内の fresnelSchlick が既にフレネルを含むので ここでは掛けない

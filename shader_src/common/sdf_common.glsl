@@ -86,7 +86,7 @@ float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, floa
         }
 
         prevD = d;
-        t += max(d, 0.1);
+        t += d;
         if (t > tMax) return res;
     }
     return 0.0;

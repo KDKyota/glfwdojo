@@ -211,8 +211,8 @@ cmake --build --preset release-run  # Release でビルドして起動
 
 | 項目            | 内容                                                                                                                                                         |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Camera: ...`   | 現在のカメラモード（`Free look` / `Third person`）を表示。`F` キーの案内を兼ねる                                                                            |
-| `View`          | 表示するものを 14 種から選ぶ。通常のライティング / シャドウ / `shadowMap` の生値 / G-Buffer の Albedo・Normal・Position・Metallic・Roughness / 4分割表示 / SSAO / 透過シャドウの色 / IBL の irradiance・prefilter・BRDF LUT |
+| `Camera: ...`   | 現在のカメラモード（`Free look` / `Third person`）とワールド座標・向きベクトルを表示。`F` キーの案内を兼ねる                                                 |
+| `View`          | 表示するものを 19 種から選ぶ。通常のライティング / シャドウ / `shadowMap` の生値 / G-Buffer の Albedo・Normal・Position・Metallic・Roughness / 4分割表示 / SSAO / 透過シャドウの色 / IBL の irradiance・prefilter・BRDF LUT / SDF の可視性・ソフトシャドウ・ステップ数 / SDF 鏡面コーントレースの可視性・ステップ数 |
 | `Raw output`    | Bloom・トーンマッピング・ガンマ補正を飛ばす。**G-Buffer や SSAO を見るときは必須**（切らないと正常な値でも一律に真っ白く見えて判定できない）                 |
 | `Show collision shape` | キャラクターの衝突判定に使っている円柱形状を可視化する                                                                                              |
 | `SSAO strength` | 環境光遮蔽の効き具合                                                                                                                                         |

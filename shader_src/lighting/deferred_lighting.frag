@@ -22,7 +22,7 @@ uniform sampler2D brdfLUT;
 // SDF レイマーチで焼いた拡散側の可視性 鏡面は視線依存なので焼けずここには入らない
 uniform sampler2D sdfOcclusion;
 const float MAX_REFLECTION_LOD = 4.0;
-const float SDF_ROUGHNESS_THRESHOLD = 0.7; // Roughness の値によっては sdfConeVisibility() を実行しない
+const float SDF_ROUGHNESS_THRESHOLD = 0.7; // Roughness の値によっては sdfEnvVisibility() を実行しない
 
 uniform vec3 viewPos;
 
@@ -77,7 +77,7 @@ void main() {
             if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
                 // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
                 specVisibility =
-                    mix(1.0, sdfConeVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+                    mix(1.0, sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
             } else
                 specVisibility = 1.0;
         } else

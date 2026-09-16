@@ -215,6 +215,19 @@ void main() {
         } else {
             FragColor = vec4(vec3(texture(sdfOcclusion, TexCoords).r), 1.0);
         }
+    } else if (debugMode == 17 || debugMode == 18) {
+        // 鏡面のコーントレースの生の結果 17 は可視性 18 は使ったステップ数
+        if (dot(Normal, Normal) < 0.5) {
+            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        } else {
+            vec3 viewDir = normalize(viewPos - FragPos);
+            vec3 R = reflect(-viewDir, Normal);
+            int steps;
+            float visibility = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R),
+                                                Roughness * Roughness, sceneParams.w, steps);
+            float value = debugMode == 17 ? visibility : float(steps) / float(SDF_MAX_STEPS);
+            FragColor = vec4(vec3(value), 1.0);
+        }
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）
     }

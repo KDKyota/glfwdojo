@@ -27,7 +27,17 @@ const float SDF_DIFFUSE_CONE_TANGENT = 0.55; // 1 本が受け持つ立体角に
 
 const float SDF_DISCONTINUE_DIST = 8.0; // 計算効率のために SDF の計算を打ち切る距離
 
-const float SDF_RES_THRESHOLD = 0.02; // res がこれ以上小さくならないであろう値を閾値とする
+const float SDF_RES_THRESHOLD = 0.02; // これ以下まで res が落ちたら遮蔽とみなして打ち切る値
+
+const float SDF_RANGE_FADE_RATIO = 0.3; // 打ち切り距離の手前 何割から遮蔽をフェードさせるか
+
+// 打ち切り距離に近い遮蔽ほど寄与を下げる重み
+// これがないと最後の1歩が tMax を跨ぐかどうかで res が跳ね縞模様が出る 
+// faceRange: tMax の手前どのくらいの距離からフェードアウトを始めるのか
+float sdfRangeWeight (float t, float tMax, float fadeRange) {
+    // smoothstep は edge0 < edge1 でないと未定義なので反転させてから 1 から引く
+    return 1.0 - smoothstep(tMax - max(fadeRange, 1e-5), tMax, t); // max の 1e-5 としているのはsmoothstep の第1,2引数が同じ値んあるのを防ぐため
+}
 
 // 点から箱までの最短距離距離を計算
 float sdBox (vec3 p, vec3 center, vec3 halfSize) {
@@ -66,42 +76,65 @@ float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
 
 // 注意：coneTangent が実質的な円錐の角度になるので、0 だと実質的に線になる
 // コーントレースで途中での最小距離を返す steps に実際に使ったステップ数を書き出す
-float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, out int steps) { // `tMax` は tをどこまで伸ばしたら打ち切るかという値
+// startPhase: 最初の一歩だけ歩幅を伸縮させて 歩数の位相をずらすための係数（1.0 で無効）
+float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, float fadeRange, float startPhase, out int steps) { // `tMax` は tをどこまで伸ばしたら打ち切るかという値
     vec3 origin = pos + normal * SDF_NORMAL_BIAS;
     float res = 1.0;
     float t = 0.0;
     float prevD = 1e20;
     for (steps = 0; steps < SDF_MAX_STEPS; ++steps) {
         float d = sceneSDF(origin + dir * t);
-        if (d < SDF_HIT_EPSILON) return 0.0;
+        if (d < SDF_HIT_EPSILON)
+            return min(res, 1.0 - sdfRangeWeight(t, tMax, fadeRange));
 
-        // 止まった地点だけで測ると最接近点を取り逃がして縞が出る
         float y = d * d / (2.0 * prevD);
         float tClosest = t - y;
         // 最接近点が出発点より手前なら面から離れていく途中なので判定しない
         if (tClosest > 0.0) {
             float closest = sqrt(max(d * d - y * y, 0.0));
-            res = min(res, closest / max(tClosest * coneTangent, 1e-4));
-            if (res <= SDF_RES_THRESHOLD) return res;
+            float visibility = closest / max(tClosest * coneTangent, 1e-4);
+            res = min(res, mix(1.0, visibility, sdfRangeWeight(tClosest, tMax, fadeRange)));
+            // 打ち切り時の res は最後のサンプル位置で一桁振れる HDR だと波紋になるので 0 に倒す
+            if (res <= SDF_RES_THRESHOLD) return 0.0;
         }
 
         prevD = d;
-        t += d;
+        // 最初の一歩だけ歩幅を変えることで 何歩目でどの距離を測るかの位相をずらす
+        t += (steps == 0) ? d * startPhase : d;
         if (t > tMax) return res;
     }
-    return 0.0;
+    // ステップ切れは面すれすれを這っている状態なのでヒットと同じ扱いにする
+    return min(res, 1.0 - sdfRangeWeight(t, tMax, fadeRange));
 }
 
-// ステップ数を必要としない呼び出し元向けの薄いラッパー
-float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax) {
+// ステップ数を必要としない呼び出し元向けのラッパー
+float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, float fadeRange) {
     int steps;
-    return sdfConeVisibility(pos, normal, dir, coneTangent, tMax, steps);
+    return sdfConeVisibility(pos, normal, dir, coneTangent, tMax, fadeRange, 1.0, steps);
 }
 
+// 空へ抜けるレイ用 打ち切り距離の手前の遮蔽をフェードさせて縞を防ぐ
+// 位相の異なる2本を平均する 
+float sdfEnvVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, out int steps) {
+    float fadeRange = tMax * SDF_RANGE_FADE_RATIO;
+    int stepsB;
+    // 最初の一歩を 0.25 と 0.75 にしたものでコーントレーシング
+    float a = sdfConeVisibility(pos, normal, dir, coneTangent, tMax, fadeRange, 0.25, steps);
+    float b = sdfConeVisibility(pos, normal, dir, coneTangent, tMax, fadeRange, 0.75, stepsB);
+    steps = max(steps, stepsB);
+    return (a + b) * 0.5;
+}
+
+float sdfEnvVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax) {
+    int steps;
+    return sdfEnvVisibility(pos, normal, dir, coneTangent, tMax, steps);
+}
+
+// レイが光源で終わるので打ち切りによる縞は起きない フェードは掛けない
 float sdfLightVisibility(vec3 pos, vec3 normal, vec3 lightPos, float sourceRadius) {
     vec3 toLight = lightPos - (pos + normal * SDF_NORMAL_BIAS);
     float distToLight = length(toLight);
-    return sdfConeVisibility(pos, normal, toLight / distToLight, sourceRadius / distToLight, distToLight);
+    return sdfConeVisibility(pos, normal, toLight / distToLight, sourceRadius / distToLight, distToLight, 0.0);
 }
 
 const int SDF_HEMISPHERE_SAMPLES = 4;
@@ -125,7 +158,7 @@ float sdfSkyVisibility ( vec3 pos, vec3 normal, vec2 rotation, out int maxSteps)
         vec3 dir = tangent * local.x + bitangent * local.y + normal * local.z;
 
         int steps;
-        visible += sdfConeVisibility(pos, normal, dir, SDF_DIFFUSE_CONE_TANGENT, SDF_DISCONTINUE_DIST, steps);
+        visible += sdfEnvVisibility(pos, normal, dir, SDF_DIFFUSE_CONE_TANGENT, SDF_DISCONTINUE_DIST, steps);
         maxSteps = max(maxSteps, steps);
     }
     return visible / float(SDF_HEMISPHERE_SAMPLES);

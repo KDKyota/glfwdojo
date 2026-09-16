@@ -33,9 +33,10 @@ const float SDF_RANGE_FADE_RATIO = 0.3; // 打ち切り距離の手前 何割か
 
 // 打ち切り距離に近い遮蔽ほど寄与を下げる重み
 // これがないと最後の1歩が tMax を跨ぐかどうかで res が跳ね縞模様が出る 
+// faceRange: tMax の手前どのくらいの距離からフェードアウトを始めるのか
 float sdfRangeWeight (float t, float tMax, float fadeRange) {
     // smoothstep は edge0 < edge1 でないと未定義なので反転させてから 1 から引く
-    return 1.0 - smoothstep(tMax - max(fadeRange, 1e-4), tMax, t);
+    return 1.0 - smoothstep(tMax - max(fadeRange, 1e-5), tMax, t); // max の 1e-5 としているのはsmoothstep の第1,2引数が同じ値んあるのを防ぐため
 }
 
 // 点から箱までの最短距離距離を計算
@@ -75,7 +76,6 @@ float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
 
 // 注意：coneTangent が実質的な円錐の角度になるので、0 だと実質的に線になる
 // コーントレースで途中での最小距離を返す steps に実際に使ったステップ数を書き出す
-// fadeRange: tMax の手前で遮蔽を消していく区間の長さ 光源で終わるレイでは 0 を渡す
 // startPhase: 最初の一歩だけ歩幅を伸縮させて 歩数の位相をずらすための係数（1.0 で無効）
 float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, float fadeRange, float startPhase, out int steps) { // `tMax` は tをどこまで伸ばしたら打ち切るかという値
     vec3 origin = pos + normal * SDF_NORMAL_BIAS;
@@ -118,6 +118,7 @@ float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, floa
 float sdfEnvVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, out int steps) {
     float fadeRange = tMax * SDF_RANGE_FADE_RATIO;
     int stepsB;
+    // 最初の一歩を 0.25 と 0.75 にしたものでコーントレーシング
     float a = sdfConeVisibility(pos, normal, dir, coneTangent, tMax, fadeRange, 0.25, steps);
     float b = sdfConeVisibility(pos, normal, dir, coneTangent, tMax, fadeRange, 0.75, stepsB);
     steps = max(steps, stepsB);

@@ -94,6 +94,10 @@ int main(void) {
             {
                 ImGui::Text("Camera: %s  [F] to toggle",
                             camera->Mode() == CameraMode::ThirdPerson ? "Third person" : "Free look");
+                const glm::vec3 viewPos = camera->GetViewPosition();
+                const glm::vec3 viewFront = camera->GetViewFront();
+                ImGui::Text("pos (%.2f, %.2f, %.2f)  front (%.2f, %.2f, %.2f)", viewPos.x, viewPos.y, viewPos.z,
+                            viewFront.x, viewFront.y, viewFront.z);
                 ImGui::Separator();
 
                 static const char *kDebugModes[] = {
@@ -113,7 +117,9 @@ int main(void) {
                     "13: IBL BRDF LUT",
                     "14: SDF visibility",
                     "15: SDF soft shadow (light 0)",
-                    "16: SDF steps"
+                    "16: SDF steps",
+                    "17: SDF spec visibility",
+                    "18: SDF spec steps"
                 };
                 gl::RenderSettings &settings = scene->Settings();
                 ImGui::Combo("View", &settings.debugMode, kDebugModes,

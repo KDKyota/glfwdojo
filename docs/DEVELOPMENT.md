@@ -50,6 +50,7 @@
 | 壁だけ IBL も直接光も一切当たらず完全な黒になる | [SDF の箱の中心が描画される板ポリと重なっている](#sdf-のプロキシ形状は描画メッシュの表面と面を揃える) |
 | パスを半解像度にした途端に床へ縦筋が出る | [ノイズの倍率を入力テクスチャの解像度から作っている](#半解像度パスで入力テクスチャの解像度からスケールを作ると壊れる) |
 | 壁際の箱を浅い角度で見ると IBL の鏡面反射に同心円状の縞（波紋）が出る。`SDF occlusion` を 0 にすると消える(Issue #67) | [sphere tracing の歩幅が画素ごとに揃わず 位相がずれる](#sphere-tracing-の歩幅は画素ごとに位相がずれ同心円状の縞になる) |
+| 3Dモデルの SDF 遮蔽がモデルの形ではなく直方体になる。`debugMode 14` では正しいのに本描画では箱型 | [距離場のサンプラーを設定し忘れている](#距離場のサンプラーを設定し忘れると-aabb-全体が遮蔽物になるissue-69) |
 
 **リソース・テクスチャ**
 
@@ -776,6 +777,8 @@ Lighting パスはフルスクリーンクワッドを描くだけなので、�
 | 3        | tangent                                                           |
 | 4        | bitangent                                                         |
 | 5        | インスタンスごとの位置オフセット（`glVertexAttribDivisor(5, 1)`） |
+| 6        | boneIds（`ivec4`）。整数なので `glVertexAttribIPointer` で送る。`glVertexAttribPointer` だと float に変換されて壊れる |
+| 7        | boneWeights（`vec4`）                                             |
 
 ### なぜ規約が必要か
 
@@ -1836,6 +1839,36 @@ t += (steps == 0) ? d * startPhase : d;  // startPhase を 0.25 / 0.75 で2回�
 並べて見比べると、両方に同じパターンが出るかどうかで切り分けられる。
 
 ---
+
+### 距離場のサンプラーを設定し忘れると AABB 全体が遮蔽物になる(Issue #69)
+
+**症状:** 3Dモデルの SDF 遮蔽が、モデルの形ではなく**直方体の形**で出る。
+`debugMode 14`（SDF visibility）では正しくモデルの形に見えるのに、
+`debugMode 17`（SDF spec visibility）と本描画では箱型になる。モデル自身も真っ黒になる。
+
+**原因:** `sdf_common.glsl` を include しているシェーダーのうち、
+`modelDistanceFields[]`（`sampler3D` の配列）を設定していたのは `sdf_occlusion.frag` だけだった。
+`deferred_lighting.frag` と `glass.frag` は未設定のままだった。
+
+**なぜそうなるか:** 設定されていない sampler uniform は**既定値の 0**、つまり
+テクスチャユニット 0 を指す。そこには G-Buffer の position（2Dテクスチャ）がバインドされており、
+`sampler3D` としては不完全なので `texture()` は **`(0,0,0,1)` を返す**。距離が 0 なので
+
+```glsl
+float d = texture(modelDistanceFields[i], uvw).r;   // 常に 0.0
+if (d < SDF_HIT_EPSILON)                            // 必ず真
+```
+
+となり、**AABB の中に入ったレイが無条件で衝突扱い**になる。GL エラーも
+シェーダーのコンパイルエラーも一切出ない。
+
+**対処:** `sdf_common.glsl` を include する全てのシェーダーで `modelDistanceFields[]` を設定する。
+ユニット番号は [TextureUnits.h](../src/render/TextureUnits.h) の `kSdfModelBase` から連番で確保している。
+
+**切り分けの型:** 同じ距離場を使う表示なのに**パスによって結果が違う**なら、
+距離場ではなくシェーダーごとの uniform 設定を疑う。
+サンプラー配列は要素ごとに設定が必要で、書き忘れても何も言われない。
+
 
 ## カメラ
 

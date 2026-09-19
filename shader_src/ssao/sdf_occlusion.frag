@@ -35,6 +35,7 @@ void main() {
     // 鏡面の代表点はフル解像度の左上の画素 Lighting 側の補間がこの位置を前提にしている
     float specularVisibility = 1.0;
     if (!debugShowSteps && sdfOcclusionStrength > 0.0) {
+        // 半解像度を扱うので (i, j) -> (2i, 2j) として扱う
         ivec2 representative = 2 * ivec2(gl_FragCoord.xy);
         vec3 repNormal = texelFetch(gNormal, representative, 0).xyz;
         float roughness = texelFetch(gAlbedoRoughness, representative, 0).a;

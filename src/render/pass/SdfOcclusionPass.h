@@ -6,6 +6,7 @@
 #include "render/SceneGeometry.h"
 #include "render/targets/GBuffer.h"
 #include "render/targets/OcclusionTarget.h"
+#include "scene/SceneModels.h"
 
 namespace gl {
 
@@ -14,14 +15,15 @@ namespace gl {
  */
 class SdfOcclusionPass {
   public:
-    SdfOcclusionPass();
+    /// models の静的メッシュ距離場は起動時（このパスの初期化時）に一度だけ UBO・テクスチャユニットへ焼く
+    explicit SdfOcclusionPass(const SceneModels &models);
 
     void Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
                  const SceneGeometry &geometry, const RenderSettings &settings);
 
   private:
-    /// シーン形状を箱の集合として UBO へ焼く レイマーチ中は変化しない
-    void uploadSceneUbo();
+    /// シーン形状（箱・静的メッシュの距離場）を UBO とテクスチャユニットへ焼く 
+    void uploadSceneUbo(const SceneModels &models);
 
     Shader shader_;
     Shader blurShader_;

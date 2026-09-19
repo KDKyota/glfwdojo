@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <glm/glm.hpp>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace gl {
 namespace {
@@ -20,27 +22,33 @@ constexpr int kDebugModeStepCount = 16;
 
 } // namespace
 
-SdfOcclusionPass::SdfOcclusionPass()
+SdfOcclusionPass::SdfOcclusionPass(const SceneModels &models)
     : shader_("fragment_quad.vert", "sdf_occlusion.frag"),
       blurShader_("fragment_quad.vert", "sdf_occlusion_blur.frag") {
-    uploadSceneUbo();
+    uploadSceneUbo(models);
 
     shader_.use();
     shader_.setInt("gPosition", texunit::kGPosition);
     shader_.setInt("gNormal", texunit::kGNormal);
     shader_.setInt("texNoise", texunit::kNoise);
+    // modelDistanceFields[] は UBO に入らない（sampler は opaque 型）ので 配列の各要素へ個別に設定する
+    for (int i = 0; i < texunit::kSdfMaxModels; ++i)
+        shader_.setInt("modelDistanceFields[" + std::to_string(i) + "]", texunit::kSdfModelBase + i);
 
     blurShader_.use();
     blurShader_.setInt("sdfOcclusionInput", 0);
 }
 
-void SdfOcclusionPass::uploadSceneUbo() {
+void SdfOcclusionPass::uploadSceneUbo(const SceneModels &models) {
     struct SdfSceneBlock { // UBO として送信する構造体
         glm::vec4 boxCenters[kSdfMaxBoxes];
         glm::vec4 wallCenters[2];
         glm::vec4 boxHalfSize;
         glm::vec4 wallHalfSize;
         glm::vec4 sceneParams;
+        glm::mat4 modelWorldToLocalMatrices[texunit::kSdfMaxModels];
+        glm::vec4 modelBoundsMin[texunit::kSdfMaxModels];
+        glm::vec4 modelBoundsMax[texunit::kSdfMaxModels];
     } block{};
 
     if (layout::cubePositions.size() > kSdfMaxBoxes)
@@ -64,6 +72,29 @@ void SdfOcclusionPass::uploadSceneUbo() {
     // w はレイがシーンを確実に抜けきる距離（床の横幅）
     block.sceneParams = glm::vec4(units::floorY, static_cast<float>(layout::cubePositions.size()), 2.0f,
                                   units::floorHalfExtent * 2.0f);
+
+    const std::vector<StaticSdfInstance> sdfInstances = models.CollectStaticSdfInstances();
+    if (sdfInstances.size() > static_cast<std::size_t>(texunit::kSdfMaxModels))
+        throw std::runtime_error("Too many static SDF models for the SDF UBO");
+    // 未使用の枠も箱と同じ考え方　遠方の巨大 AABB にして距離場を無害化する（テクスチャは未使用枠を読まない前提）
+    constexpr float kUnusedModelBoundsFarAway = 1e5f;
+    for (auto &boundsMin : block.modelBoundsMin)
+        boundsMin = glm::vec4(kUnusedModelBoundsFarAway);
+    for (auto &boundsMax : block.modelBoundsMax)
+        boundsMax = glm::vec4(kUnusedModelBoundsFarAway);
+
+    for (std::size_t i = 0; i < sdfInstances.size(); ++i) {
+        const StaticSdfInstance &instance = sdfInstances[i];
+        block.modelWorldToLocalMatrices[i] = instance.worldToLocalMatrix;
+        block.modelBoundsMin[i] = glm::vec4(instance.boundsMin, 0.0f);
+        block.modelBoundsMax[i] = glm::vec4(instance.boundsMax, 0.0f);
+
+        // 焼いたテクスチャは Model が所有し続ける ここでは対応するユニットへバインドするだけ
+        // kSdfModelBase 以降は他のパスが触らないので 起動時に一度バインドすれば以後そのまま使える
+        glActiveTexture(GL_TEXTURE0 + texunit::kSdfModelBase + static_cast<int>(i));
+        glBindTexture(GL_TEXTURE_3D, instance.textureId);
+    }
+    glActiveTexture(GL_TEXTURE0);
 
     sceneUBO_.create();
     glBindBuffer(GL_UNIFORM_BUFFER, sceneUBO_);

@@ -22,7 +22,9 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
       // SDF は数m規模の低周波な遮蔽しか拾わないので半解像度で足りる
       sdfOcclusionTarget_(scrWidth / 2, scrHeight / 2, "SDF_OCCLUSION"),
       // skyboxVAO と screen quad が必要なので geometry_ より後に置くこと
-      iblMaps_(gl::BakeIblMaps(geometry_, scrWidth, scrHeight)), bloomPass_(scrWidth, scrHeight) {
+      iblMaps_(gl::BakeIblMaps(geometry_, scrWidth, scrHeight)),
+      // models_ が先に構築されている前提（Scene.h でのメンバ宣言順を参照）
+      sdfOcclusionPass_(models_), bloomPass_(scrWidth, scrHeight) {
     frameArena_.Init(kFrameArenaBytes);
     // 既定の 0.5 では環境が高いミップまでぼけ 浅い角度で白い靄になる
     settings_.glassMaterial.roughness = 0.08f;

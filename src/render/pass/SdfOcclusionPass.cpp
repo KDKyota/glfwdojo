@@ -49,6 +49,7 @@ void SdfOcclusionPass::uploadSceneUbo(const SceneModels &models) {
         glm::mat4 modelWorldToLocalMatrices[texunit::kSdfMaxModels];
         glm::vec4 modelBoundsMin[texunit::kSdfMaxModels];
         glm::vec4 modelBoundsMax[texunit::kSdfMaxModels];
+        glm::ivec4 modelCounts;
     } block{};
 
     if (layout::cubePositions.size() > kSdfMaxBoxes)
@@ -76,12 +77,8 @@ void SdfOcclusionPass::uploadSceneUbo(const SceneModels &models) {
     const std::vector<StaticSdfInstance> sdfInstances = models.CollectStaticSdfInstances();
     if (sdfInstances.size() > static_cast<std::size_t>(texunit::kSdfMaxModels))
         throw std::runtime_error("Too many static SDF models for the SDF UBO");
-    // 未使用の枠も箱と同じ考え方　遠方の巨大 AABB にして距離場を無害化する（テクスチャは未使用枠を読まない前提）
-    constexpr float kUnusedModelBoundsFarAway = 1e5f;
-    for (auto &boundsMin : block.modelBoundsMin)
-        boundsMin = glm::vec4(kUnusedModelBoundsFarAway);
-    for (auto &boundsMax : block.modelBoundsMax)
-        boundsMax = glm::vec4(kUnusedModelBoundsFarAway);
+    // 箱と違い 個数をシェーダーへ渡してループ回数を切るので 未使用枠は読まれず初期値のままでよい
+    block.modelCounts = glm::ivec4(static_cast<int>(sdfInstances.size()), 0, 0, 0);
 
     for (std::size_t i = 0; i < sdfInstances.size(); ++i) {
         const StaticSdfInstance &instance = sdfInstances[i];

@@ -6,6 +6,8 @@
 
 // 配列長は Scene.h の kSdfMaxBoxes と一致させること
 const int SDF_MAX_BOXES = 8;
+// 配列長は SdfOcclusionPass.cpp の kSdfMaxModels と一致させること
+const int SDF_MAX_MODELS = 4;
 
 layout(std140, binding = 2) uniform SdfScene {
     vec4 boxCenters[SDF_MAX_BOXES];
@@ -13,7 +15,14 @@ layout(std140, binding = 2) uniform SdfScene {
     vec4 boxHalfSize;
     vec4 wallHalfSize;
     vec4 sceneParams; // x: floorY, y: sizeof cubePositions, z: 2.0, w: floor's size
+    // 静的メッシュの距離場ぶん　未使用枠は箱と同様 遠方の巨大AABBで無害化する
+    mat4 modelWorldToLocalMatrices[SDF_MAX_MODELS]; // ワールド座標をそのメッシュのローカル座標へ変換する(ワールド変換の逆行列)
+    vec4 modelBoundsMin[SDF_MAX_MODELS];
+    vec4 modelBoundsMax[SDF_MAX_MODELS];
 };
+
+// UBO には入れられないので 普通の uniform として別に受け取っている
+uniform sampler3D modelDistanceFields[SDF_MAX_MODELS];
 
 const int SDF_MAX_STEPS = 48;
 
@@ -45,8 +54,8 @@ float sdBox (vec3 p, vec3 center, vec3 halfSize) {
     return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
-// シーン全体で最も近い面までの距離を計算
-float sceneSDF (vec3 p) {
+// 解析的な形状（床・壁・キューブ）までの距離　厳密なので歩幅にも遮蔽にもそのまま使える
+float analyticSDF (vec3 p) {
     float dist = p.y - sceneParams.x;
     // int boxCount = int(sceneParams.y);
     for (int i = 0; i < SDF_MAX_BOXES; ++i) {
@@ -59,31 +68,71 @@ float sceneSDF (vec3 p) {
     return dist;
 }
 
-// 距離 d を進み面との衝突を検出
-float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
-    vec3 origin = pos + normal * SDF_NORMAL_BIAS; // 現在地点
-    float t = 0.0;
-    for (steps = 0; steps < SDF_MAX_STEPS; ++steps) {
-        float d = sceneSDF(origin + dir * t);
-        if (d < SDF_HIT_EPSILON)
-            return 0.0;
-        t += d;
-        if (t > SDF_DISCONTINUE_DIST)
-            return 1.0;
-    }
-    return 0.0;
+// レイをモデル i のローカル空間へ移し AABB と交わる区間 [tNear, tFar] を返す
+bool modelRayInterval (int i, vec3 origin, vec3 dir, float tMax, out vec3 localOrigin, out vec3 localDir,
+                       out float tNear, out float tFar) {
+    localOrigin = (modelWorldToLocalMatrices[i] * vec4(origin, 1.0)).xyz;
+    localDir = mat3(modelWorldToLocalMatrices[i]) * dir;
+
+    // 軸に平行な成分が 0 除算になるのを避ける
+    vec3 safeDir = mix(localDir, vec3(1e-9), lessThan(abs(localDir), vec3(1e-9)));
+    vec3 tA = (modelBoundsMin[i].xyz - localOrigin) / safeDir;
+    vec3 tB = (modelBoundsMax[i].xyz - localOrigin) / safeDir;
+    vec3 tEnter = min(tA, tB);
+    vec3 tExit = max(tA, tB);
+
+    tNear = max(max(tEnter.x, max(tEnter.y, tEnter.z)), 0.0);
+    tFar = min(min(tExit.x, min(tExit.y, tExit.z)), tMax);
+    return tNear <= tFar;
 }
 
-// 注意：coneTangent が実質的な円錐の角度になるので、0 だと実質的に線になる
-// コーントレースで途中での最小距離を返す steps に実際に使ったステップ数を書き出す
-// startPhase: 最初の一歩だけ歩幅を伸縮させて 歩数の位相をずらすための係数（1.0 で無効）
-float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, float fadeRange, float startPhase, out int steps) { // `tMax` は tをどこまで伸ばしたら打ち切るかという値
-    vec3 origin = pos + normal * SDF_NORMAL_BIAS;
+// モデル i の距離場を レイが AABB を通る区間だけコーントレースする
+// 注意：距離場は AABB の中にしか無く 外側で返せるのは箱の形の値だけなので 区間外を評価すると AABB の形が遮蔽に焼き付く
+float coneVisibilityModel (int i, vec3 origin, vec3 dir, float coneTangent, float tMax, float fadeRange, inout int steps) {
+    vec3 localOrigin, localDir;
+    float t, tFar;
+    if (!modelRayInterval(i, origin, dir, tMax, localOrigin, localDir, t, tFar))
+        return 1.0;
+
+    float res = 1.0;
+    float prevD = 1e20;
+    for (int step = 0; step < SDF_MAX_STEPS; ++step) {
+        if (t > tFar)
+            return res;
+
+        vec3 localP = localOrigin + localDir * t;
+        vec3 uvw = (localP - modelBoundsMin[i].xyz) / (modelBoundsMax[i].xyz - modelBoundsMin[i].xyz);
+        float d = texture(modelDistanceFields[i], uvw).r;
+        ++steps;
+        if (d < SDF_HIT_EPSILON)
+            return min(res, 1.0 - sdfRangeWeight(t, tMax, fadeRange));
+
+        float y = d * d / (2.0 * prevD);
+        float tClosest = t - y;
+        // y > d は厳密な距離場では起こらず 焼いた距離場の補間誤差で歩幅より遠くへ跳んだ印なので 遮蔽ではなく推定不能として捨てる
+        if (tClosest > 0.0 && y <= d) {
+            float closest = sqrt(max(d * d - y * y, 0.0));
+            float visibility = closest / max(tClosest * coneTangent, 1e-4);
+            res = min(res, mix(1.0, visibility, sdfRangeWeight(tClosest, tMax, fadeRange)));
+            if (res <= SDF_RES_THRESHOLD)
+                return 0.0;
+        }
+
+        prevD = d;
+        t += d;
+    }
+    return res;
+}
+
+// 解析的な形状だけをコーントレースする
+float coneVisibilityAnalytic (vec3 origin, vec3 dir, float coneTangent, float tMax, float fadeRange,
+                              float startPhase, inout int steps) {
     float res = 1.0;
     float t = 0.0;
     float prevD = 1e20;
-    for (steps = 0; steps < SDF_MAX_STEPS; ++steps) {
-        float d = sceneSDF(origin + dir * t);
+    for (int step = 0; step < SDF_MAX_STEPS; ++step) {
+        float d = analyticSDF(origin + dir * t);
+        ++steps;
         if (d < SDF_HIT_EPSILON)
             return min(res, 1.0 - sdfRangeWeight(t, tMax, fadeRange));
 
@@ -95,16 +144,63 @@ float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, floa
             float visibility = closest / max(tClosest * coneTangent, 1e-4);
             res = min(res, mix(1.0, visibility, sdfRangeWeight(tClosest, tMax, fadeRange)));
             // 打ち切り時の res は最後のサンプル位置で一桁振れる HDR だと波紋になるので 0 に倒す
-            if (res <= SDF_RES_THRESHOLD) return 0.0;
+            if (res <= SDF_RES_THRESHOLD)
+                return 0.0;
         }
 
         prevD = d;
         // 最初の一歩だけ歩幅を変えることで 何歩目でどの距離を測るかの位相をずらす
-        t += (steps == 0) ? d * startPhase : d;
-        if (t > tMax) return res;
+        t += (step == 0) ? d * startPhase : d;
+        if (t > tMax)
+            return res;
     }
     // ステップ切れは面すれすれを這っている状態なのでヒットと同じ扱いにする
     return min(res, 1.0 - sdfRangeWeight(t, tMax, fadeRange));
+}
+
+// 距離 d を進み面との衝突を検出
+float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
+    vec3 origin = pos + normal * SDF_NORMAL_BIAS; // 現在地点
+    steps = 0;
+    float t = 0.0;
+    for (int step = 0; step < SDF_MAX_STEPS && t <= SDF_DISCONTINUE_DIST; ++step) {
+        float d = analyticSDF(origin + dir * t);
+        ++steps;
+        if (d < SDF_HIT_EPSILON)
+            return 0.0;
+        t += d;
+    }
+
+    for (int i = 0; i < SDF_MAX_MODELS; ++i) {
+        vec3 localOrigin, localDir;
+        float tModel, tFar;
+        if (!modelRayInterval(i, origin, dir, SDF_DISCONTINUE_DIST, localOrigin, localDir, tModel, tFar))
+            continue;
+        for (int step = 0; step < SDF_MAX_STEPS && tModel <= tFar; ++step) {
+            vec3 localP = localOrigin + localDir * tModel;
+            vec3 uvw = (localP - modelBoundsMin[i].xyz) / (modelBoundsMax[i].xyz - modelBoundsMin[i].xyz);
+            float d = texture(modelDistanceFields[i], uvw).r;
+            ++steps;
+            if (d < SDF_HIT_EPSILON)
+                return 0.0;
+            tModel += d;
+        }
+    }
+    return 1.0;
+}
+
+// 注意：coneTangent が実質的な円錐の角度になるので、0 だと実質的に線になる
+// コーントレースで途中での最小距離を返す steps に実際に使ったステップ数を書き出す
+// startPhase: 最初の一歩だけ歩幅を伸縮させて 歩数の位相をずらすための係数（1.0 で無効）
+//  各距離場を有効範囲の外で評価しないようにするために形状ごとに独立してトレースし 可視性を min で合成する
+float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, float tMax, float fadeRange, float startPhase, out int steps) { // `tMax` は tをどこまで伸ばしたら打ち切るかという値
+    vec3 origin = pos + normal * SDF_NORMAL_BIAS;
+    steps = 0;
+    float res = coneVisibilityAnalytic(origin, dir, coneTangent, tMax, fadeRange, startPhase, steps);
+    for (int i = 0; i < SDF_MAX_MODELS; ++i) {
+        res = min(res, coneVisibilityModel(i, origin, dir, coneTangent, tMax, fadeRange, steps));
+    }
+    return res;
 }
 
 // ステップ数を必要としない呼び出し元向けのラッパー

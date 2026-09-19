@@ -55,6 +55,7 @@ add_executable(
   # asset: 読み込んだモデル
   src/asset/Mesh.cpp
   src/asset/Model.cpp
+  src/asset/MeshDistanceField.cpp
   # scene: シーン上の存在
   src/scene/Camera.cpp
   src/scene/Character.cpp

@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <glm/glm.hpp>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace gl {
 namespace {
@@ -20,27 +22,35 @@ constexpr int kDebugModeStepCount = 16;
 
 } // namespace
 
-SdfOcclusionPass::SdfOcclusionPass()
+SdfOcclusionPass::SdfOcclusionPass(const SceneModels &models)
     : shader_("fragment_quad.vert", "sdf_occlusion.frag"),
       blurShader_("fragment_quad.vert", "sdf_occlusion_blur.frag") {
-    uploadSceneUbo();
+    uploadSceneUbo(models);
 
     shader_.use();
     shader_.setInt("gPosition", texunit::kGPosition);
     shader_.setInt("gNormal", texunit::kGNormal);
+    shader_.setInt("gAlbedoRoughness", texunit::kSdfGAlbedoRoughness);
     shader_.setInt("texNoise", texunit::kNoise);
+    // modelDistanceFields[] は UBO に入らない（sampler は opaque 型）ので 配列の各要素へ個別に設定する
+    for (int i = 0; i < texunit::kSdfMaxModels; ++i)
+        shader_.setInt("modelDistanceFields[" + std::to_string(i) + "]", texunit::kSdfModelBase + i);
 
     blurShader_.use();
     blurShader_.setInt("sdfOcclusionInput", 0);
 }
 
-void SdfOcclusionPass::uploadSceneUbo() {
+void SdfOcclusionPass::uploadSceneUbo(const SceneModels &models) {
     struct SdfSceneBlock { // UBO として送信する構造体
         glm::vec4 boxCenters[kSdfMaxBoxes];
         glm::vec4 wallCenters[2];
         glm::vec4 boxHalfSize;
         glm::vec4 wallHalfSize;
         glm::vec4 sceneParams;
+        glm::mat4 modelWorldToLocalMatrices[texunit::kSdfMaxModels];
+        glm::vec4 modelBoundsMin[texunit::kSdfMaxModels];
+        glm::vec4 modelBoundsMax[texunit::kSdfMaxModels];
+        glm::ivec4 modelCounts;
     } block{};
 
     if (layout::cubePositions.size() > kSdfMaxBoxes)
@@ -65,6 +75,25 @@ void SdfOcclusionPass::uploadSceneUbo() {
     block.sceneParams = glm::vec4(units::floorY, static_cast<float>(layout::cubePositions.size()), 2.0f,
                                   units::floorHalfExtent * 2.0f);
 
+    const std::vector<StaticSdfInstance> sdfInstances = models.CollectStaticSdfInstances();
+    if (sdfInstances.size() > static_cast<std::size_t>(texunit::kSdfMaxModels))
+        throw std::runtime_error("Too many static SDF models for the SDF UBO");
+    // 箱と違い 個数をシェーダーへ渡してループ回数を切るので 未使用枠は読まれず初期値のままでよい
+    block.modelCounts = glm::ivec4(static_cast<int>(sdfInstances.size()), 0, 0, 0);
+
+    for (std::size_t i = 0; i < sdfInstances.size(); ++i) {
+        const StaticSdfInstance &instance = sdfInstances[i];
+        block.modelWorldToLocalMatrices[i] = instance.worldToLocalMatrix;
+        block.modelBoundsMin[i] = glm::vec4(instance.boundsMin, 0.0f);
+        block.modelBoundsMax[i] = glm::vec4(instance.boundsMax, 0.0f);
+
+        // 焼いたテクスチャは Model が所有し続ける ここでは対応するユニットへバインドするだけ
+        // kSdfModelBase 以降は他のパスが触らないので 起動時に一度バインドすれば以後そのまま使える
+        glActiveTexture(GL_TEXTURE0 + texunit::kSdfModelBase + static_cast<int>(i));
+        glBindTexture(GL_TEXTURE_3D, instance.textureId);
+    }
+    glActiveTexture(GL_TEXTURE0);
+
     sceneUBO_.create();
     glBindBuffer(GL_UNIFORM_BUFFER, sceneUBO_);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(block), &block, GL_STATIC_DRAW);
@@ -73,7 +102,7 @@ void SdfOcclusionPass::uploadSceneUbo() {
 }
 
 void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
-                               const SceneGeometry &geometry, const RenderSettings &settings) {
+                               const SceneGeometry &geometry, const Camera &camera, const RenderSettings &settings) {
     glViewport(0, 0, target.Width(), target.Height());
     glBindFramebuffer(GL_FRAMEBUFFER, target.Fbo());
     glClear(GL_COLOR_BUFFER_BIT);
@@ -82,9 +111,14 @@ void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbu
     glBindTexture(GL_TEXTURE_2D, gbuffer.Position());
     glActiveTexture(GL_TEXTURE0 + texunit::kGNormal);
     glBindTexture(GL_TEXTURE_2D, gbuffer.Normal());
+    glActiveTexture(GL_TEXTURE0 + texunit::kSdfGAlbedoRoughness);
+    glBindTexture(GL_TEXTURE_2D, gbuffer.AlbedoRoughness());
     glActiveTexture(GL_TEXTURE0 + texunit::kNoise);
     glBindTexture(GL_TEXTURE_2D, noise.Get());
     shader_.use();
+    shader_.setVec3("viewPos", camera.GetViewPosition());
+    // UI から変わる値なので毎フレーム送る
+    shader_.setFloat("sdfOcclusionStrength", settings.sdfOcclusionStrength);
     shader_.setBool("debugShowSteps", settings.debugMode == kDebugModeStepCount);
     geometry.DrawScreenQuad();
 

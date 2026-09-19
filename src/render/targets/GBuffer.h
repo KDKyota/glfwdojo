@@ -25,6 +25,9 @@ class GBuffer {
     GLuint Normal() const {
         return normal_;
     }
+    GLuint AlbedoRoughness() const {
+        return albedoRoughness_;
+    }
     int Width() const {
         return width_;
     }

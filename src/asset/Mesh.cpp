@@ -37,6 +37,17 @@ void Mesh::setupMesh() {
 
     const GLsizei stride = sizeof(gl::Vertex);
 
+    /*
+     * 頂点属性 location 番号
+     *   0  position
+     *   1  normal
+     *   2  uv
+     *   3  tangent
+     *   4  bitangent
+     *   5  インスタンスごとの位置オフセット（Mesh は使わない）
+     *   6  boneIds
+     *   7  boneWeights
+     */
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(gl::Vertex, position));
 

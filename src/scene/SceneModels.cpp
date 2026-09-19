@@ -53,4 +53,16 @@ void SceneModels::Draw(Shader &shader) const {
         models_[i]->Draw(shader, modelMatrices_[i]);
 }
 
+std::vector<StaticSdfInstance> SceneModels::CollectStaticSdfInstances() const {
+    std::vector<StaticSdfInstance> instances;
+    for (size_t i = 0; i < models_.size(); ++i) {
+        for (const StaticMeshDistanceField &sdf : models_[i]->StaticDistanceFields()) {
+            // モデルの配置行列 × メッシュのノード変換 = このメッシュのローカル→ワールド変換
+            const glm::mat4 localToWorldMatrix = modelMatrices_[i] * sdf.nodeToModelRoot;
+            instances.push_back({sdf.field.texture, glm::inverse(localToWorldMatrix), sdf.field.boundsMin, sdf.field.boundsMax});
+        }
+    }
+    return instances;
+}
+
 } // namespace gl

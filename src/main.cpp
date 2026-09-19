@@ -119,7 +119,8 @@ int main(void) {
                     "15: SDF soft shadow (light 0)",
                     "16: SDF steps",
                     "17: SDF spec visibility",
-                    "18: SDF spec steps"
+                    "18: SDF spec steps",
+                    "19: SDF spec visibility (half-res)"
                 };
                 gl::RenderSettings &settings = scene->Settings();
                 ImGui::Combo("View", &settings.debugMode, kDebugModes,

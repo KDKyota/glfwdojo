@@ -20,7 +20,7 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
       gBuffer_(scrWidth, scrHeight), hdrTarget_(scrWidth, scrHeight),
       ssaoTarget_(scrWidth, scrHeight, "SSAO"),
       // SDF は数m規模の低周波な遮蔽しか拾わないので半解像度で足りる
-      sdfOcclusionTarget_(scrWidth / 2, scrHeight / 2, "SDF_OCCLUSION"),
+      sdfOcclusionTarget_(scrWidth / 2, scrHeight / 2, "SDF_OCCLUSION", 2),
       // skyboxVAO と screen quad が必要なので geometry_ より後に置くこと
       iblMaps_(gl::BakeIblMaps(geometry_, scrWidth, scrHeight)),
       // models_ が先に構築されている前提（Scene.h でのメンバ宣言順を参照）
@@ -81,7 +81,7 @@ void Scene::Render(float deltaTime, float heightScale) {
     profiler_.Measure(gl::GpuPass::Ssao, [&] { ssaoPass_.Execute(ssaoTarget_, gBuffer_, noise_, geometry_); });
     // [4.5] SSAO が届かない数m規模の遮蔽を SDF から求める
     profiler_.Measure(gl::GpuPass::SdfOcclusion, [&] {
-        sdfOcclusionPass_.Execute(sdfOcclusionTarget_, gBuffer_, noise_, geometry_, settings_);
+        sdfOcclusionPass_.Execute(sdfOcclusionTarget_, gBuffer_, noise_, geometry_, *camera_, settings_);
     });
     // [5] G-Buffer の深度を hdrTarget_ へ複製（前方描画の深度テスト用）
     profiler_.Measure(gl::GpuPass::BlitDepth, [&] { gBuffer_.BlitDepthTo(hdrTarget_.Fbo()); });

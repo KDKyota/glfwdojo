@@ -6,12 +6,13 @@
 #include "render/SceneGeometry.h"
 #include "render/targets/GBuffer.h"
 #include "render/targets/OcclusionTarget.h"
+#include "scene/Camera.h"
 #include "scene/SceneModels.h"
 
 namespace gl {
 
 /**
- * @brief SSAO が届かない数m規模の遮蔽を SDF のレイマーチで求める
+ * @brief SSAO が届かない数m規模の遮蔽を SDF のレイマーチで求める 拡散と鏡面の両方を半解像度で書く
  */
 class SdfOcclusionPass {
   public:
@@ -19,7 +20,7 @@ class SdfOcclusionPass {
     explicit SdfOcclusionPass(const SceneModels &models);
 
     void Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
-                 const SceneGeometry &geometry, const RenderSettings &settings);
+                 const SceneGeometry &geometry, const Camera &camera, const RenderSettings &settings);
 
   private:
     /// シーン形状（箱・静的メッシュの距離場）を UBO とテクスチャユニットへ焼く 

@@ -24,6 +24,10 @@
  * [SSAO パスと SDF 遮蔽パスが共有]
  *   2      noise
  *
+ * [SDF 遮蔽パス専用]
+ *   0..1   gPosition / gNormal（G-Buffer と同じ番号）
+ *   3      gAlbedoRoughness（2 は noise が使うので G-Buffer の番号とは別）
+ *
  * [画面への合成]
  *   0      screenTexture
  *   1      bloomBlur
@@ -56,6 +60,8 @@ inline constexpr int kHeightMap = 2;
 
 /* ---- 遮蔽パスが敷くノイズ ---- */
 inline constexpr int kNoise = 2;
+// SDF 遮蔽パスは kNoise が 2 を使うので 粗さを読む G-Buffer だけ別の番号に置く
+inline constexpr int kSdfGAlbedoRoughness = 3;
 
 /* ---- 画面への合成 ---- */
 inline constexpr int kScreenTexture = 0;

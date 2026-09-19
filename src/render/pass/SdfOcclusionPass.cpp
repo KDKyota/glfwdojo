@@ -30,6 +30,7 @@ SdfOcclusionPass::SdfOcclusionPass(const SceneModels &models)
     shader_.use();
     shader_.setInt("gPosition", texunit::kGPosition);
     shader_.setInt("gNormal", texunit::kGNormal);
+    shader_.setInt("gAlbedoRoughness", texunit::kSdfGAlbedoRoughness);
     shader_.setInt("texNoise", texunit::kNoise);
     // modelDistanceFields[] は UBO に入らない（sampler は opaque 型）ので 配列の各要素へ個別に設定する
     for (int i = 0; i < texunit::kSdfMaxModels; ++i)
@@ -101,7 +102,7 @@ void SdfOcclusionPass::uploadSceneUbo(const SceneModels &models) {
 }
 
 void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
-                               const SceneGeometry &geometry, const RenderSettings &settings) {
+                               const SceneGeometry &geometry, const Camera &camera, const RenderSettings &settings) {
     glViewport(0, 0, target.Width(), target.Height());
     glBindFramebuffer(GL_FRAMEBUFFER, target.Fbo());
     glClear(GL_COLOR_BUFFER_BIT);
@@ -110,9 +111,14 @@ void SdfOcclusionPass::Execute(const OcclusionTarget &target, const GBuffer &gbu
     glBindTexture(GL_TEXTURE_2D, gbuffer.Position());
     glActiveTexture(GL_TEXTURE0 + texunit::kGNormal);
     glBindTexture(GL_TEXTURE_2D, gbuffer.Normal());
+    glActiveTexture(GL_TEXTURE0 + texunit::kSdfGAlbedoRoughness);
+    glBindTexture(GL_TEXTURE_2D, gbuffer.AlbedoRoughness());
     glActiveTexture(GL_TEXTURE0 + texunit::kNoise);
     glBindTexture(GL_TEXTURE_2D, noise.Get());
     shader_.use();
+    shader_.setVec3("viewPos", camera.GetViewPosition());
+    // UI から変わる値なので毎フレーム送る
+    shader_.setFloat("sdfOcclusionStrength", settings.sdfOcclusionStrength);
     shader_.setBool("debugShowSteps", settings.debugMode == kDebugModeStepCount);
     geometry.DrawScreenQuad();
 

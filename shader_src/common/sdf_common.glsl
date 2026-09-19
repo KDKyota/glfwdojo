@@ -42,7 +42,8 @@ const float SDF_RES_THRESHOLD = 0.02; // これ以下まで res が落ちたら�
 const float SDF_RANGE_FADE_RATIO = 0.3; // 打ち切り距離の手前 何割から遮蔽をフェードさせるか
 
 // この粗さ以上の画素は鏡面のトレースをしない 半解像度パスと Lighting パスで同じ画素を対象にするため共有する
-const float SDF_ROUGHNESS_THRESHOLD = 0.7;
+// 注意：既定の Roughness が SDF_ROUGHNESS_THRESHOLD を超えるオブジェクトは全て SDF の効果が拡散のみとなる
+const float SDF_ROUGHNESS_THRESHOLD = 0.5;
 
 // 打ち切り距離に近い遮蔽ほど寄与を下げる重み
 // これがないと最後の1歩が tMax を跨ぐかどうかで res が跳ね縞模様が出る 

@@ -36,6 +36,9 @@ class Mesh {
     bool IsSkinned() const { return isSkinned_; }
     const glm::vec3 &BoundsMin() const { return boundsMin_; }
     const glm::vec3 &BoundsMax() const { return boundsMax_; }
+    // 距離場の焼き込みなど CPU 側で三角形データが必要な処理向け
+    const std::vector<gl::Vertex> &Vertices() const { return vertices_; }
+    const std::vector<unsigned int> &Indices() const { return indices_; }
 
     // GlHandle がコピー禁止・ムーブ可なので Mesh もそれに従う（std::vector<Mesh> で必要）
     Mesh(Mesh &&) noexcept = default;

@@ -15,10 +15,11 @@ layout(std140, binding = 2) uniform SdfScene {
     vec4 boxHalfSize;
     vec4 wallHalfSize;
     vec4 sceneParams; // x: floorY, y: sizeof cubePositions, z: 2.0, w: floor's size
-    // 静的メッシュの距離場ぶん　未使用枠は箱と同様 遠方の巨大AABBで無害化する
+    // 静的メッシュの距離場ぶん　先頭から modelCounts.x 個だけが有効で それ以降の枠は読まない
     mat4 modelWorldToLocalMatrices[SDF_MAX_MODELS]; // ワールド座標をそのメッシュのローカル座標へ変換する(ワールド変換の逆行列)
     vec4 modelBoundsMin[SDF_MAX_MODELS];
     vec4 modelBoundsMax[SDF_MAX_MODELS];
+    ivec4 modelCounts; // x: 有効な静的メッシュ距離場の数
 };
 
 // UBO には入れられないので 普通の uniform として別に受け取っている
@@ -171,7 +172,7 @@ float sdfVisibility (vec3 pos, vec3 normal, vec3 dir, out int steps) {
         t += d;
     }
 
-    for (int i = 0; i < SDF_MAX_MODELS; ++i) {
+    for (int i = 0; i < modelCounts.x; ++i) {
         vec3 localOrigin, localDir;
         float tModel, tFar;
         if (!modelRayInterval(i, origin, dir, SDF_DISCONTINUE_DIST, localOrigin, localDir, tModel, tFar))
@@ -197,7 +198,7 @@ float sdfConeVisibility(vec3 pos, vec3 normal, vec3 dir, float coneTangent, floa
     vec3 origin = pos + normal * SDF_NORMAL_BIAS;
     steps = 0;
     float res = coneVisibilityAnalytic(origin, dir, coneTangent, tMax, fadeRange, startPhase, steps);
-    for (int i = 0; i < SDF_MAX_MODELS; ++i) {
+    for (int i = 0; i < modelCounts.x; ++i) {
         res = min(res, coneVisibilityModel(i, origin, dir, coneTangent, tMax, fadeRange, steps));
     }
     return res;

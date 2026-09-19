@@ -23,6 +23,9 @@ ForwardPass::ForwardPass()
                                         texunit::kShadowColor + static_cast<int>(i));
     transparentWindowShader_.setInt("prefilterMap", texunit::kPrefilterMap);
     transparentWindowShader_.setInt("brdfLUT", texunit::kBrdfLut);
+    // sdf_common.glsl の距離場 未設定だとユニット0を読み texture() が 0 を返して AABB 全体が遮蔽物になる
+    for (int i = 0; i < texunit::kSdfMaxModels; ++i)
+        transparentWindowShader_.setInt("modelDistanceFields[" + std::to_string(i) + "]", texunit::kSdfModelBase + i);
     transparentWindowShader_.setFloat("farPlane", shadow::kFarPlane);
     transparentWindowShader_.setFloat("shadowMapSize", static_cast<float>(shadow::kMapWidth));
 

@@ -1,7 +1,7 @@
 // SDF 遮蔽の後処理 ピクセルごとの回転が残したノイズを均す
 #version 460 core
 
-out float FragColor;
+out vec2 FragColor;
 
 in vec2 TexCoords;
 
@@ -19,5 +19,6 @@ void main() {
             result += texture(sdfOcclusionInput, TexCoords + offset).r;
         }
     }
-    FragColor = result / 16.0;
+    // 鏡面はノイズを敷いていないので均す必要がなく ぼかすと輪郭を越えて染み出すのでそのまま渡す
+    FragColor = vec2(result / 16.0, texture(sdfOcclusionInput, TexCoords).g);
 }

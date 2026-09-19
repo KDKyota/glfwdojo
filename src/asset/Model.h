@@ -11,6 +11,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "asset/Mesh.h"
+#include "asset/MeshDistanceField.h"
 #include "gl/TextureCache.h"
 
 // スキニングはノード階層を辿って行列を合成するため 読み込み時に平坦化せず木のまま保持する
@@ -31,6 +32,12 @@ template <typename T>
 struct AnimationKey {
     float time = 0.0f;
     T value{};
+};
+
+/// 静的メッシュの距離場で、SDF 遮蔽物として使う
+struct StaticMeshDistanceField {
+    gl::MeshDistanceField field;
+    glm::mat4 nodeToModelRoot;
 };
 
 /// 1ノードのキーフレーム列（aiNodeAnim に対応）
@@ -94,6 +101,9 @@ class Model {
     const glm::mat4 &GlobalInverseTransform() const { return globalInverseTransform_; }
     const std::unordered_map<std::string, BoneInfo> &Bones() const { return bones_; }
 
+    // SDF 遮蔽物として使う 静的メッシュ（ボーン無し）ぶんの距離場
+    const std::vector<StaticMeshDistanceField> &StaticDistanceFields() const { return staticDistanceFields_; }
+
   private:
     std::vector<Mesh> meshes_;
     ModelNode root_;
@@ -109,6 +119,7 @@ class Model {
     glm::vec3 boundsMax_{0.0f};
     // デフォルトブロックの uniform 上限（GL の保証は 1024 component）を避けるため UBO で送る
     gl::BufferHandle boneUBO_;
+    std::vector<StaticMeshDistanceField> staticDistanceFields_;
 
     std::vector<Animation> animations_;
     int activeAnimation_ = -1; // 再生中のアニメーション -1 でなし
@@ -138,6 +149,8 @@ class Model {
     void uploadBoneMatrices();
     /// バインドポーズの AABB をノード階層をたどって求める
     void accumulateBounds(const ModelNode &node, const glm::mat4 &parentTransform);
+    /// ノード階層をたどり 静的メッシュ（ボーン無し）ごとに距離場を焼く 起動時に一度だけ呼ぶ想定
+    void buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &parentTransform);
     /// aiAnimation をすべて読み込む
     void loadAnimations(const aiScene *scene);
     /// チャンネルがあれば時刻 time のローカル変換を作り なければバインドポーズを返す

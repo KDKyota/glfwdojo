@@ -11,6 +11,9 @@
 
 namespace {
 
+// 3D モデル AABB の一辺における格子点の数
+constexpr int kSdfBakeResolution = 32;
+
 // aiMatrix4x4 は行優先 glm::mat4 は列優先なので転置しながら詰め替える
 glm::mat4 toGlm(const aiMatrix4x4 &m) {
     return glm::mat4(m.a1, m.b1, m.c1, m.d1,
@@ -96,6 +99,7 @@ void Model::loadModel(const std::string &path) {
     boundsMin_ = glm::vec3(std::numeric_limits<float>::max());
     boundsMax_ = glm::vec3(std::numeric_limits<float>::lowest());
     accumulateBounds(root_, glm::mat4(1.0f));
+    buildStaticDistanceFields(root_, glm::mat4(1.0f));
 
     loadAnimations(scene);
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
@@ -133,6 +137,21 @@ void Model::accumulateBounds(const ModelNode &node, const glm::mat4 &parentTrans
 
     for (const ModelNode &child : node.children)
         accumulateBounds(child, worldTransform);
+}
+
+/// ノード階層をたどり 静的メッシュ（ボーン無し）ごとに距離場を焼く 起動時に一度だけ呼ぶ想定
+void Model::buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &parentTransform) {
+    // メッシュのノード空間からモデルのルート空間への変換　Scene 上のワールド変換ではない（SceneModels 側で modelMatrix と合成する）
+    const glm::mat4 nodeToModelRoot = parentTransform * node.localTransform;
+
+    for (const unsigned int index : node.meshIndices) {
+        const Mesh &mesh = meshes_[index];
+        if (!mesh.IsSkinned())
+            staticDistanceFields_.push_back({gl::BakeMeshDistanceField(mesh, kSdfBakeResolution), nodeToModelRoot});
+    }
+
+    for (const ModelNode &child : node.children)
+        buildStaticDistanceFields(child, nodeToModelRoot);
 }
 
 /// boneMatrices_ を UBO へ書き込む

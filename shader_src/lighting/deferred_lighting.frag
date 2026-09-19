@@ -22,7 +22,6 @@ uniform sampler2D brdfLUT;
 // SDF レイマーチで焼いた拡散側の可視性 鏡面は視線依存なので焼けずここには入らない
 uniform sampler2D sdfOcclusion;
 const float MAX_REFLECTION_LOD = 4.0;
-const float SDF_ROUGHNESS_THRESHOLD = 0.7; // Roughness の値によっては sdfEnvVisibility() を実行しない
 
 uniform vec3 viewPos;
 
@@ -33,6 +32,50 @@ uniform float ssaoStrength;
 
 // debugMode 14 でレイを飛ばす方向(ImGui から変更可能にする)
 uniform vec3 sdfDebugDir;
+
+// 代表点の面との距離がこの範囲を超えたら別の面とみなす gPosition の量子化誤差(cm 単位)より大きくする
+const float SDF_UPSAMPLE_PLANE_SIGMA = 0.05;
+// 有効な代表点の重みの合計がこれ未満なら 補間せずフル解像度でトレースし直す
+const float SDF_UPSAMPLE_MIN_WEIGHT = 0.05;
+
+// 半解像度パスが書いた鏡面の可視性を フル解像度の画素へ補間して返す
+// 半解像度のテクセル (i,j) はフル解像度の画素 (2i,2j) を代表点としてトレースしているので
+// 同じ面の代表点だけを重みに使い 物体の輪郭を越えて値が染み出さないようにする
+// 使える代表点が無ければ -1
+float upsampleSpecularVisibility(vec3 pos, vec3 normal, ivec2 pixel) {
+    ivec2 halfSize = textureSize(sdfOcclusion, 0);
+    ivec2 base = pixel >> 1;
+    // 偶数の画素は代表点そのもの 奇数の画素は隣の代表点との中点
+    vec2 fraction = vec2(pixel & 1) * 0.5;
+
+    float sum = 0.0;
+    float weightSum = 0.0;
+    for (int j = 0; j < 2; ++j) {
+        for (int i = 0; i < 2; ++i) {
+            float bilinear = (i == 0 ? 1.0 - fraction.x : fraction.x) * (j == 0 ? 1.0 - fraction.y : fraction.y);
+            if (bilinear <= 0.0)
+                continue;
+
+            ivec2 texel = min(base + ivec2(i, j), halfSize - 1);
+            ivec2 representative = texel * 2;
+            vec4 repNormal = texelFetch(gNormal, representative, 0);
+            float repRoughness = texelFetch(gAlbedoRoughness, representative, 0).a;
+            // 背景と 粗くて鏡面をトレースしていない画素の値は使えない
+            if (dot(repNormal.xyz, repNormal.xyz) < 0.5 || repRoughness >= SDF_ROUGHNESS_THRESHOLD)
+                continue;
+
+            vec3 repPos = texelFetch(gPosition, representative, 0).xyz;
+            float planeDistance = dot(normal, repPos - pos);
+            float planeWeight = exp(-planeDistance * planeDistance / (SDF_UPSAMPLE_PLANE_SIGMA * SDF_UPSAMPLE_PLANE_SIGMA));
+            float normalWeight = pow(max(dot(normal, normalize(repNormal.xyz)), 0.0), 8.0);
+
+            float weight = bilinear * planeWeight * normalWeight;
+            sum += weight * texelFetch(sdfOcclusion, texel, 0).g;
+            weightSum += weight;
+        }
+    }
+    return weightSum >= SDF_UPSAMPLE_MIN_WEIGHT ? sum / weightSum : -1.0;
+}
 
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
@@ -75,9 +118,13 @@ void main() {
         if (Roughness < SDF_ROUGHNESS_THRESHOLD){
             float specConeTangent = Roughness * Roughness;
             if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
-                // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
-                specVisibility =
-                    mix(1.0, sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w), sdfOcclusionStrength);
+                float traced = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));
+                // 同じ面の代表点が無い画素（細い物体や輪郭）は 半解像度の値を使わずここでトレースし直す
+                if (traced < 0.0) {
+                    // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
+                    traced = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w);
+                }
+                specVisibility = mix(1.0, traced, sdfOcclusionStrength);
             } else
                 specVisibility = 1.0;
         } else
@@ -227,6 +274,16 @@ void main() {
                                                 Roughness * Roughness, sceneParams.w, steps);
             float value = debugMode == 17 ? visibility : float(steps) / float(SDF_MAX_STEPS);
             FragColor = vec4(vec3(value), 1.0);
+        }
+    } else if (debugMode == 19) {
+        // 実際にライティングが使う鏡面の可視性（半解像度＋補間） 17 と見比べる 赤はトレースし直した画素
+        if (dot(Normal, Normal) < 0.5) {
+            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        } else if (Roughness >= SDF_ROUGHNESS_THRESHOLD) {
+            FragColor = vec4(0.0, 0.0, 1.0, 1.0); // 粗い画素は鏡面をトレースしない 青
+        } else {
+            float visibility = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));
+            FragColor = visibility < 0.0 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(vec3(visibility), 1.0);
         }
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // 未定義の debugMode（マゼンタ）

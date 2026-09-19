@@ -10,6 +10,16 @@
 namespace gl {
 
 /**
+ * @brief SDF 遮蔽物として使う 静的メッシュ1つぶんのワールド空間での情報
+ */
+struct StaticSdfInstance {
+    GLuint textureId;
+    // ワールド座標を このメッシュの距離場テクスチャのローカル座標へ変換する（ワールド変換の逆行列）
+    glm::mat4 worldToLocalMatrix;
+    glm::vec3 boundsMin, boundsMax; // ローカル座標での AABB
+};
+
+/**
  * @brief 読み込んだモデルとその配置行列 および操作対象のキャラクターを持つ
  *
  * Shadow パスと Geometry パスの両方が同じモデル列を別のシェーダーで描く
@@ -36,6 +46,9 @@ class SceneModels {
     const glm::vec3 *FollowTargetPosition() const {
         return character_ ? &character_->Position() : nullptr;
     }
+
+    /// SDF 遮蔽物として使う 静的メッシュの情報を 全モデルから集める
+    std::vector<StaticSdfInstance> CollectStaticSdfInstances() const;
 
   private:
     std::vector<std::unique_ptr<Model>> models_; // テクスチャやボーン・アニメーションなどの描画情報を持つ

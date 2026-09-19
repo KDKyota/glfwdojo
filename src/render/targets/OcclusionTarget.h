@@ -4,13 +4,14 @@
 namespace gl {
 
 /**
- * @brief 遮蔽率をスカラー1枚に書くパスの出力先 本体とブラー後の2枚を持つ
+ * @brief 遮蔽率を書くパスの出力先 本体とブラー後の2枚を持つ
  *
  * @param debugName FBO が不完全だったときに報告へ添える名前
+ * @param channelCount 1 なら R のみ 2 なら RG（SDF 遮蔽が拡散と鏡面を1枚に持つ）
  */
 class OcclusionTarget {
   public:
-    OcclusionTarget(int width, int height, const char *debugName);
+    OcclusionTarget(int width, int height, const char *debugName, int channelCount = 1);
 
     GLuint Fbo() const {
         return fbo_;
@@ -34,7 +35,7 @@ class OcclusionTarget {
   private:
     int width_, height_;
     FramebufferHandle fbo_, blurFbo_;
-    TextureHandle buffer_, blurredBuffer_; // GL_R8
+    TextureHandle buffer_, blurredBuffer_; // GL_R8 か GL_RG8
 };
 
 } // namespace gl

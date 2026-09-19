@@ -25,6 +25,9 @@ DeferredLightingPass::DeferredLightingPass() : shader_("fragment_quad.vert", "de
     shader_.setInt("prefilterMap", texunit::kPrefilterMap);
     shader_.setInt("brdfLUT", texunit::kBrdfLut);
     shader_.setInt("sdfOcclusion", texunit::kSdfOcclusion);
+    // sdf_common.glsl の距離場 未設定だとユニット0を読み texture() が 0 を返して AABB 全体が遮蔽物になる
+    for (int i = 0; i < texunit::kSdfMaxModels; ++i)
+        shader_.setInt("modelDistanceFields[" + std::to_string(i) + "]", texunit::kSdfModelBase + i);
 }
 
 void DeferredLightingPass::Execute(const HdrTarget &hdr, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,

@@ -11,7 +11,6 @@ struct IblMaps {
     TextureHandle irradianceMap;
     // ミップの各レベルが roughness 0.0 / 0.25 / 0.5 / 0.75 / 1.0 に対応する
     TextureHandle prefilterMap;
-    // 環境にも材質の色にも依存しない普遍的な表
     TextureHandle brdfLut;
 };
 

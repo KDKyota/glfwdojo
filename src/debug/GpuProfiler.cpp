@@ -1,6 +1,9 @@
 #include "debug/GpuProfiler.h"
 
+#include <algorithm>
+#include <cstdio>
 #include <iterator>
+#include <numeric>
 
 namespace {
 
@@ -64,6 +67,7 @@ void gl::GpuProfiler::collect(int slot) {
         GLuint64 nanoseconds = 0;
         glGetQueryObjectui64v(queries_[i][slot], GL_QUERY_RESULT, &nanoseconds);
         const float milliseconds = static_cast<float>(nanoseconds) / 1.0e6f;
+        samples_[i].push_back(milliseconds);
 
         // 初回は平均の初期値が無いのでそのまま入れる 0から平均すると表示が数秒かけて立ち上がる
         if (smoothed_[i] == 0.0f)
@@ -78,6 +82,22 @@ float gl::GpuProfiler::TotalMilliseconds() const {
     for (float milliseconds : smoothed_)
         total += milliseconds;
     return total;
+}
+
+void gl::GpuProfiler::PrintSummary() const {
+    std::printf("%-9s %8s %8s %8s %8s %8s\n", "Pass", "mean", "median", "max", "min", "frames");
+    for (std::size_t i = 0; i < kPassCount; ++i) {
+        std::vector<float> sorted = samples_[i];
+        if (sorted.empty())
+            continue;
+        std::sort(sorted.begin(), sorted.end());
+
+        const std::size_t n = sorted.size();
+        const float median = n % 2 == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) * 0.5f;
+        const float mean = std::accumulate(sorted.begin(), sorted.end(), 0.0f) / static_cast<float>(n);
+        std::printf("%-9s %8.3f %8.3f %8.3f %8.3f %8zu\n", kPassNames[i], mean, median, sorted.back(), sorted.front(),
+                    n);
+    }
 }
 
 const char *gl::GpuProfiler::Name(GpuPass pass) {

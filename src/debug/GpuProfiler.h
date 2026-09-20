@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 namespace gl {
 
@@ -53,6 +54,9 @@ class GpuProfiler {
 
     float TotalMilliseconds() const;
 
+    /// 記録した全フレームのパスごとの平均 中央値 最大 最小を標準出力へ書く
+    void PrintSummary() const;
+
     static const char *Name(GpuPass pass);
 
   private:
@@ -69,6 +73,8 @@ class GpuProfiler {
     // そのスロットへ実際に計測を仕込んだか 起動直後は結果が存在しない
     std::array<std::array<bool, kFrameLag>, kPassCount> issued_{};
     std::array<float, kPassCount> smoothed_{};
+    // 終了時の統計用に平滑化前の値を全て残す
+    std::array<std::vector<float>, kPassCount> samples_;
 
     std::uint64_t frame_ = 0;
     int writeSlot_ = 0; // 今書く場所と読む場所を意図的にずらすインデックス

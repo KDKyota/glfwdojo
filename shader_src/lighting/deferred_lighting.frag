@@ -143,9 +143,12 @@ void main() {
                 continue;
 
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
+            // NdotL が 0 以下では shadow は寄与しないので早期にはじく
+            if (dot(Normal, lightDir) <= 0.0)
+                continue;
             float shadow = ShadowCalculation(FragPos, Normal, lightDir,
                     pointLights[i].position, shadowMap[i]);
-            if (sdfShadowStrength > 0.0) { // 処理効率工場のための条件
+            if (sdfShadowStrength > 0.0 && shadow < 1.0) { // 処理効率工場のための条件
                 float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
                                                            pointLights[i].sourceRadius);
                 shadow = max(shadow, sdfShadow * sdfShadowStrength);

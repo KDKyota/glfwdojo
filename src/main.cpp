@@ -175,4 +175,6 @@ int main(void) {
         window->SwapBuffers();
         window->PollEvents();
     }
+
+    scene->Profiler().PrintSummary();
 }

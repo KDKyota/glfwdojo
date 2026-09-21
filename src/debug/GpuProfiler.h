@@ -12,6 +12,7 @@ namespace gl {
 /// GPU での処理時間を計測するパス
 enum class GpuPass {
     Shadow,
+    Reflection,
     Geometry,
     Ssao,
     SdfOcclusion,
@@ -40,17 +41,14 @@ class GpuProfiler {
     void EndFrame();
 
     /// body の GPU 実行時間を計測する
-    template <typename F>
-    void Measure(GpuPass pass, F &&body) {
+    template <typename F> void Measure(GpuPass pass, F &&body) {
         begin(pass);
         body();
         end();
     }
 
     /// 平滑化済みの実行時間をミリ秒で返す
-    float Milliseconds(GpuPass pass) const {
-        return smoothed_[static_cast<std::size_t>(pass)];
-    }
+    float Milliseconds(GpuPass pass) const { return smoothed_[static_cast<std::size_t>(pass)]; }
 
     float TotalMilliseconds() const;
 

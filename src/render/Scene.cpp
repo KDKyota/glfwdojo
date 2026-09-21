@@ -18,6 +18,8 @@ constexpr GLuint kMatricesUboBinding = 0;
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : scrWidth_(scrWidth), scrHeight_(scrHeight), camera_(camera), geometry_(cache_), models_(cache_),
       gBuffer_(scrWidth, scrHeight), hdrTarget_(scrWidth, scrHeight),
+      // 床はぼかして合成するので半解像度で足りる
+      reflectionTarget_(scrWidth / 2, scrHeight / 2),
       ssaoTarget_(scrWidth, scrHeight, "SSAO"),
       // SDF は数m規模の低周波な遮蔽しか拾わないので半解像度で足りる
       sdfOcclusionTarget_(scrWidth / 2, scrHeight / 2, "SDF_OCCLUSION", 2),
@@ -73,6 +75,11 @@ void Scene::Render(float deltaTime, float heightScale) {
         shadowPass_.Execute(shadowTargets_, geometry_, models_, windowCount, settings_.shadowMapStaticCasters);
     });
     updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO は定数の集まりなのでupdateしない
+    // [2.5] 床で折り返した鏡像カメラから描く UBO の view を書き換えるので直後に戻す
+    profiler_.Measure(gl::GpuPass::Reflection, [&] {
+        reflectionPass_.Execute(reflectionTarget_, geometry_, iblMaps_, *camera_, matricesUBO_);
+    });
+    updateMatricesUBO();
     // [3] 不透明物の幾何情報を G-Buffer へ
     profiler_.Measure(gl::GpuPass::Geometry, [&] {
         geometryPass_.Execute(gBuffer_, geometry_, models_, *camera_, settings_, heightScale, windowCount);

@@ -30,12 +30,12 @@ DeferredLightingPass::DeferredLightingPass() : shader_("fragment_quad.vert", "de
         shader_.setInt("modelDistanceFields[" + std::to_string(i) + "]", texunit::kSdfModelBase + i);
 }
 
-void DeferredLightingPass::Execute(const HdrTarget &hdr, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,
+void DeferredLightingPass::Execute(const TargetView &target, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,
                                    const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion,
-                                   const IblMaps &ibl, const SceneGeometry &geometry, const Camera &camera,
+                                   const IblMaps &ibl, const SceneGeometry &geometry, const RenderView &view,
                                    const RenderSettings &settings) {
-    glViewport(0, 0, hdr.Width(), hdr.Height());
-    glBindFramebuffer(GL_FRAMEBUFFER, hdr.Fbo());
+    glViewport(0, 0, target.width, target.height);
+    glBindFramebuffer(GL_FRAMEBUFFER, target.fbo);
     glClear(GL_COLOR_BUFFER_BIT); // 深度は GBuffer::BlitDepthTo() でコピー済み
     glDisable(GL_DEPTH_TEST);
 
@@ -54,7 +54,7 @@ void DeferredLightingPass::Execute(const HdrTarget &hdr, const GBuffer &gbuffer,
     glBindTexture(GL_TEXTURE_2D, sdfOcclusion.BlurredBuffer());
 
     shader_.use();
-    shader_.setVec3("viewPos", camera.GetViewPosition());
+    shader_.setVec3("viewPos", view.position);
     // UI から変わる値なので毎フレーム送る
     shader_.setInt("debugMode", settings.debugMode);
     shader_.setFloat("ssaoStrength", settings.ssaoStrength);

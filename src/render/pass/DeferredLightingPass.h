@@ -1,13 +1,13 @@
 #pragma once
+#include "gl/RenderTarget.h"
 #include "gl/Shader.h"
 #include "render/RenderSettings.h"
+#include "render/RenderView.h"
 #include "render/SceneGeometry.h"
 #include "render/ibl/IblMaps.h"
 #include "render/targets/GBuffer.h"
-#include "render/targets/HdrTarget.h"
 #include "render/targets/OcclusionTarget.h"
 #include "render/targets/ShadowCubeTargets.h"
-#include "scene/Camera.h"
 
 namespace gl {
 
@@ -18,9 +18,9 @@ class DeferredLightingPass {
   public:
     DeferredLightingPass();
 
-    void Execute(const HdrTarget &hdr, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,
+    void Execute(const TargetView &target, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,
                  const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion, const IblMaps &ibl,
-                 const SceneGeometry &geometry, const Camera &camera, const RenderSettings &settings);
+                 const SceneGeometry &geometry, const RenderView &view, const RenderSettings &settings);
 
   private:
     Shader shader_;

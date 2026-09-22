@@ -135,10 +135,12 @@ int main(void) {
                 ImGui::Checkbox("Invert", &settings.debugCheckerInvert);
                 ImGui::Separator();
 
-                // GL のテクスチャは下が原点なので UV の上下を反転して表示する
-                ImGui::Text("Floor reflection");
-                ImGui::Image((ImTextureID)(intptr_t)scene->ReflectionColor(), ImVec2(320, 180), ImVec2(0, 1),
-                             ImVec2(1, 0));
+                ImGui::Checkbox("Planar reflection (floor)", &settings.planarReflection);
+                if (settings.planarReflection) {
+                    // GL のテクスチャは下が原点なので UV を上下反転する
+                    ImGui::Image((ImTextureID)(intptr_t)scene->ReflectionColor(), ImVec2(320, 180), ImVec2(0, 1),
+                                 ImVec2(1, 0));
+                }
                 ImGui::Separator();
 
                 ImGui::SliderFloat(("SDF azimuth"), &settings.sdfDebugAzimuthDegrees, -180.0f, 180.0f);

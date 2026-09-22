@@ -22,6 +22,8 @@ struct RenderSettings {
     // SDF ソフトシャドウの聞き具合
     float sdfShadowStrength = 1.0f;
     bool shadowMapStaticCasters = false; // 床とキューブと壁をシャドウマップにも描くか
+    // 床の平面反射 シーンをもう一度描くため実行時に切り替えられるようにしている
+    bool planarReflection = true;
     // SDF レイマーチの検証用
     float sdfDebugAzimuthDegrees = 0.0f;
     float sdfDebugElevationDegrees = 45.0f;

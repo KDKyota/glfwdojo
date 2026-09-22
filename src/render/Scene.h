@@ -7,6 +7,7 @@
 #include "gl/TextureCache.h"
 #include "render/GeometryData.h"
 #include "render/RenderSettings.h"
+#include "render/RenderView.h"
 #include "render/SceneGeometry.h"
 #include "render/ibl/IblMaps.h"
 #include "render/pass/BloomPass.h"
@@ -103,6 +104,7 @@ class Scene {
     gl::GBuffer gBuffer_;
     gl::HdrTarget hdrTarget_;
     gl::ReflectionTarget reflectionTarget_;
+    gl::GBuffer reflectionGBuffer_;
     gl::ShadowCubeTargets shadowTargets_;
     gl::OcclusionTarget ssaoTarget_;
     gl::OcclusionTarget sdfOcclusionTarget_;

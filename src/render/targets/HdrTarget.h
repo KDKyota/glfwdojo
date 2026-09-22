@@ -1,5 +1,6 @@
 #pragma once
 #include "gl/GlHandle.h"
+#include "gl/RenderTarget.h"
 
 namespace gl {
 
@@ -12,6 +13,9 @@ class HdrTarget {
 
     GLuint Fbo() const {
         return fbo_;
+    }
+    TargetView View() const {
+        return {fbo_, width_, height_};
     }
     GLuint Color() const {
         return color_;

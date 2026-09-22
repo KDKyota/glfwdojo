@@ -28,8 +28,8 @@ GeometryPass::GeometryPass()
 }
 
 void GeometryPass::Execute(const GBuffer &gbuffer, const SceneGeometry &geometry, const SceneModels &models,
-                           const Camera &camera, const RenderSettings &settings, float heightScale,
-                           std::size_t windowCount) {
+                           const RenderView &view, const RenderSettings &settings, float heightScale,
+                           std::size_t windowCount, const glm::vec4 &clipPlane) {
     glViewport(0, 0, gbuffer.Width(), gbuffer.Height());
     glEnable(GL_DEPTH_TEST);
     // ブレンドが有効なままだと アルファ未定義の出力は書き込みが丸ごと消える
@@ -45,7 +45,8 @@ void GeometryPass::Execute(const GBuffer &gbuffer, const SceneGeometry &geometry
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     cubeShader_.use();
-    cubeShader_.setVec3("viewPos", camera.GetViewPosition());
+    cubeShader_.setVec4("clipPlane", clipPlane);
+    cubeShader_.setVec3("viewPos", view.position);
     cubeShader_.setMat3("normalMatrix", glm::mat3(1.0f));
     cubeShader_.setFloat("heightScale", heightScale);
     settings.cubeMaterial.applyToShader(cubeShader_);
@@ -54,6 +55,7 @@ void GeometryPass::Execute(const GBuffer &gbuffer, const SceneGeometry &geometry
 
     /* floor */
     floorShader_.use();
+    floorShader_.setVec4("clipPlane", clipPlane);
     floorShader_.setMat3("normalMatrix", glm::mat3(1.0f));
     settings.floorMaterial.applyToShader(floorShader_);
     floorShader_.setBool("checkerFloor", settings.debugCheckerFloor);
@@ -63,15 +65,18 @@ void GeometryPass::Execute(const GBuffer &gbuffer, const SceneGeometry &geometry
 
     /* wall */
     wallShader_.use();
+    wallShader_.setVec4("clipPlane", clipPlane);
     settings.wallMaterial.applyToShader(wallShader_);
     geometry.DrawWalls(wallShader_);
 
     /* model */
     modelShader_.use();
+    modelShader_.setVec4("clipPlane", clipPlane);
     models.Draw(modelShader_);
 
     /* 窓枠 */
     windowShader_.use();
+    windowShader_.setVec4("clipPlane", clipPlane);
     settings.windowMaterial.applyToShader(windowShader_);
     geometry.DrawWindows(windowShader_, windowCount);
 }

@@ -21,7 +21,12 @@ uniform samplerCube prefilterMap;
 uniform sampler2D brdfLUT;
 // SDF レイマーチで焼いた拡散側の可視性 鏡面は視線依存なので焼けずここには入らない
 uniform sampler2D sdfOcclusion;
+// 床で折り返した鏡像カメラで描いた反射像 画面全体を覆うクワッドと同じ UV で対応する
+uniform sampler2D reflectionColor;
+uniform bool hasReflection;
 const float MAX_REFLECTION_LOD = 4.0;
+// 床の判定 gPosition の量子化誤差より大きく取る
+const float FLOOR_PLANE_EPSILON = 0.05;
 
 uniform vec3 viewPos;
 
@@ -131,7 +136,16 @@ void main() {
             // そもそも roughness が大きいなら広い範囲を平均している skyVisibility で済む
             specVisibility = skyVisibility;
 
-        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
+        vec3 iblSpecularWeight = kS * brdf.x + brdf.y;
+        bool isFloor = hasReflection && abs(FragPos.y - sceneParams.x) < FLOOR_PLANE_EPSILON && Normal.y > 0.9;
+        vec3 specularIBL;
+        if (isFloor) {
+            // 遮蔽で暗くする代わりに その方向を実際に映る色へ置き換える
+            vec3 reflected = texture(reflectionColor, TexCoords).rgb;
+            specularIBL = mix(reflected, prefiltered, specVisibility) * iblSpecularWeight;
+        } else {
+            specularIBL = prefiltered * iblSpecularWeight * specVisibility;
+        }
 
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している
         vec3 result = (kD * diffuseIBL + specularIBL) * AmbientOcclusion * ambientStrength;

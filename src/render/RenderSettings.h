@@ -24,6 +24,8 @@ struct RenderSettings {
     bool shadowMapStaticCasters = false; // 床とキューブと壁をシャドウマップにも描くか
     // 床の平面反射 シーンをもう一度描くため実行時に切り替えられるようにしている
     bool planarReflection = true;
+    // 床の反射像へ SDF の鏡面遮蔽も重ねるか 反射像は遮蔽込みの実測なので既定では掛けない
+    bool floorSdfSpecularOcclusion = false;
     // SDF レイマーチの検証用
     float sdfDebugAzimuthDegrees = 0.0f;
     float sdfDebugElevationDegrees = 45.0f;

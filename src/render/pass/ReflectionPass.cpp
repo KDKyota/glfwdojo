@@ -34,7 +34,7 @@ ReflectionPass::ReflectionPass() : skyboxShader_("skybox.vert", "skybox.frag") {
 
 void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer,
                              GeometryPass &geometryPass, DeferredLightingPass &lightingPass,
-                             const SceneGeometry &geometry, const SceneModels &models,
+                             ForwardPass &forwardPass, const SceneGeometry &geometry, const SceneModels &models,
                              const ShadowCubeTargets &shadows, const OcclusionTarget &ssao,
                              const OcclusionTarget &sdfOcclusion, const IblMaps &ibl, const Camera &camera,
                              const RenderSettings &settings, GLuint matricesUbo, float heightScale,
@@ -71,6 +71,12 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
     glViewport(0, 0, target.Width(), target.Height());
     glBindFramebuffer(GL_FRAMEBUFFER, target.Fbo());
     glEnable(GL_DEPTH_TEST);
+
+    // 光源を示すキューブは G-Buffer を経由しないのでライティングの後に重ねる
+    glEnable(GL_CLIP_DISTANCE0);
+    forwardPass.RenderLightCubes(geometry, kFloorClipPlane);
+    glDisable(GL_CLIP_DISTANCE0);
+
     glDepthFunc(GL_LEQUAL);
     skyboxShader_.use();
     glActiveTexture(GL_TEXTURE0);

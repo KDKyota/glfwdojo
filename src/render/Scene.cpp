@@ -13,13 +13,16 @@
 namespace {
 // 全パスが view / projection を読む binding
 constexpr GLuint kMatricesUboBinding = 0;
+// 反射の解像度を画面の何分の1にするか 上げるとシーンをもう一度描く画素数がそのぶん減る
+constexpr int kReflectionResolutionDivisor = 2;
 } // namespace
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : scrWidth_(scrWidth), scrHeight_(scrHeight), camera_(camera), geometry_(cache_), models_(cache_),
       gBuffer_(scrWidth, scrHeight), hdrTarget_(scrWidth, scrHeight),
-      // 床はぼかして合成するので半解像度で足りる
-      reflectionTarget_(scrWidth / 2, scrHeight / 2), reflectionGBuffer_(scrWidth / 2, scrHeight / 2),
+      // 注意: 深度を Blit で受け渡すので反射ターゲットと反射用 G-Buffer は同じサイズにすること
+      reflectionTarget_(scrWidth / kReflectionResolutionDivisor, scrHeight / kReflectionResolutionDivisor),
+      reflectionGBuffer_(scrWidth / kReflectionResolutionDivisor, scrHeight / kReflectionResolutionDivisor),
       ssaoTarget_(scrWidth, scrHeight, "SSAO"),
       // SDF は数m規模の低周波な遮蔽しか拾わないので半解像度で足りる
       sdfOcclusionTarget_(scrWidth / 2, scrHeight / 2, "SDF_OCCLUSION", 2),
@@ -74,7 +77,8 @@ void Scene::Render(float deltaTime, float heightScale) {
     profiler_.Measure(gl::GpuPass::Shadow, [&] {
         shadowPass_.Execute(shadowTargets_, geometry_, models_, windowCount, settings_.shadowMapStaticCasters);
     });
-    updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO は定数の集まりなのでupdateしない
+    updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO
+                         // は定数の集まりなのでupdateしない
     // [2.5] 床で折り返した鏡像カメラからシーンを描く
     if (settings_.planarReflection) {
         profiler_.Measure(gl::GpuPass::Reflection, [&] {

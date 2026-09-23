@@ -14,6 +14,7 @@ layout (std140, binding = 0) uniform Matrices {
 
 uniform mat4 model;
 uniform mat3 normalMatrix;
+uniform vec4 clipPlane; // 平面反射で床より上だけを残す境界面
 
 uniform vec3 lightPos;
 uniform vec3 viewPos;
@@ -41,5 +42,6 @@ void main()
 	TangentLightPos = TBN * lightPos;
 	TangentViewPos = TBN * viewPos;
 	TangentFragPos = TBN * FragPos;
+	gl_ClipDistance[0] = dot(vec4(FragPos, 1.0), clipPlane);
 	gl_Position = projection * view * model * vec4(aPos + aOffset, 1.0);
 }

@@ -9,7 +9,7 @@ namespace {
 
 // GpuPass の並びと一致させること ずれても動いてしまい表示だけが入れ替わる
 constexpr const char *kPassNames[] = {
-    "Shadow", "Geometry", "SSAO", "SdfOccl", "BlitDepth", "Lighting", "Forward", "Bloom", "ToScreen",
+    "Shadow", "Reflect", "Geometry", "SSAO", "SdfOccl", "BlitDepth", "Lighting", "Forward", "Bloom", "ToScreen",
 };
 static_assert(std::size(kPassNames) == gl::GpuProfiler::kPassCount, "GpuPass と名前配列の数が合っていない");
 
@@ -34,8 +34,7 @@ void gl::GpuProfiler::EndFrame() {
 }
 
 void gl::GpuProfiler::begin(GpuPass pass) {
-    if (measuring_)
-        return;
+    if (measuring_) return;
     measuring_ = true;
 
     const std::size_t index = static_cast<std::size_t>(pass);
@@ -46,8 +45,7 @@ void gl::GpuProfiler::begin(GpuPass pass) {
 }
 
 void gl::GpuProfiler::end() {
-    if (!measuring_)
-        return;
+    if (!measuring_) return;
     glEndQuery(GL_TIME_ELAPSED);
     glPopDebugGroup();
     measuring_ = false;
@@ -55,14 +53,12 @@ void gl::GpuProfiler::end() {
 
 void gl::GpuProfiler::collect(int slot) {
     for (std::size_t i = 0; i < kPassCount; ++i) {
-        if (!issued_[i][slot])
-            continue;
+        if (!issued_[i][slot]) continue;
 
         // 未完了なら読まずに前回値を保つ ここで待つと計測のために CPU を止めることになる
         GLint available = 0;
         glGetQueryObjectiv(queries_[i][slot], GL_QUERY_RESULT_AVAILABLE, &available);
-        if (!available)
-            continue;
+        if (!available) continue;
 
         GLuint64 nanoseconds = 0;
         glGetQueryObjectui64v(queries_[i][slot], GL_QUERY_RESULT, &nanoseconds);
@@ -88,8 +84,7 @@ void gl::GpuProfiler::PrintSummary() const {
     std::printf("%-9s %8s %8s %8s %8s %8s\n", "Pass", "mean", "median", "max", "min", "frames");
     for (std::size_t i = 0; i < kPassCount; ++i) {
         std::vector<float> sorted = samples_[i];
-        if (sorted.empty())
-            continue;
+        if (sorted.empty()) continue;
         std::sort(sorted.begin(), sorted.end());
 
         const std::size_t n = sorted.size();

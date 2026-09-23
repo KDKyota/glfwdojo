@@ -3,6 +3,12 @@
 
 namespace gl {
 
+/// 出力先の FBO とサイズ パスを特定のターゲット型に縛らないために使う
+struct TargetView {
+    GLuint fbo;
+    int width, height;
+};
+
 /**
  * @brief 2D テクスチャを確保して現在バインド中の FBO のアタッチメントへ繋ぐ
  *

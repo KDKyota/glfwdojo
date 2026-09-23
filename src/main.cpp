@@ -135,6 +135,17 @@ int main(void) {
                 ImGui::Checkbox("Invert", &settings.debugCheckerInvert);
                 ImGui::Separator();
 
+                ImGui::Checkbox("Planar reflection (floor)", &settings.planarReflection);
+                if (settings.planarReflection) {
+                    ImGui::Indent();
+                    ImGui::Checkbox("Apply SDF specular occlusion", &settings.floorSdfSpecularOcclusion);
+                    // GL のテクスチャは下が原点なので UV を上下反転する
+                    ImGui::Image((ImTextureID)(intptr_t)scene->ReflectionColor(), ImVec2(320, 180), ImVec2(0, 1),
+                                 ImVec2(1, 0));
+                    ImGui::Unindent();
+                }
+                ImGui::Separator();
+
                 ImGui::SliderFloat(("SDF azimuth"), &settings.sdfDebugAzimuthDegrees, -180.0f, 180.0f);
                 ImGui::SliderFloat("SDF elevation", &settings.sdfDebugElevationDegrees, -90.0f, 90.0f);
 

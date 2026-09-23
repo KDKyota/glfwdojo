@@ -7,12 +7,14 @@
 #include "gl/TextureCache.h"
 #include "render/GeometryData.h"
 #include "render/RenderSettings.h"
+#include "render/RenderView.h"
 #include "render/SceneGeometry.h"
 #include "render/ibl/IblMaps.h"
 #include "render/pass/BloomPass.h"
 #include "render/pass/DeferredLightingPass.h"
 #include "render/pass/ForwardPass.h"
 #include "render/pass/GeometryPass.h"
+#include "render/pass/ReflectionPass.h"
 #include "render/pass/SdfOcclusionPass.h"
 #include "render/pass/ShadowPass.h"
 #include "render/pass/SsaoPass.h"
@@ -20,6 +22,7 @@
 #include "render/targets/GBuffer.h"
 #include "render/targets/HdrTarget.h"
 #include "render/targets/OcclusionTarget.h"
+#include "render/targets/ReflectionTarget.h"
 #include "render/targets/ShadowCubeTargets.h"
 #include "scene/Camera.h"
 #include "scene/Collision.h"
@@ -72,6 +75,11 @@ class Scene {
         return profiler_;
     }
 
+    // 床の反射テクスチャ ImGui での確認用
+    GLuint ReflectionColor() const {
+        return reflectionTarget_.Color();
+    }
+
   private:
     /// 壁と立方体から衝突判定用の直方体を作る
     void initColliders();
@@ -95,6 +103,8 @@ class Scene {
     /* レンダーターゲット パス同士はこれを介して繋がる */
     gl::GBuffer gBuffer_;
     gl::HdrTarget hdrTarget_;
+    gl::ReflectionTarget reflectionTarget_;
+    gl::GBuffer reflectionGBuffer_;
     gl::ShadowCubeTargets shadowTargets_;
     gl::OcclusionTarget ssaoTarget_;
     gl::OcclusionTarget sdfOcclusionTarget_;
@@ -102,6 +112,7 @@ class Scene {
 
     /* Render() から順に呼ばれるパス テクスチャで繋がっているので順序に意味がある */
     gl::ShadowPass shadowPass_;
+    gl::ReflectionPass reflectionPass_;
     gl::GeometryPass geometryPass_;
     gl::SsaoPass ssaoPass_;
     gl::SdfOcclusionPass sdfOcclusionPass_;

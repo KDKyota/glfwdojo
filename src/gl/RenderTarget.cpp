@@ -24,8 +24,8 @@ void AttachDepthStencilBuffer(RenderbufferHandle &renderbuffer, int width, int h
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);
 }
 
-void CreateCubemap(TextureHandle &texture, GLint internalFormat, GLenum format, GLenum type, int size,
-                   GLint minFilter, GLint magFilter) {
+void CreateCubemap(TextureHandle &texture, GLint internalFormat, GLenum format, GLenum type, int size, GLint minFilter,
+                   GLint magFilter) {
     texture.create();
     glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
     for (unsigned int i = 0; i < 6; ++i)

@@ -21,7 +21,16 @@ uniform samplerCube prefilterMap;
 uniform sampler2D brdfLUT;
 // SDF レイマーチで焼いた拡散側の可視性 鏡面は視線依存なので焼けずここには入らない
 uniform sampler2D sdfOcclusion;
+// 床で折り返した鏡像カメラで描いた反射像
+uniform sampler2D reflectionColor;
+uniform bool hasReflection;
+// 反射像へ SDF の鏡面遮蔽も重ねるか 見比べのために切り替えられるようにしている
+uniform bool floorSdfSpecularOcclusion;
 const float MAX_REFLECTION_LOD = 4.0;
+// 床の判定 gPosition の量子化誤差より大きく取る
+const float FLOOR_PLANE_EPSILON = 0.05;
+// reflectionColor のミップを何段まで使うか roughness=1 で最もぼけたレベルを選ぶ
+const float MAX_REFLECTION_COLOR_LOD = 5.0;
 
 uniform vec3 viewPos;
 
@@ -113,25 +122,42 @@ void main() {
         vec3 prefiltered = textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
 
-        float specVisibility = 0.0;
-        // Roughness が大きいものは specVisibility を計算してもあまりメリットがない
-        if (Roughness < SDF_ROUGHNESS_THRESHOLD){
-            float specConeTangent = Roughness * Roughness;
-            if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
-                float traced = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));
-                // 同じ面の代表点が無い画素（細い物体や輪郭）は 半解像度の値を使わずここでトレースし直す
-                if (traced < 0.0) {
-                    // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
-                    traced = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w);
-                }
-                specVisibility = mix(1.0, traced, sdfOcclusionStrength);
-            } else
-                specVisibility = 1.0;
-        } else
-            // そもそも roughness が大きいなら広い範囲を平均している skyVisibility で済む
-            specVisibility = skyVisibility;
+        vec3 iblSpecularWeight = kS * brdf.x + brdf.y;
+        bool isFloor = hasReflection && abs(FragPos.y - sceneParams.x) < FLOOR_PLANE_EPSILON && Normal.y > 0.9;
+        // 反射像だけを使う床では specVisibility が不要なのでトレースごと省く
+        bool needsSpecVisibility = !isFloor || floorSdfSpecularOcclusion;
 
-        vec3 specularIBL = prefiltered * (kS * brdf.x + brdf.y) * specVisibility;
+        float specVisibility = 1.0;
+        if (needsSpecVisibility) {
+            // Roughness が大きいものは specVisibility を計算してもあまりメリットがない
+            if (Roughness < SDF_ROUGHNESS_THRESHOLD) {
+                float specConeTangent = Roughness * Roughness;
+                if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
+                    float traced = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));
+                    // 同じ面の代表点が無い画素（細い物体や輪郭）は 半解像度の値を使わずここでトレースし直す
+                    if (traced < 0.0) {
+                        // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
+                        traced =
+                            sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w);
+                    }
+                    specVisibility = mix(1.0, traced, sdfOcclusionStrength);
+                }
+            } else
+                // そもそも roughness が大きいなら広い範囲を平均している skyVisibility で済む
+                specVisibility = skyVisibility;
+        }
+
+        vec3 specularIBL;
+        if (isFloor) {
+            // 遮蔽で暗くする代わりに その方向を実際に映る色へ置き換える
+            vec3 reflected = textureLod(reflectionColor, TexCoords, Roughness * MAX_REFLECTION_COLOR_LOD).rgb;
+            // 反射像は遮蔽込みの実測なので重ねると二重に遮ることになる
+            if (floorSdfSpecularOcclusion)
+                reflected = mix(reflected, prefiltered, specVisibility);
+            specularIBL = reflected * iblSpecularWeight;
+        } else {
+            specularIBL = prefiltered * iblSpecularWeight * specVisibility;
+        }
 
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している
         vec3 result = (kD * diffuseIBL + specularIBL) * AmbientOcclusion * ambientStrength;
@@ -150,7 +176,7 @@ void main() {
                     pointLights[i].position, shadowMap[i]);
             if (sdfShadowStrength > 0.0 && shadow < 1.0) { // 処理効率工場のための条件
                 float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
-                                                           pointLights[i].sourceRadius);
+                            pointLights[i].sourceRadius);
                 shadow = max(shadow, sdfShadow * sdfShadowStrength);
             }
             // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
@@ -242,8 +268,8 @@ void main() {
     } else if (debugMode == 13) {
         // 画面全体に LUT を貼る 左下が暗く右上が明るい赤緑のグラデーションが正解
         FragColor = vec4(texture(brdfLUT, TexCoords).rg, 0.0, 1.0);
-	} else if (debugMode == 14) {
-		// SDF関数のデバッグ
+    } else if (debugMode == 14) {
+        // SDF関数のデバッグ
         if (dot(Normal, Normal) < 0.5) { // オブジェクトと HDR を区別して処理
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
@@ -274,7 +300,7 @@ void main() {
             vec3 R = reflect(-viewDir, Normal);
             int steps;
             float visibility = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R),
-                                                Roughness * Roughness, sceneParams.w, steps);
+                    Roughness * Roughness, sceneParams.w, steps);
             float value = debugMode == 17 ? visibility : float(steps) / float(SDF_MAX_STEPS);
             FragColor = vec4(vec3(value), 1.0);
         }

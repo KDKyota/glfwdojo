@@ -14,6 +14,7 @@ layout (std140, binding = 0) uniform Matrices {
 };
 
 uniform mat4 model;
+uniform vec4 clipPlane; // 平面反射で床より上だけを残す境界面
 
 out vec3 FragPos;
 out vec2 TexCoords;
@@ -30,5 +31,6 @@ void main()
     vec3 N = normalize(normalMat * aNormal);
     TBN = mat3(T, B, N);
 
+    gl_ClipDistance[0] = dot(vec4(FragPos, 1.0), clipPlane);
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }

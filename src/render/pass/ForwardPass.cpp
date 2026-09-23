@@ -40,7 +40,7 @@ void ForwardPass::Execute(const HdrTarget &hdr, const SceneGeometry &geometry, c
     glBindFramebuffer(GL_FRAMEBUFFER, hdr.Fbo());
     glEnable(GL_DEPTH_TEST);
 
-    renderLightCubes(geometry);
+    RenderLightCubes(geometry);
     renderSkybox(geometry, ibl);
     if (settings.debugCollision)
         debugDraw.Draw(character);
@@ -51,8 +51,9 @@ void ForwardPass::Execute(const HdrTarget &hdr, const SceneGeometry &geometry, c
     glDisable(GL_BLEND);
 }
 
-void ForwardPass::renderLightCubes(const SceneGeometry &geometry) {
+void ForwardPass::RenderLightCubes(const SceneGeometry &geometry, const glm::vec4 &clipPlane) {
     lightCubeShader_.use();
+    lightCubeShader_.setVec4("clipPlane", clipPlane);
     for (const auto &pointLight : layout::pointLights) {
         lightCubeShader_.setVec3("lightColor", pointLight.diffuse);
         glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), pointLight.position);

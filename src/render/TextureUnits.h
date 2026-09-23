@@ -15,6 +15,7 @@
  *   14     brdfLUT
  *   15     sdfOcclusion
  *   16..19 modelDistanceFields[4]（3D）現状は 16 だけが使われ 17..19 は空き
+ *   20     reflectionColor
  *
  * [G-Buffer を書くパスのマテリアル]
  *   0      diffuseMap
@@ -52,6 +53,8 @@ inline constexpr int kSdfOcclusion = 15;
 inline constexpr int kSdfMaxModels = 4;
 // 静的メッシュ距離場が使う連番（kSdfModelBase 〜 kSdfModelBase + kSdfMaxModels - 1）の先頭
 inline constexpr int kSdfModelBase = 16;
+// 床の平面反射 kSdfModelBase + kSdfMaxModels の直後
+inline constexpr int kReflectionColor = 20;
 
 /* ---- G-Buffer を書くパスのマテリアル 上とは別の文脈の割り当て ---- */
 inline constexpr int kDiffuseMap = 0;

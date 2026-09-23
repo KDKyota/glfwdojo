@@ -5,6 +5,8 @@
 # cmake --preset default で生成されるビルドディレクトリ
 build/
 
+__cmake_systeminformation/
+
 # 自分用の計画ファイル
 docs/plan.md
 

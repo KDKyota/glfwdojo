@@ -22,6 +22,7 @@ layout(std140, binding = 1) uniform BoneMatrices {
 
 uniform mat4 model;
 uniform bool hasBones;
+uniform vec4 clipPlane; // 平面反射で床より上だけを残す境界面
 
 out vec3 FragPos;
 out vec3 Normal;
@@ -61,5 +62,6 @@ void main()
     vec3 B = normalize(normalMat * localBitangent);
     TBN = mat3(T, B, Normal);
 
+    gl_ClipDistance[0] = dot(vec4(FragPos, 1.0), clipPlane);
     gl_Position = projection * view * worldPos;
 }

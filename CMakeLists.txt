@@ -40,9 +40,11 @@ add_executable(
   src/render/targets/GBuffer.cpp
   src/render/targets/HdrTarget.cpp
   src/render/targets/OcclusionTarget.cpp
+  src/render/targets/ReflectionTarget.cpp
   src/render/targets/ShadowCubeTargets.cpp
   # render/pass: Render() から順に呼ばれる各パス
   src/render/pass/ShadowPass.cpp
+  src/render/pass/ReflectionPass.cpp
   src/render/pass/GeometryPass.cpp
   src/render/pass/SsaoPass.cpp
   src/render/pass/SdfOcclusionPass.cpp

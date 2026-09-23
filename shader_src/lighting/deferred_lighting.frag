@@ -122,26 +122,31 @@ void main() {
         vec3 prefiltered = textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(brdfLUT, vec2(NdotV, Roughness)).rg;
 
-        float specVisibility = 0.0;
-        // Roughness が大きいものは specVisibility を計算してもあまりメリットがない
-        if (Roughness < SDF_ROUGHNESS_THRESHOLD) {
-            float specConeTangent = Roughness * Roughness;
-            if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
-                float traced = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));
-                // 同じ面の代表点が無い画素（細い物体や輪郭）は 半解像度の値を使わずここでトレースし直す
-                if (traced < 0.0) {
-                    // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
-                    traced = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w);
-                }
-                specVisibility = mix(1.0, traced, sdfOcclusionStrength);
-            } else
-                specVisibility = 1.0;
-        } else
-            // そもそも roughness が大きいなら広い範囲を平均している skyVisibility で済む
-            specVisibility = skyVisibility;
-
         vec3 iblSpecularWeight = kS * brdf.x + brdf.y;
         bool isFloor = hasReflection && abs(FragPos.y - sceneParams.x) < FLOOR_PLANE_EPSILON && Normal.y > 0.9;
+        // 反射像だけを使う床では specVisibility が不要なのでトレースごと省く
+        bool needsSpecVisibility = !isFloor || floorSdfSpecularOcclusion;
+
+        float specVisibility = 1.0;
+        if (needsSpecVisibility) {
+            // Roughness が大きいものは specVisibility を計算してもあまりメリットがない
+            if (Roughness < SDF_ROUGHNESS_THRESHOLD) {
+                float specConeTangent = Roughness * Roughness;
+                if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
+                    float traced = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));
+                    // 同じ面の代表点が無い画素（細い物体や輪郭）は 半解像度の値を使わずここでトレースし直す
+                    if (traced < 0.0) {
+                        // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
+                        traced =
+                            sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w);
+                    }
+                    specVisibility = mix(1.0, traced, sdfOcclusionStrength);
+                }
+            } else
+                // そもそも roughness が大きいなら広い範囲を平均している skyVisibility で済む
+                specVisibility = skyVisibility;
+        }
+
         vec3 specularIBL;
         if (isFloor) {
             // 遮蔽で暗くする代わりに その方向を実際に映る色へ置き換える

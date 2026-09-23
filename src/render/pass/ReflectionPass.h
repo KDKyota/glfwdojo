@@ -4,6 +4,7 @@
 #include "render/SceneGeometry.h"
 #include "render/ibl/IblMaps.h"
 #include "render/pass/DeferredLightingPass.h"
+#include "render/pass/ForwardPass.h"
 #include "render/pass/GeometryPass.h"
 #include "render/targets/GBuffer.h"
 #include "render/targets/OcclusionTarget.h"
@@ -25,7 +26,8 @@ class ReflectionPass {
 
     /// 注意: Matrices UBO の view を鏡像に書き換えるので呼び出し側で元に戻すこと
     void Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer, GeometryPass &geometryPass,
-                 DeferredLightingPass &lightingPass, const SceneGeometry &geometry, const SceneModels &models,
+                 DeferredLightingPass &lightingPass, ForwardPass &forwardPass, const SceneGeometry &geometry,
+                 const SceneModels &models,
                  const ShadowCubeTargets &shadows, const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion,
                  const IblMaps &ibl, const Camera &camera, const RenderSettings &settings, GLuint matricesUbo,
                  float heightScale, std::size_t windowCount);

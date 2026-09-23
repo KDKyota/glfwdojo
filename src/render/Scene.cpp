@@ -83,8 +83,9 @@ void Scene::Render(float deltaTime, float heightScale) {
     if (settings_.planarReflection) {
         profiler_.Measure(gl::GpuPass::Reflection, [&] {
             reflectionPass_.Execute(reflectionTarget_, reflectionGBuffer_, geometryPass_, deferredLightingPass_,
-                                    geometry_, models_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_, iblMaps_,
-                                    *camera_, settings_, matricesUBO_, heightScale, windowCount);
+                                    forwardPass_, geometry_, models_, shadowTargets_, ssaoTarget_,
+                                    sdfOcclusionTarget_, iblMaps_, *camera_, settings_, matricesUBO_, heightScale,
+                                    windowCount);
         });
         updateMatricesUBO(); // 注意: 反射パスが UBO の view を書き換えるので戻す
     }

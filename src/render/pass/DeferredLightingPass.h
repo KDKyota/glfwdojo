@@ -18,9 +18,13 @@ class DeferredLightingPass {
   public:
     DeferredLightingPass();
 
+    /**
+     * @param reflectionColor 床に合成する平面反射のテクスチャ 0 なら床は通常の IBL のまま
+     */
     void Execute(const TargetView &target, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,
                  const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion, const IblMaps &ibl,
-                 const SceneGeometry &geometry, const RenderView &view, const RenderSettings &settings);
+                 const SceneGeometry &geometry, const RenderView &view, const RenderSettings &settings,
+                 GLuint reflectionColor = 0);
 
   private:
     Shader shader_;

@@ -25,6 +25,7 @@ DeferredLightingPass::DeferredLightingPass() : shader_("fragment_quad.vert", "de
     shader_.setInt("prefilterMap", texunit::kPrefilterMap);
     shader_.setInt("brdfLUT", texunit::kBrdfLut);
     shader_.setInt("sdfOcclusion", texunit::kSdfOcclusion);
+    shader_.setInt("reflectionColor", texunit::kReflectionColor);
     // sdf_common.glsl の距離場 未設定だとユニット0を読み texture() が 0 を返して AABB 全体が遮蔽物になる
     for (int i = 0; i < texunit::kSdfMaxModels; ++i)
         shader_.setInt("modelDistanceFields[" + std::to_string(i) + "]", texunit::kSdfModelBase + i);
@@ -33,7 +34,7 @@ DeferredLightingPass::DeferredLightingPass() : shader_("fragment_quad.vert", "de
 void DeferredLightingPass::Execute(const TargetView &target, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,
                                    const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion,
                                    const IblMaps &ibl, const SceneGeometry &geometry, const RenderView &view,
-                                   const RenderSettings &settings) {
+                                   const RenderSettings &settings, GLuint reflectionColor) {
     glViewport(0, 0, target.width, target.height);
     glBindFramebuffer(GL_FRAMEBUFFER, target.fbo);
     glClear(GL_COLOR_BUFFER_BIT); // 深度は GBuffer::BlitDepthTo() でコピー済み
@@ -52,9 +53,12 @@ void DeferredLightingPass::Execute(const TargetView &target, const GBuffer &gbuf
     glBindTexture(GL_TEXTURE_2D, ibl.brdfLut);
     glActiveTexture(GL_TEXTURE0 + texunit::kSdfOcclusion);
     glBindTexture(GL_TEXTURE_2D, sdfOcclusion.BlurredBuffer());
+    glActiveTexture(GL_TEXTURE0 + texunit::kReflectionColor);
+    glBindTexture(GL_TEXTURE_2D, reflectionColor);
 
     shader_.use();
     shader_.setVec3("viewPos", view.position);
+    shader_.setBool("hasReflection", reflectionColor != 0);
     // UI から変わる値なので毎フレーム送る
     shader_.setInt("debugMode", settings.debugMode);
     shader_.setFloat("ssaoStrength", settings.ssaoStrength);

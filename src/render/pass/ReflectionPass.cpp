@@ -77,5 +77,9 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
     glBindTexture(GL_TEXTURE_CUBE_MAP, ibl.envCubemap);
     geometry.DrawSkyboxMesh();
     glDepthFunc(GL_LESS);
+
+    // 床の roughness に応じたぼかしを textureLod で引けるようにミップを作り直す
+    glBindTexture(GL_TEXTURE_2D, target.Color());
+    glGenerateMipmap(GL_TEXTURE_2D);
 }
 } // namespace gl

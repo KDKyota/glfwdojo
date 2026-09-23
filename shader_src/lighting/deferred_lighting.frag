@@ -27,6 +27,8 @@ uniform bool hasReflection;
 const float MAX_REFLECTION_LOD = 4.0;
 // 床の判定 gPosition の量子化誤差より大きく取る
 const float FLOOR_PLANE_EPSILON = 0.05;
+// reflectionColor のミップを何段まで使うか roughness=1 で最もぼけたレベルを選ぶ
+const float MAX_REFLECTION_COLOR_LOD = 5.0;
 
 uniform vec3 viewPos;
 
@@ -141,7 +143,7 @@ void main() {
         vec3 specularIBL;
         if (isFloor) {
             // 遮蔽で暗くする代わりに その方向を実際に映る色へ置き換える
-            vec3 reflected = texture(reflectionColor, TexCoords).rgb;
+            vec3 reflected = textureLod(reflectionColor, TexCoords, Roughness * MAX_REFLECTION_COLOR_LOD).rgb;
             specularIBL = mix(reflected, prefiltered, specVisibility) * iblSpecularWeight;
         } else {
             specularIBL = prefiltered * iblSpecularWeight * specVisibility;

@@ -59,6 +59,7 @@ void DeferredLightingPass::Execute(const TargetView &target, const GBuffer &gbuf
     shader_.use();
     shader_.setVec3("viewPos", view.position);
     shader_.setBool("hasReflection", reflectionColor != 0);
+    shader_.setBool("floorSdfSpecularOcclusion", settings.floorSdfSpecularOcclusion);
     // UI から変わる値なので毎フレーム送る
     shader_.setInt("debugMode", settings.debugMode);
     shader_.setFloat("ssaoStrength", settings.ssaoStrength);

@@ -2,6 +2,7 @@
 #include "asset/Mesh.h"
 #include "gl/GlHandle.h"
 #include <glm/glm.hpp>
+#include <vector>
 
 namespace gl {
 
@@ -16,8 +17,22 @@ struct MeshDistanceField {
 };
 
 /**
- * @brief 符号付き距離場を計算し GL_TEXTURE_3D へアップロードする　起動時に一度だけ呼ぶ想定
+ * @brief GPU へ送る前に作った距離場　ディスクへの保存とアップロードの両方を受け渡す
  */
-MeshDistanceField BakeMeshDistanceField(const Mesh &mesh, int resolution);
+struct BakedDistanceField {
+    int resolution = 0;
+    glm::vec3 boundsMin{0.0f};
+    glm::vec3 boundsMax{0.0f};
+    std::vector<float> values; // resolution^3 個の距離の値
+};
 
+/**
+ * @brief メッシュの距離場を事前に CPU で計算する
+ */
+BakedDistanceField BakeDistanceField(const Mesh &mesh, int resolution);
+
+/**
+ * @brief 作成した距離場を GL_TEXTURE_3D で GPU に送信する
+ */
+MeshDistanceField UploadMeshDistanceField(const BakedDistanceField &baked);
 } // namespace gl

@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <type_traits>
+#include <optional>
 
 namespace gl {
 namespace {
@@ -37,6 +38,10 @@ std::uint64_t computeStableHash(const void *data, std::size_t size, std::uint64_
 template <typename T> void writeInBinary(std::ostream &out, const T &value) {
     static_assert(std::is_trivially_copyable_v<T>, "バイト列をそのまま書けるのは trivially copyable な型だけ");
     out.write(reinterpret_cast<const char *>(&value), sizeof(T));
+}
+template <typename T> void readInBinary(std::istream &in, T &value) {
+    static_assert(std::is_trivially_copyable_v<T>, "バイト列を読めるのは trivially copyable な型だけ");
+    in.read(reinterpret_cast<char *>(&value), sizeof(T));
 }
 // 距離場を決める頂点座標とインデックスを入力としてハッシュ化する
 std::uint64_t hashDistanceFieldInputs(const Mesh &mesh) {
@@ -88,6 +93,35 @@ void saveBakedDistanceField(const std::filesystem::path &cacheFile, const std::s
     std::filesystem::rename(temporaryFile, cacheFile, error);
 }
 
+std::optional<BakedDistanceField> loadBakedDistanceField(const std::filesystem::path &cacheFile,
+                                                         const std::string &bakeKey) {
+    std::ifstream in(cacheFile, std::ios::binary);
+    if (!in) return std::nullopt;
+
+    std::uint32_t version = 0; // 変数を初期化しているだけ
+    readInBinary(in, version);
+    if (version != kCacheFileVersion) return std::nullopt;
+
+    std::uint32_t keyLength = 0;
+    readInBinary(in, keyLength);
+    if (keyLength != bakeKey.size()) return std::nullopt;
+    std::string storedKey(keyLength, '\0');
+    in.read(storedKey.data(), keyLength);
+    if (storedKey != bakeKey) return std::nullopt;
+
+    BakedDistanceField baked;
+    readInBinary(in, baked.resolution);
+    readInBinary(in, baked.boundsMin);
+    readInBinary(in, baked.boundsMax);
+    if (!in || baked.resolution != kSdfBakeResolution) return std::nullopt;
+
+    baked.values.resize(static_cast<std::size_t>(baked.resolution) * baked.resolution * baked.resolution);
+    in.read(reinterpret_cast<char *>(baked.values.data()),
+            static_cast<std::streamsize>(baked.values.size() * sizeof(float)));
+    if (!in) return std::nullopt;
+    return baked;
+}
+
 } // namespace
 
 std::shared_ptr<const MeshDistanceField> MeshDistanceFieldCache::get(const std::string &modelPath,
@@ -97,12 +131,18 @@ std::shared_ptr<const MeshDistanceField> MeshDistanceFieldCache::get(const std::
         std::cout << "SDF cache hit: " << key << std::endl;
         return cached;
     }
-    std::cout << "SDF cache miss: " << key << std::endl;
-    const BakedDistanceField baked = BakeDistanceField(mesh, kSdfBakeResolution);
-    saveBakedDistanceField(getCacheFilePathFromKey(key), key, baked);
+    const std::filesystem::path cacheFile = getCacheFilePathFromKey(key);
+    std::optional<BakedDistanceField> baked = loadBakedDistanceField(cacheFile, key);
+    if (baked) {
+        std::cout << "SDF disk hit: " << key << std::endl;
+    } else {
+        std::cout << "SDF miss: " << key << std::endl;
+        baked = BakeDistanceField(mesh, kSdfBakeResolution);
+        saveBakedDistanceField(cacheFile, key, *baked);
+    }
 
     std::shared_ptr<const MeshDistanceField> field =
-        std::make_shared<const MeshDistanceField>(UploadMeshDistanceField(baked));
+        std::make_shared<const MeshDistanceField>(UploadMeshDistanceField(*baked));
     cache_[key] = field;
     return field;
 }

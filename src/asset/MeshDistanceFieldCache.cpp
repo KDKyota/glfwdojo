@@ -18,7 +18,7 @@ namespace {
 constexpr std::uint64_t kStableHashSeed = 14695981039346656037ull;
 constexpr std::uint64_t kStableHashMultiplier = 1099511628211ull;
 
-constexpr const char *kDistanceFieldCacheDrectory = "sdf_cache";
+constexpr const char *kDistanceFieldCacheDirectory = "sdf_cache";
 constexpr std::uint32_t kCacheFileVersion = 1;
 
 /**
@@ -59,7 +59,7 @@ std::filesystem::path getCacheFilePathFromKey(const std::string &bakeKey) {
     // キーは / や | を含むので16進数表記をファイル名にする
     std::snprintf(fileName, sizeof(fileName), "%016llx.sdf",
                   static_cast<unsigned long long>(computeStableHash(bakeKey.data(), bakeKey.size(), kStableHashSeed)));
-    return std::filesystem::path(kDistanceFieldCacheDrectory) / fileName;
+    return std::filesystem::path(kDistanceFieldCacheDirectory) / fileName;
 }
 
 void saveBakedDistanceField(const std::filesystem::path &cacheFile, const std::string &bakeKey,

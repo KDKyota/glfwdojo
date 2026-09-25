@@ -12,6 +12,7 @@
 
 #include "asset/Mesh.h"
 #include "asset/MeshDistanceField.h"
+#include "asset/MeshDistanceFieldCache.h"
 #include "gl/TextureCache.h"
 
 // スキニングはノード階層を辿って行列を合成するため 読み込み時に平坦化せず木のまま保持する
@@ -28,15 +29,14 @@ struct BoneInfo {
 };
 
 /// キーフレーム1つ 時刻は現実の秒ではなくアニメーションの tick 単位
-template <typename T>
-struct AnimationKey {
+template <typename T> struct AnimationKey {
     float time = 0.0f;
     T value{};
 };
 
 /// 静的メッシュの距離場で、SDF 遮蔽物として使う
 struct StaticMeshDistanceField {
-    gl::MeshDistanceField field;
+    std::shared_ptr<const gl::MeshDistanceField> field;
     glm::mat4 nodeToModelRoot;
 };
 
@@ -50,8 +50,8 @@ struct NodeAnimation {
 /// アニメーション1本
 struct Animation {
     std::string name;
-    float duration = 0.0f; // tick 単位の長さ
-    float ticksPerSecond = 25.0f; // 1秒 = 25 ticks -> 1tics = 40ms
+    float duration = 0.0f;                                   // tick 単位の長さ
+    float ticksPerSecond = 25.0f;                            // 1秒 = 25 ticks -> 1tics = 40ms
     std::unordered_map<std::string, NodeAnimation> channels; // ノード名 -> キー列
 };
 
@@ -70,8 +70,9 @@ class Model {
      *
      * @param path モデルファイルのパス
      * @param cache テクスチャの多重ロードを避けるための共有キャッシュ
+     * @param sdfCache 距離場の多重焼き込みを避けるための共有キャッシュ
      */
-    Model(const std::string &path, TextureCache &cache);
+    Model(const std::string &path, TextureCache &cache, gl::MeshDistanceFieldCache &sdfCache);
 
     /**
      * @brief ノード階層を辿って全メッシュを描画する
@@ -89,9 +90,7 @@ class Model {
     void UpdateAnimation(float deltaTime);
 
     /// バインドポーズでの高さを返す
-    float Height() const {
-        return boundsMax_.y - boundsMin_.y;
-    }
+    float Height() const { return boundsMax_.y - boundsMin_.y; }
 
     bool HasAnimation() const { return activeAnimation_ >= 0; }
 
@@ -114,6 +113,7 @@ class Model {
     std::string path_;
     std::string directory_;
     TextureCache &cache_;
+    gl::MeshDistanceFieldCache &sdfCache_;
     std::vector<glm::mat4> boneMatrices_;
     glm::vec3 boundsMin_{0.0f};
     glm::vec3 boundsMax_{0.0f};
@@ -122,7 +122,7 @@ class Model {
     std::vector<StaticMeshDistanceField> staticDistanceFields_;
 
     std::vector<Animation> animations_;
-    int activeAnimation_ = -1; // 再生中のアニメーション -1 でなし
+    int activeAnimation_ = -1;   // 再生中のアニメーション -1 でなし
     float animationTime_ = 0.0f; // アニメーションの再生時間
 
     /// Assimp でシーンを読み込む
@@ -141,10 +141,12 @@ class Model {
      * @brief ノードを描画する
      * @param [in] node 今書こうとしているノード
      * @param [in] parentTransform このノードの親までの累積変換
-     * @param [in] skinnedWorldTransform スキンメッシュに使うワールド変換（modelMatrix * root_.localTransform 全ノード共通）
+     * @param [in] skinnedWorldTransform スキンメッシュに使うワールド変換（modelMatrix * root_.localTransform
+     * 全ノード共通）
      * @param [in] shader 描画に使うシェーダ
      */
-    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const;
+    void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform,
+                  gl::Shader &shader) const;
     /// boneMatrices_ を UBO へ書き込む
     void uploadBoneMatrices();
     /// バインドポーズの AABB をノード階層をたどって求める

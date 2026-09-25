@@ -1,4 +1,5 @@
 #pragma once
+#include "asset/MeshDistanceFieldCache.h"
 #include "asset/Model.h"
 #include "gl/Shader.h"
 #include "gl/TextureCache.h"
@@ -27,7 +28,7 @@ struct StaticSdfInstance {
 class SceneModels {
   public:
     /// SceneLayout の modelSpawns に従って各モデルを読み込む
-    explicit SceneModels(TextureCache &cache);
+    explicit SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache);
 
     /// アニメーションを進める 操作対象は待機モーションが無いので停止中は進めない
     void UpdateAnimation(float deltaTime);
@@ -38,14 +39,10 @@ class SceneModels {
     void Draw(Shader &shader) const;
 
     // 操作対象 読み込めていなければ nullptr
-    Character *PlayerCharacter() {
-        return character_.get();
-    }
+    Character *PlayerCharacter() { return character_.get(); }
 
     // 三人称カメラの追従先 対象のモデルが読み込めていなければ nullptr
-    const glm::vec3 *FollowTargetPosition() const {
-        return character_ ? &character_->Position() : nullptr;
-    }
+    const glm::vec3 *FollowTargetPosition() const { return character_ ? &character_->Position() : nullptr; }
 
     /// SDF 遮蔽物として使う 静的メッシュの情報を 全モデルから集める
     std::vector<StaticSdfInstance> CollectStaticSdfInstances() const;

@@ -1,4 +1,6 @@
 #include "asset/Model.h"
+#include "asset/MeshDistanceField.h"
+#include "asset/MeshDistanceFieldCache.h"
 
 #include <assimp/anim.h>
 #include <iostream>
@@ -11,15 +13,9 @@
 
 namespace {
 
-// 3D モデル AABB の一辺における格子点の数
-constexpr int kSdfBakeResolution = 32;
-
 // aiMatrix4x4 は行優先 glm::mat4 は列優先なので転置しながら詰め替える
 glm::mat4 toGlm(const aiMatrix4x4 &m) {
-    return glm::mat4(m.a1, m.b1, m.c1, m.d1,
-                     m.a2, m.b2, m.c2, m.d2,
-                     m.a3, m.b3, m.c3, m.d3,
-                     m.a4, m.b4, m.c4, m.d4);
+    return glm::mat4(m.a1, m.b1, m.c1, m.d1, m.a2, m.b2, m.c2, m.d2, m.a3, m.b3, m.c3, m.d3, m.a4, m.b4, m.c4, m.d4);
 }
 
 /// 空いているボーンスロットへ影響を1件追加する
@@ -38,8 +34,7 @@ void addBoneInfluence(gl::Vertex &vertex, int boneIndex, float weight) {
 }
 
 // time をはさむ前側のキーの添え字とその区間内での補間率を返す
-template <typename T>
-std::pair<size_t, float> findSegment(const std::vector<AnimationKey<T>> &keys, float time) {
+template <typename T> std::pair<size_t, float> findSegment(const std::vector<AnimationKey<T>> &keys, float time) {
     for (size_t i = 0; i + 1 < keys.size(); ++i) {
         if (time < keys[i + 1].time) {
             const float span = keys[i + 1].time - keys[i].time;
@@ -61,12 +56,9 @@ glm::vec3 sampleVec3(const std::vector<AnimationKey<glm::vec3>> &keys, float tim
 
 // アニメーションによる回転の補完
 glm::quat sampleQuat(const std::vector<AnimationKey<glm::quat>> &keys, float time) {
-    if (keys.empty())
-        return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-    if (time <= keys.front().time)
-        return keys.front().value;
-    if (time >= keys.back().time)
-        return keys.back().value;
+    if (keys.empty()) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    if (time <= keys.front().time) return keys.front().value;
+    if (time >= keys.back().time) return keys.back().value;
 
     const auto [index, factor] = findSegment(keys, time);
     // 線形補間だと単位長からずれて回転速度がムラになるので slerp を使う
@@ -74,16 +66,17 @@ glm::quat sampleQuat(const std::vector<AnimationKey<glm::quat>> &keys, float tim
 }
 } // namespace
 
-Model::Model(const std::string &path, TextureCache &cache) : path_(path), cache_(cache) {
+Model::Model(const std::string &path, TextureCache &cache, gl::MeshDistanceFieldCache &sdfCache)
+    : path_(path), cache_(cache), sdfCache_(sdfCache) {
     loadModel(path);
 }
 
 void Model::loadModel(const std::string &path) {
     Assimp::Importer importer;
     // LimitBoneWeights は1頂点あたりの影響を4本へ切り詰める gl::Vertex の枠と一致させるため必須
-    const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs |
-                                                       aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
-                                                       aiProcess_LimitBoneWeights);
+    const aiScene *scene =
+        importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace |
+                                    aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
         throw std::runtime_error("ERROR::ASSIMP::" + std::string(importer.GetErrorString()));
     }
@@ -141,13 +134,13 @@ void Model::accumulateBounds(const ModelNode &node, const glm::mat4 &parentTrans
 
 /// ノード階層をたどり 静的メッシュ（ボーン無し）ごとに距離場を焼く 起動時に一度だけ呼ぶ想定
 void Model::buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &parentTransform) {
-    // メッシュのノード空間からモデルのルート空間への変換　Scene 上のワールド変換ではない（SceneModels 側で modelMatrix と合成する）
+    // メッシュのノード空間からモデルのルート空間への変換　Scene 上のワールド変換ではない（SceneModels 側で modelMatrix
+    // と合成する）
     const glm::mat4 nodeToModelRoot = parentTransform * node.localTransform;
 
     for (const unsigned int index : node.meshIndices) {
         const Mesh &mesh = meshes_[index];
-        if (!mesh.IsSkinned())
-            staticDistanceFields_.push_back({gl::BakeMeshDistanceField(mesh, kSdfBakeResolution), nodeToModelRoot});
+        if (!mesh.IsSkinned()) staticDistanceFields_.push_back({sdfCache_.get(path_, index, mesh), nodeToModelRoot});
     }
 
     for (const ModelNode &child : node.children)
@@ -338,11 +331,13 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
     // 第二引数はノードの親までの累積変換 -> ルートの時点では何もたどらないのでワールド配置の modelMatrix
     drawNode(root_, modelMatrix, skinnedWorldTransform, shader);
 
-    // 影パスのようにモデル以外と共有するシェーダーでは hasBones を立てたまま抜けるとボーン属性を持たない VAO が既定値 aWeights=(0,0,0,1) を読んで finalBones[0] で変形される
+    // 影パスのようにモデル以外と共有するシェーダーでは hasBones を立てたまま抜けるとボーン属性を持たない VAO が既定値
+    // aWeights=(0,0,0,1) を読んで finalBones[0] で変形される
     shader.setBool("hasBones", false);
 }
 
-void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {
+void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform,
+                     gl::Shader &shader) const {
     // updateBoneMatrices と同じ変換を辿らないと アニメーションするノードにぶら下がる
     // 非スキンメッシュだけがバインドポーズに取り残される
     const glm::mat4 worldTransform = parentTransform * nodeTransform(node, animationTime_);
@@ -366,8 +361,7 @@ void Model::loadAnimations(const aiScene *scene) {
         Animation animation;
         animation.name = source->mName.C_Str();
         animation.duration = static_cast<float>(source->mDuration);
-        if (source->mTicksPerSecond != 0.0)
-            animation.ticksPerSecond = static_cast<float>(source->mTicksPerSecond);
+        if (source->mTicksPerSecond != 0.0) animation.ticksPerSecond = static_cast<float>(source->mTicksPerSecond);
 
         for (unsigned int c = 0; c < source->mNumChannels; ++c) {
             const aiNodeAnim *channel = source->mChannels[c];
@@ -383,7 +377,8 @@ void Model::loadAnimations(const aiScene *scene) {
             for (unsigned int k = 0; k < channel->mNumRotationKeys; ++k) {
                 const aiQuatKey &key = channel->mRotationKeys[k];
                 // glm::quat の引数順は (w, x, y, z) aiQuaternion のメンバ並びと違う
-                node.rotations.push_back({static_cast<float>(key.mTime), glm::quat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z)});
+                node.rotations.push_back(
+                    {static_cast<float>(key.mTime), glm::quat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z)});
             }
 
             node.scales.reserve(channel->mNumScalingKeys);
@@ -431,8 +426,7 @@ void Model::UpdateAnimation(float deltaTime) {
 
     const Animation &animation = animations_[activeAnimation_];
     animationTime_ += deltaTime * animation.ticksPerSecond;
-    if (animation.duration > 0.0f)
-        animationTime_ = std::fmod(animationTime_, animation.duration);
+    if (animation.duration > 0.0f) animationTime_ = std::fmod(animationTime_, animation.duration);
 
     updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
     uploadBoneMatrices();

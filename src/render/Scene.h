@@ -27,6 +27,7 @@
 #include "scene/Camera.h"
 #include "scene/Collision.h"
 #include "scene/SceneModels.h"
+#include "asset/MeshDistanceFieldCache.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
@@ -53,32 +54,20 @@ class Scene {
     void Render(float deltaTime, float heightScale);
 
     // ImGui のパネルから直接編集する
-    gl::RenderSettings &Settings() {
-        return settings_;
-    }
+    gl::RenderSettings &Settings() { return settings_; }
 
     // 三人称カメラの追従先 対象のモデルが読み込めていなければ nullptr
-    const glm::vec3 *FollowTargetPosition() const {
-        return models_.FollowTargetPosition();
-    }
+    const glm::vec3 *FollowTargetPosition() const { return models_.FollowTargetPosition(); }
 
     // 操作対象 読み込めていなければ nullptr
-    Character *PlayerCharacter() {
-        return models_.PlayerCharacter();
-    }
+    Character *PlayerCharacter() { return models_.PlayerCharacter(); }
 
-    const gl::CollisionWorld &Colliders() const {
-        return colliders_;
-    }
+    const gl::CollisionWorld &Colliders() const { return colliders_; }
 
-    const gl::GpuProfiler &Profiler() const {
-        return profiler_;
-    }
+    const gl::GpuProfiler &Profiler() const { return profiler_; }
 
     // 床の反射テクスチャ ImGui での確認用
-    GLuint ReflectionColor() const {
-        return reflectionTarget_.Color();
-    }
+    GLuint ReflectionColor() const { return reflectionTarget_.Color(); }
 
   private:
     /// 壁と立方体から衝突判定用の直方体を作る
@@ -93,6 +82,7 @@ class Scene {
     int scrWidth_, scrHeight_;
     std::shared_ptr<Camera> camera_;
     TextureCache cache_;
+    gl::MeshDistanceFieldCache sdfCache_;
     gl::RenderSettings settings_;
 
     gl::CollisionWorld colliders_; // 壁と立方体を直方体として持つ

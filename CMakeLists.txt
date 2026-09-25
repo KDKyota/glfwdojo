@@ -11,6 +11,9 @@ find_package(assimp CONFIG REQUIRED)
 # できずにビルドが失敗する。
 find_package(imgui CONFIG REQUIRED)
 
+# SDF 焼き込みの計算部 Debug でも最適化を効かせるため別ターゲットにしている
+add_subdirectory(src/sdf)
+
 add_executable(
   glfwdojo
   src/main.cpp
@@ -58,6 +61,7 @@ add_executable(
   src/asset/Mesh.cpp
   src/asset/Model.cpp
   src/asset/MeshDistanceField.cpp
+  src/asset/MeshDistanceFieldCache.cpp
   # scene: シーン上の存在
   src/scene/Camera.cpp
   src/scene/Character.cpp
@@ -79,7 +83,7 @@ set_source_files_properties(
              COMPILE_DEFINITIONS "_CRT_SECURE_NO_WARNINGS")
 
 target_link_libraries(glfwdojo PRIVATE OpenGL::GL glfw glm::glm glad::glad
-                                       assimp::assimp imgui::imgui)
+                                       assimp::assimp imgui::imgui sdf_builder)
 
 # FrameArena の効果測定用。OpenGL に依存しないので単体でビルド・実行できる
 add_executable(frame_arena_bench bench/frame_arena_bench.cpp)

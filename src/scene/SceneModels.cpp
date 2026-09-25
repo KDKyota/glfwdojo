@@ -1,5 +1,6 @@
 #include "scene/SceneModels.h"
 
+#include "asset/MeshDistanceFieldCache.h"
 #include "scene/SceneLayout.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -7,15 +8,16 @@
 
 namespace gl {
 
-SceneModels::SceneModels(TextureCache &cache) {
+SceneModels::SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache) {
     for (const layout::ModelSpawn &spawn : layout::modelSpawns) {
         try {
-            models_.push_back(std::make_unique<Model>(spawn.path, cache));
+            models_.push_back(std::make_unique<Model>(spawn.path, cache, sdfCache));
         } catch (const std::exception &e) {
             std::cout << "Skipped model: " << spawn.path << " (" << e.what() << ")" << std::endl;
             continue;
         }
-        glm::mat4 orientation = glm::rotate(glm::mat4(1.0f), glm::radians(spawn.rotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 orientation =
+            glm::rotate(glm::mat4(1.0f), glm::radians(spawn.rotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
         orientation = glm::rotate(orientation, glm::radians(spawn.rotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
         orientation = glm::rotate(orientation, glm::radians(spawn.rotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
         orientation = glm::scale(orientation, glm::vec3(spawn.scale));
@@ -40,12 +42,11 @@ void SceneModels::UpdateAnimation(float deltaTime) {
 }
 
 void SceneModels::SyncPlayerMatrix() {
-    if (!character_ || playerModelIndex_ < 0)
-        return;
+    if (!character_ || playerModelIndex_ < 0) return;
 
-    modelMatrices_[playerModelIndex_] =
-        glm::translate(glm::mat4(1.0f), character_->Position()) *
-        glm::rotate(glm::mat4(1.0f), character_->Yaw(), glm::vec3(0.0f, 1.0f, 0.0f)) * playerBaseTransform_;
+    modelMatrices_[playerModelIndex_] = glm::translate(glm::mat4(1.0f), character_->Position()) *
+                                        glm::rotate(glm::mat4(1.0f), character_->Yaw(), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                                        playerBaseTransform_;
 }
 
 void SceneModels::Draw(Shader &shader) const {
@@ -59,7 +60,8 @@ std::vector<StaticSdfInstance> SceneModels::CollectStaticSdfInstances() const {
         for (const StaticMeshDistanceField &sdf : models_[i]->StaticDistanceFields()) {
             // モデルの配置行列 × メッシュのノード変換 = このメッシュのローカル→ワールド変換
             const glm::mat4 localToWorldMatrix = modelMatrices_[i] * sdf.nodeToModelRoot;
-            instances.push_back({sdf.field.texture, glm::inverse(localToWorldMatrix), sdf.field.boundsMin, sdf.field.boundsMax});
+            instances.push_back(
+                {sdf.field->texture, glm::inverse(localToWorldMatrix), sdf.field->boundsMin, sdf.field->boundsMax});
         }
     }
     return instances;

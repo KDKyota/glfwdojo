@@ -18,7 +18,7 @@ constexpr int kReflectionResolutionDivisor = 2;
 } // namespace
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
-    : scrWidth_(scrWidth), scrHeight_(scrHeight), camera_(camera), geometry_(cache_), models_(cache_),
+    : scrWidth_(scrWidth), scrHeight_(scrHeight), camera_(camera), geometry_(cache_), models_(cache_, sdfCache_),
       gBuffer_(scrWidth, scrHeight), hdrTarget_(scrWidth, scrHeight),
       // 注意: 深度を Blit で受け渡すので反射ターゲットと反射用 G-Buffer は同じサイズにすること
       reflectionTarget_(scrWidth / kReflectionResolutionDivisor, scrHeight / kReflectionResolutionDivisor),
@@ -83,9 +83,8 @@ void Scene::Render(float deltaTime, float heightScale) {
     if (settings_.planarReflection) {
         profiler_.Measure(gl::GpuPass::Reflection, [&] {
             reflectionPass_.Execute(reflectionTarget_, reflectionGBuffer_, geometryPass_, deferredLightingPass_,
-                                    forwardPass_, geometry_, models_, shadowTargets_, ssaoTarget_,
-                                    sdfOcclusionTarget_, iblMaps_, *camera_, settings_, matricesUBO_, heightScale,
-                                    windowCount);
+                                    forwardPass_, geometry_, models_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_,
+                                    iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount);
         });
         updateMatricesUBO(); // 注意: 反射パスが UBO の view を書き換えるので戻す
     }

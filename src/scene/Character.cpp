@@ -17,7 +17,7 @@ float wrapAngle(float radians) {
     return radians;
 }
 
-CharacterMotionState determinMotionState(bool hasMoveInput, bool hasRunInput) {
+CharacterMotionState determineMotionState(bool hasMoveInput, bool hasRunInput) {
     if (!hasMoveInput)
         return CharacterMotionState::Idle;
     if (hasRunInput)
@@ -33,7 +33,7 @@ Character::Character(const glm::vec3 &position, float height) : position_(positi
 void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world) {
     const bool hasMoveInput = glm::dot(input, input) > kInputEpsilon;
-    SetMotionState(determinMotionState(hasMoveInput, hasRunInput));
+    SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
     if (!hasMoveInput) 
         return; // 注意：この early return を入れないと、以降でのderection の計算で 0 除算が起きる
 

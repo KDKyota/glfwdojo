@@ -33,7 +33,7 @@ struct ModelSpawn {
 inline const std::vector<ModelSpawn> modelSpawns = {
     {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), glm::vec3(0.0f), 1.0f},
     {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f},
-    {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f, true},
+    {"resources/characters/UAL1_Standard.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f, true},
 };
 
 inline const std::array<PointLight, kPointLightCount> pointLights = {

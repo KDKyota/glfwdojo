@@ -36,7 +36,7 @@ SceneModels::SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache) 
 void SceneModels::UpdateAnimation(float deltaTime) {
     for (size_t i = 0; i < models_.size(); ++i) {
         if (static_cast<int>(i) == playerModelIndex_ && character_) { // 念のため int にキャスト
-            if (character_->IsMoving()) {
+            if (character_->MotionState() == CharacterMotionState::Walk) {
                 std::string clipName = "Walk_Loop";
                 models_[i]->PlayAnimation(clipName);
             } else {

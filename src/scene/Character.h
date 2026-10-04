@@ -16,6 +16,14 @@ constexpr float HEIGHT = gl::units::characterHeight;
 } // namespace CharacterDefaults
 
 /**
+ * @brief キャラクターのモーション状態
+ */
+enum class CharacterMotionState {
+    Idle,
+    Walk,
+};
+
+/**
  * @brief プレイヤーが操作するキャラクターの位置と向きを持つ
  */
 class Character {
@@ -47,16 +55,18 @@ class Character {
     float Yaw() const {
         return yaw_;
     }
-    bool IsMoving() const {
-        return isMoving_;
-    }
+
+    CharacterMotionState MotionState() const { return motionState_; }
 
   private:
     glm::vec3 position_;
     float yaw_ = 0.0f;
     float height_ = CharacterDefaults::HEIGHT;
-    bool isMoving_ = false;
+    CharacterMotionState motionState_ = CharacterMotionState::Idle;
 
     /// 進行方向へyawを補間する
     void turnTowards(const glm::vec3 &direction, float deltaTime);
+    void SetMotionState(CharacterMotionState state) {
+        motionState_ = state;
+    } // この関数は setter だけど Character クラス内でしか使わないので private にしている
 };

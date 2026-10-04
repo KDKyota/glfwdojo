@@ -164,6 +164,22 @@ void Model::buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &pa
         buildStaticDistanceFields(child, nodeToModelRoot);
 }
 
+/// アニメーションを再生する
+void Model::PlayAnimation(const std::string &name) {
+    // 探索時に二分木探索をしてもいいかと思ったけど、せいぜい数十個程度のアニメーションしかないので線形探索で十分
+    for (size_t i = 0; i < animations_.size(); ++i) {
+        if (animations_[i].name == name) {
+            if (activeAnimation_ == static_cast<int>(i)) {
+                return; // すでに再生中
+            }
+            activeAnimation_ = static_cast<int>(i);
+            animationTime_ = 0.0f;
+            return;
+        }
+    }
+    std::cerr << "Animation not found: " << name << std::endl;
+}
+
 /// boneMatrices_ を UBO へ書き込む
 void Model::uploadBoneMatrices() {
     glBindBuffer(GL_UNIFORM_BUFFER, boneUBO_);

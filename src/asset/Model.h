@@ -103,6 +103,8 @@ class Model {
     // SDF 遮蔽物として使う 静的メッシュ（ボーン無し）ぶんの距離場
     const std::vector<StaticMeshDistanceField> &StaticDistanceFields() const { return staticDistanceFields_; }
 
+    void PlayAnimation(const std::string &name);
+
   private:
     std::vector<Mesh> meshes_;
     ModelNode root_;

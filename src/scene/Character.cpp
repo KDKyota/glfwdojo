@@ -35,7 +35,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, const glm::
     const bool hasMoveInput = glm::dot(input, input) > kInputEpsilon;
     SetMotionState(determinMotionState(hasMoveInput, hasRunInput));
     if (!hasMoveInput) 
-        return;
+        return; // 注意：この early return を入れないと、以降でのderection の計算で 0 除算が起きる
 
     // 注意: forward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
     const glm::vec3 forward = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));

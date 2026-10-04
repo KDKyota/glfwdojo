@@ -35,9 +35,20 @@ SceneModels::SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache) 
 
 void SceneModels::UpdateAnimation(float deltaTime) {
     for (size_t i = 0; i < models_.size(); ++i) {
-        // 待機モーションが無いので停止中は再生位置を進めない
-        const bool freeze = character_ && static_cast<int>(i) == playerModelIndex_ && !character_->IsMoving();
-        models_[i]->UpdateAnimation(freeze ? 0.0f : deltaTime);
+        if (static_cast<int>(i) == playerModelIndex_ && character_) { // 念のため int にキャスト
+            if (character_->IsMoving()) {
+                std::string clipName = "Walk_Loop";
+                models_[i]->PlayAnimation(clipName);
+            } else {
+               // 停止中はアニメーションを巻き戻す
+                std::string clipName = "Idle_Loop";
+                models_[i]->PlayAnimation(clipName);
+            }
+            models_[i]->UpdateAnimation(deltaTime);
+
+        } else {
+           models_[i]->UpdateAnimation(deltaTime);
+        }
     }
 }
 

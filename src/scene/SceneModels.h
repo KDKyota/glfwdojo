@@ -30,7 +30,7 @@ class SceneModels {
     /// SceneLayout の modelSpawns に従って各モデルを読み込む
     explicit SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache);
 
-    /// アニメーションを進める 操作対象は待機モーションが無いので停止中は進めない
+    /// アニメーションを進める 
     void UpdateAnimation(float deltaTime);
 
     /// 操作対象のモデル行列を現在の位置と向きから作り直す

@@ -95,6 +95,23 @@ void Model::loadModel(const std::string &path) {
     buildStaticDistanceFields(root_, glm::mat4(1.0f));
 
     loadAnimations(scene);
+
+    // アニメーションのログ出力
+    std::cout << "path: " << path_ << std::endl;
+    for (const auto &animation: animations_) {
+        std::cout << "Animation name: " << animation.name << std::endl;
+        std::cout << "duration: " << animation.duration << std::endl;
+        std::cout << "ticksPerSecond: " << animation.ticksPerSecond << std::endl;
+        std::cout << "duration in seconds: " << animation.duration / animation.ticksPerSecond << std::endl;
+        for (const auto &channel : animation.channels) {
+            std::cout << " node: " << channel.first << std::endl;
+            std::cout << "  positions: " << channel.second.positions.size() << std::endl;
+            std::cout << "  rotations: " << channel.second.rotations.size() << std::endl;
+            std::cout << "  scales: " << channel.second.scales.size() << std::endl;
+        }
+        
+    }
+
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
     updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);
 

@@ -124,7 +124,7 @@ SSAO（数 cm〜数十 cm の接地感）と SDF 遮蔽（数 m 規模の壁や�
 | OS                 | Windows 11 (build 26200)                          | Ubuntu 24.04 LTS on WSL2 (kernel 6.18) |
 | コンパイラ         | MSVC 19.51（Visual Studio 18.x Community）        | GCC 13.3                               |
 | CMake / Ninja      | Visual Studio 同梱版                              | CMake 3.28 / Ninja 1.11                |
-| CPU / GPU          | AMD Ryzen 7 7735HS + 内蔵 Radeon Graphics（iGPU） | 同じ iGPU を `d3d12` 経由で使用        |
+| CPU / GPU          | Intel Core Ultra 7 270K Plus + NVIDIA Geforce RTX 5070 | 同じ GPU を `d3d12` 経由で使用        |
 | 使用するプリセット | `default` / `release`                             | `linux-debug`                          |
 
 **専用 GPU は使っていません。** iGPU で 4灯のポイントシャドウ + Deferred Shading + SSAO + Bloom が30FPS動く程度の負荷です。

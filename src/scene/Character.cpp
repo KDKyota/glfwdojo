@@ -17,6 +17,14 @@ float wrapAngle(float radians) {
     return radians;
 }
 
+CharacterMotionState determinMotionState(bool hasMoveInput, bool hasRunInput) {
+    if (!hasMoveInput)
+        return CharacterMotionState::Idle;
+    if (hasRunInput)
+        return CharacterMotionState::Run;
+
+    return CharacterMotionState::Walk;
+}
 } // namespace
 
 Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height) {
@@ -25,16 +33,9 @@ Character::Character(const glm::vec3 &position, float height) : position_(positi
 void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world) {
     const bool hasMoveInput = glm::dot(input, input) > kInputEpsilon;
-    if (hasMoveInput)
-        if (hasRunInput)
-            SetMotionState(CharacterMotionState::Run);
-        else
-            SetMotionState(CharacterMotionState::Walk);
-    else 
-        SetMotionState(CharacterMotionState::Idle);
-    if (!hasMoveInput)
+    SetMotionState(determinMotionState(hasMoveInput, hasRunInput));
+    if (!hasMoveInput) 
         return;
-    
 
     // 注意: forward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
     const glm::vec3 forward = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
@@ -56,7 +57,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, const glm::
           break;
     }
 
-    std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
+    //std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
 
     position_ += direction * velocity_ * deltaTime;
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る

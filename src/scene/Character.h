@@ -6,7 +6,6 @@
 #include "core/SceneUnits.h"
 
 namespace CharacterDefaults {
-constexpr float MOVE_SPEED = gl::units::walkSpeed;
 // 進行方向へ向き直る速さ
 constexpr float TURN_STIFFNESS = 12.0f;
 // 衝突判定に使う円柱の半径 見た目のメッシュより少し太い
@@ -21,6 +20,9 @@ constexpr float HEIGHT = gl::units::characterHeight;
 enum class CharacterMotionState {
     Idle,
     Walk,
+    Run,
+    Jump,
+    Fall,
 };
 
 /**
@@ -35,13 +37,13 @@ class Character {
 
     /**
      * @brief カメラ基準の入力で移動し 進行方向へ向き直る
-     *
+     * @param hasRunInput 走る入力があるか
      * @param cameraFront カメラの視線方向
      * @param input xが右方向yが前方向の -1〜1
      * @param deltaTime 前フレームからの経過時間
      * @param world 移動後のめり込みを解消する障害物
      */
-    void Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float deltaTime, const gl::CollisionWorld &world);
+    void Move(const glm::vec3 &cameraFront, bool hasRunInput, const glm::vec2 &input, float deltaTime, const gl::CollisionWorld &world);
 
     const glm::vec3 &Position() const {
         return position_;
@@ -57,16 +59,15 @@ class Character {
     }
 
     CharacterMotionState MotionState() const { return motionState_; }
+    void SetMotionState(CharacterMotionState state) { motionState_ = state; } 
 
   private:
     glm::vec3 position_;
     float yaw_ = 0.0f;
     float height_ = CharacterDefaults::HEIGHT;
     CharacterMotionState motionState_ = CharacterMotionState::Idle;
+    float velocity_ = gl::units::walkSpeed;
 
     /// 進行方向へyawを補間する
     void turnTowards(const glm::vec3 &direction, float deltaTime);
-    void SetMotionState(CharacterMotionState state) {
-        motionState_ = state;
-    } // この関数は setter だけど Character クラス内でしか使わないので private にしている
 };

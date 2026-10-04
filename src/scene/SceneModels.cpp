@@ -36,13 +36,23 @@ SceneModels::SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache) 
 void SceneModels::UpdateAnimation(float deltaTime) {
     for (size_t i = 0; i < models_.size(); ++i) {
         if (static_cast<int>(i) == playerModelIndex_ && character_) { // 念のため int にキャスト
-            if (character_->MotionState() == CharacterMotionState::Walk) {
+            switch (character_->MotionState()) {
+            case CharacterMotionState::Walk: {
                 std::string clipName = "Walk_Loop";
                 models_[i]->PlayAnimation(clipName);
-            } else {
-               // 停止中はアニメーションを巻き戻す
+                break;
+            }
+            case CharacterMotionState::Run: {
+
+                std::string clipname = "Sprint_Loop";
+                models_[i]->PlayAnimation(clipname);
+                break;
+            }
+            default: {
+                // 停止中はアニメーションを巻き戻す
                 std::string clipName = "Idle_Loop";
                 models_[i]->PlayAnimation(clipName);
+            }
             }
             models_[i]->UpdateAnimation(deltaTime);
 

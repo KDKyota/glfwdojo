@@ -8,7 +8,7 @@ namespace gl::units {
 /* ---- 人体スケールの基準値 地形やアニメーションの寸法はここから決める ---- */
 inline constexpr float characterHeight = 1.7f;
 inline constexpr float walkSpeed = 1.4f;
-inline constexpr float runSpeed = 4.5f;
+inline constexpr float runSpeed = 5.0f;
 // 蹴上げ・踏面 住宅の階段に近い値（TODO: 不自然に見える場合は調整）
 inline constexpr float stairRiser = 0.18f;
 inline constexpr float stairTread = 0.27f;

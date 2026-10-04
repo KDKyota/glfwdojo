@@ -97,7 +97,7 @@ void Model::loadModel(const std::string &path) {
     loadAnimations(scene);
 
     // アニメーションのログ出力
-    std::cout << "path: " << path_ << std::endl;
+    /*std::cout << "path: " << path_ << std::endl;
     for (const auto &animation: animations_) {
         std::cout << "Animation name: " << animation.name << std::endl;
         std::cout << "duration: " << animation.duration << std::endl;
@@ -110,7 +110,7 @@ void Model::loadModel(const std::string &path) {
             std::cout << "  scales: " << channel.second.scales.size() << std::endl;
         }
         
-    }
+    }*/
 
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
     updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);

@@ -1,6 +1,7 @@
 #include "scene/Character.h"
 
 #include <cmath>
+#include <iostream>
 
 namespace {
 
@@ -21,11 +22,14 @@ float wrapAngle(float radians) {
 Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height) {
 }
 
-void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float deltaTime,
+void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world) {
     const bool hasMoveInput = glm::dot(input, input) > kInputEpsilon;
     if (hasMoveInput)
-        SetMotionState(CharacterMotionState::Walk);
+        if (hasRunInput)
+            SetMotionState(CharacterMotionState::Run);
+        else
+            SetMotionState(CharacterMotionState::Walk);
     else 
         SetMotionState(CharacterMotionState::Idle);
     if (!hasMoveInput)
@@ -39,7 +43,22 @@ void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float
     // 注意: 合成してから正規化しないと斜め移動が sqrt(2) 倍速くなる
     const glm::vec3 direction = glm::normalize(forward * input.y + right * input.x);
 
-    position_ += direction * CharacterDefaults::MOVE_SPEED * deltaTime;
+    switch (MotionState())
+    {
+      case CharacterMotionState::Walk:
+        velocity_ = gl::units::walkSpeed;
+        break;
+      case CharacterMotionState::Run:
+        velocity_ = gl::units::runSpeed;
+        break;
+      case CharacterMotionState::Idle:
+          velocity_ = 0.0f;
+          break;
+    }
+
+    std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
+
+    position_ += direction * velocity_ * deltaTime;
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
     position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);
     // 壁沿いに滑っている間も入力した向きを保つ

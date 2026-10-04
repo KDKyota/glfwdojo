@@ -23,9 +23,14 @@ Character::Character(const glm::vec3 &position, float height) : position_(positi
 
 void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world) {
-    isMoving_ = glm::dot(input, input) > kInputEpsilon;
-    if (!isMoving_)
+    const bool hasMoveInput = glm::dot(input, input) > kInputEpsilon;
+    if (hasMoveInput)
+        SetMotionState(CharacterMotionState::Walk);
+    else 
+        SetMotionState(CharacterMotionState::Idle);
+    if (!hasMoveInput)
         return;
+    
 
     // 注意: forward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
     const glm::vec3 forward = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));

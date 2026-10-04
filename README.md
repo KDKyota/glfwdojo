@@ -127,8 +127,6 @@ SSAO（数 cm〜数十 cm の接地感）と SDF 遮蔽（数 m 規模の壁や�
 | CPU / GPU          | Intel Core Ultra 7 270K Plus + NVIDIA Geforce RTX 5070 | 同じ GPU を `d3d12` 経由で使用        |
 | 使用するプリセット | `default` / `release`                             | `linux-debug`                          |
 
-**専用 GPU は使っていません。** iGPU で 4灯のポイントシャドウ + Deferred Shading + SSAO + Bloom が30FPS動く程度の負荷です。
-
 ### WSL2 で動かす場合の注意
 
 WSL2 はデフォルトだとソフトウェアレンダリング（llvmpipe）にフォールバックして極端に遅くなります。GPU を使うには環境変数の指定が必要です。

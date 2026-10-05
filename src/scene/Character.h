@@ -43,7 +43,7 @@ class Character {
      * @param deltaTime 前フレームからの経過時間
      * @param world 移動後のめり込みを解消する障害物
      */
-    void Move(const glm::vec3 &cameraFront, bool hasRunInput, const glm::vec2 &input, float deltaTime, const gl::CollisionWorld &world);
+    void Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime, const gl::CollisionWorld &world);
 
     const glm::vec3 &Position() const {
         return position_;
@@ -59,7 +59,9 @@ class Character {
     }
 
     CharacterMotionState MotionState() const { return motionState_; }
-    void SetMotionState(CharacterMotionState state) { motionState_ = state; } 
+    void SetMotionState(CharacterMotionState state) { motionState_ = state; }
+
+    void SetVerticalVelocity(float velocity) { verticalVelocity_ = velocity; }
 
   private:
     glm::vec3 position_;
@@ -67,6 +69,8 @@ class Character {
     float height_ = CharacterDefaults::HEIGHT;
     CharacterMotionState motionState_ = CharacterMotionState::Idle;
     float velocity_ = gl::units::walkSpeed;
+
+    float verticalVelocity_ = 0.0f; // 上下方向の速度
 
     /// 進行方向へyawを補間する
     void turnTowards(const glm::vec3 &direction, float deltaTime);

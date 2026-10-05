@@ -69,12 +69,12 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
             SetMotionState(CharacterMotionState::Fall);
         } else if (hasJumpInput) {
             verticalVelocity_ = gl::units::jumpSpeed;
-            SetMotionState(CharacterMotionState::Jump);
+            SetMotionState(CharacterMotionState::Jump_Start);
         } else {
            SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
         }
         break;
-    case CharacterMotionState::Jump:
+    case CharacterMotionState::Jump_Start:
         if (verticalVelocity_ <= 0.0f) SetMotionState(CharacterMotionState::Fall);
         break;
     case CharacterMotionState::Fall:
@@ -95,7 +95,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     case CharacterMotionState::Idle:
         velocity_ = 0.0f;
         break;
-    case CharacterMotionState::Jump:
+    case CharacterMotionState::Jump_Start:
     case CharacterMotionState::Fall:
         if (hasMoveInput) {
             velocity_ = hasRunInput ? gl::units::runSpeed : gl::units::walkSpeed;

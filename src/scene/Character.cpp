@@ -46,9 +46,9 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     const std::optional<float> groundHeight = world.FindGroundHeight(position_);
    
-    if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
-        SetMotionState(CharacterMotionState::Fall);
-    }
+    //if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
+    //    SetMotionState(CharacterMotionState::Fall);
+    //}
 
     verticalVelocity_ -= gl::units::gravity * deltaTime;
 
@@ -67,8 +67,11 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     case CharacterMotionState::Idle:
         if (!isOnGround) {
             SetMotionState(CharacterMotionState::Fall);
+        } else if (hasJumpInput) {
+            verticalVelocity_ = gl::units::jumpSpeed;
+            SetMotionState(CharacterMotionState::Jump);
         } else {
-            SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
+           SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
         }
         break;
     case CharacterMotionState::Jump:
@@ -81,7 +84,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         break;
     }
 
-    // 状態の更新に応じて速度を更新する
+    // 状態の更新に応じて水平速度を更新する
     switch (MotionState()) {
     case CharacterMotionState::Walk:
         velocity_ = gl::units::walkSpeed;
@@ -91,6 +94,14 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         break;
     case CharacterMotionState::Idle:
         velocity_ = 0.0f;
+        break;
+    case CharacterMotionState::Jump:
+    case CharacterMotionState::Fall:
+        if (hasMoveInput) {
+            velocity_ = hasRunInput ? gl::units::runSpeed : gl::units::walkSpeed;
+        } else {
+            velocity_ = 0.0f;
+        }
         break;
     }
 

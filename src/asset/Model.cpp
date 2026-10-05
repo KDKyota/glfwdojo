@@ -164,8 +164,15 @@ void Model::buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &pa
         buildStaticDistanceFields(child, nodeToModelRoot);
 }
 
+bool Model::isAnimationFinished() const {
+    if (activeAnimation_ >= 0 && !isLoopAnimation_ && animationTime_ >= animations_[activeAnimation_].duration) {
+        return true;
+    }
+    return false;
+}
+
 /// アニメーションを再生する
-void Model::PlayAnimation(const std::string &name) {
+void Model::PlayAnimation(const std::string &name, bool isLoopAnimation, float playbackSpeed) {
     // 探索時に二分木探索をしてもいいかと思ったけど、せいぜい数十個程度のアニメーションしかないので線形探索で十分
     for (size_t i = 0; i < animations_.size(); ++i) {
         if (animations_[i].name == name) {
@@ -174,6 +181,9 @@ void Model::PlayAnimation(const std::string &name) {
             }
             activeAnimation_ = static_cast<int>(i);
             animationTime_ = 0.0f;
+            isLoopAnimation_ = isLoopAnimation;
+            playbackSpeed_ = playbackSpeed;
+
             return;
         }
     }
@@ -454,12 +464,19 @@ void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTra
         updateBoneMatrices(child, globalTransform, time);
 }
 
+
+
 void Model::UpdateAnimation(float deltaTime) {
     if (activeAnimation_ < 0 || boneMatrices_.empty()) return;
 
     const Animation &animation = animations_[activeAnimation_];
-    animationTime_ += deltaTime * animation.ticksPerSecond;
-    if (animation.duration > 0.0f) animationTime_ = std::fmod(animationTime_, animation.duration);
+    animationTime_ += deltaTime * animation.ticksPerSecond * playbackSpeed_;
+
+    if (!isLoopAnimation_ && isAnimationFinished()) 
+        animationTime_ = animation.duration;
+    
+    if (isLoopAnimation_ && animation.duration > 0.0f)
+        animationTime_ = std::fmod(animationTime_, animation.duration);
 
     updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
     uploadBoneMatrices();

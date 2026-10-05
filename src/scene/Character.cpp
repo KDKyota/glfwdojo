@@ -63,23 +63,8 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     switch (MotionState()) {
     case CharacterMotionState::Walk:
-        //velocity_ = gl::units::walkSpeed;
-        if (!isOnGround) {
-            SetMotionState(CharacterMotionState::Fall);
-        } else {
-            SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
-        }
-        break;
     case CharacterMotionState::Run:
-        //velocity_ = gl::units::runSpeed;
-        if (!isOnGround) {
-            SetMotionState(CharacterMotionState::Fall);
-        } else {
-            SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
-        }
-        break;
     case CharacterMotionState::Idle:
-        //velocity_ = 0.0f;
         if (!isOnGround) {
             SetMotionState(CharacterMotionState::Fall);
         } else {

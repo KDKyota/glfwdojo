@@ -21,6 +21,7 @@ enum class CharacterMotionState {
     Idle,
     Walk,
     Run,
+    Jump_Start,
     Jump,
     Fall,
 };

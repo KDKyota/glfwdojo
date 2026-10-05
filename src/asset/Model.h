@@ -103,7 +103,10 @@ class Model {
     // SDF 遮蔽物として使う 静的メッシュ（ボーン無し）ぶんの距離場
     const std::vector<StaticMeshDistanceField> &StaticDistanceFields() const { return staticDistanceFields_; }
 
-    void PlayAnimation(const std::string &name);
+    void PlayAnimation(const std::string &name, bool isLoopAnimation = true, float playbackSpeed = 1.0f);
+
+    /// 再生中のアニメーションが終了したかどうかを返す ループ再生中は常に false
+    bool isAnimationFinished() const;  
 
   private:
     std::vector<Mesh> meshes_;
@@ -126,6 +129,11 @@ class Model {
     std::vector<Animation> animations_;
     int activeAnimation_ = -1;   // 再生中のアニメーション -1 でなし
     float animationTime_ = 0.0f; // アニメーションの再生時間
+    bool isLoopAnimation_ = true; // ループ再生するかどうか
+    float playbackSpeed_ = 1.0f; // 再生速度の倍率
+
+
+    
 
     /// Assimp でシーンを読み込む
     void loadModel(const std::string &path);

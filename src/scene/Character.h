@@ -9,7 +9,7 @@ namespace CharacterDefaults {
 // 進行方向へ向き直る速さ
 constexpr float TURN_STIFFNESS = 12.0f;
 // 衝突判定に使う円柱の半径 見た目のメッシュより少し太い
-constexpr float RADIUS = 0.3f;
+constexpr float RADIUS = 0.5f;
 // 高さはモデルの実寸を渡す これは読み込めなかった場合の既定値
 constexpr float HEIGHT = gl::units::characterHeight;
 } // namespace CharacterDefaults

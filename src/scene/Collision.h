@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <optional>
 
 namespace gl {
 
@@ -28,6 +29,14 @@ class CollisionWorld {
      * @param height 円柱の高さ
      */
     glm::vec3 Resolve(const glm::vec3 &footPosition, float radius, float height) const;
+
+    /**
+     * @brief 地面となる高さ（障害物を含む）を返す
+     *
+     * @param footPos 足元の位置（円柱の底面の中心）
+     * @return std::optional<float> 地面から足元までの高さ、見つからなければ nullopt
+     */
+    std::optional<float> FindGroundHeight(const glm::vec3 &footPos) const;
 
   private:
     std::vector<AABB> boxes_;

@@ -30,7 +30,7 @@ class SceneModels {
     /// SceneLayout の modelSpawns に従って各モデルを読み込む
     explicit SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache);
 
-    /// アニメーションを進める 操作対象は待機モーションが無いので停止中は進めない
+    /// アニメーションを進める 
     void UpdateAnimation(float deltaTime);
 
     /// 操作対象のモデル行列を現在の位置と向きから作り直す
@@ -56,6 +56,15 @@ class SceneModels {
     int playerModelIndex_ = -1;
     // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う
     glm::mat4 playerBaseTransform_{1.0f}; // yaw 以外の回転とスケールを畳んだ行列
+
+    bool isPlayingLandAnimation_ = false; // ジャンプ着地アニメーションを再生中かどうか
+    CharacterMotionState prevMotionState_ = CharacterMotionState::Idle; // 前フレームでのモーション状態
+
+    bool IsPrevFallNowLand() const {
+        return (prevMotionState_ == CharacterMotionState::Fall  &&
+               character_->MotionState() == CharacterMotionState::Idle);
+    }
+
 };
 
 } // namespace gl

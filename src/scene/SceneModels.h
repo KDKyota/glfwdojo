@@ -56,6 +56,15 @@ class SceneModels {
     int playerModelIndex_ = -1;
     // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う
     glm::mat4 playerBaseTransform_{1.0f}; // yaw 以外の回転とスケールを畳んだ行列
+
+    bool isPlayingLandAnimation_ = false; // ジャンプ着地アニメーションを再生中かどうか
+    CharacterMotionState prevMotionState_ = CharacterMotionState::Idle; // 前フレームでのモーション状態
+
+    bool IsPrevFallNowLand() const {
+        return (prevMotionState_ == CharacterMotionState::Fall  &&
+               character_->MotionState() == CharacterMotionState::Idle);
+    }
+
 };
 
 } // namespace gl

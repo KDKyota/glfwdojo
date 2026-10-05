@@ -48,6 +48,12 @@ void SceneModels::UpdateAnimation(float deltaTime) {
                 models_[i]->PlayAnimation(clipname);
                 break;
             }
+            case CharacterMotionState::Jump:
+            case CharacterMotionState::Fall: {
+                std::string clipName = "Jump_Loop";
+                models_[i]->PlayAnimation(clipName);
+                break;
+            }
             default: {
                 // 停止中はアニメーションを巻き戻す
                 std::string clipName = "Idle_Loop";

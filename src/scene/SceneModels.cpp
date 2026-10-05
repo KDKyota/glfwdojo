@@ -48,6 +48,11 @@ void SceneModels::UpdateAnimation(float deltaTime) {
                 models_[i]->PlayAnimation(clipname);
                 break;
             }
+            case CharacterMotionState::Jump_Start: {
+                std::string clipName = "Jump_Start";
+                models_[i]->PlayAnimation(clipName, false, 2.0f);
+                break;
+            }
             case CharacterMotionState::Jump:
             case CharacterMotionState::Fall: {
                 std::string clipName = "Jump_Loop";

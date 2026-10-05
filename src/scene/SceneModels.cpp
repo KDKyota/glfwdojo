@@ -36,36 +36,55 @@ SceneModels::SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache) 
 void SceneModels::UpdateAnimation(float deltaTime) {
     for (size_t i = 0; i < models_.size(); ++i) {
         if (static_cast<int>(i) == playerModelIndex_ && character_) { // 念のため int にキャスト
-            switch (character_->MotionState()) {
-            case CharacterMotionState::Walk: {
-                std::string clipName = "Walk_Loop";
-                models_[i]->PlayAnimation(clipName);
-                break;
-            }
-            case CharacterMotionState::Run: {
+            
 
-                std::string clipname = "Sprint_Loop";
-                models_[i]->PlayAnimation(clipname);
-                break;
+            if (IsPrevFallNowLand()) // 着地の瞬間に Land アニメーションを再生する
+                isPlayingLandAnimation_ = true;
+            
+            // Lnad アニメーションが再生中に Idle に戻ったら Land アニメーションが終わったとみなす
+            if (isPlayingLandAnimation_ &&
+                (character_->MotionState() != CharacterMotionState::Idle || models_[i]->isAnimationFinished())) {
+                isPlayingLandAnimation_ = false;
             }
-            case CharacterMotionState::Jump_Start: {
-                std::string clipName = "Jump_Start";
+
+            if (isPlayingLandAnimation_) {
+                std::string clipName = "Jump_Land";
                 models_[i]->PlayAnimation(clipName, false, 2.0f);
-                break;
+            } else {
+                switch (character_->MotionState()) {
+                case CharacterMotionState::Walk: {
+                    std::string clipName = "Walk_Loop";
+                    models_[i]->PlayAnimation(clipName);
+                    break;
+                }
+                case CharacterMotionState::Run: {
+
+                    std::string clipname = "Sprint_Loop";
+                    models_[i]->PlayAnimation(clipname);
+                    break;
+                }
+                case CharacterMotionState::Jump_Start: {
+                    std::string clipName = "Jump_Start";
+                    models_[i]->PlayAnimation(clipName, false, 2.0f);
+                    break;
+                }
+                case CharacterMotionState::Jump:
+                case CharacterMotionState::Fall: {
+                    std::string clipName = "Jump_Loop";
+                    models_[i]->PlayAnimation(clipName);
+                    break;
+                }
+                default: {
+                    // 停止中はアニメーションを巻き戻す
+                    std::string clipName = "Idle_Loop";
+                    models_[i]->PlayAnimation(clipName);
+                }
+                }
             }
-            case CharacterMotionState::Jump:
-            case CharacterMotionState::Fall: {
-                std::string clipName = "Jump_Loop";
-                models_[i]->PlayAnimation(clipName);
-                break;
-            }
-            default: {
-                // 停止中はアニメーションを巻き戻す
-                std::string clipName = "Idle_Loop";
-                models_[i]->PlayAnimation(clipName);
-            }
-            }
+
             models_[i]->UpdateAnimation(deltaTime);
+
+            prevMotionState_ = character_->MotionState();
 
         } else {
            models_[i]->UpdateAnimation(deltaTime);

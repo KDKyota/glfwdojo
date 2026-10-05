@@ -95,6 +95,23 @@ void Model::loadModel(const std::string &path) {
     buildStaticDistanceFields(root_, glm::mat4(1.0f));
 
     loadAnimations(scene);
+
+    // アニメーションのログ出力
+    /*std::cout << "path: " << path_ << std::endl;
+    for (const auto &animation: animations_) {
+        std::cout << "Animation name: " << animation.name << std::endl;
+        std::cout << "duration: " << animation.duration << std::endl;
+        std::cout << "ticksPerSecond: " << animation.ticksPerSecond << std::endl;
+        std::cout << "duration in seconds: " << animation.duration / animation.ticksPerSecond << std::endl;
+        for (const auto &channel : animation.channels) {
+            std::cout << " node: " << channel.first << std::endl;
+            std::cout << "  positions: " << channel.second.positions.size() << std::endl;
+            std::cout << "  rotations: " << channel.second.rotations.size() << std::endl;
+            std::cout << "  scales: " << channel.second.scales.size() << std::endl;
+        }
+        
+    }*/
+
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
     updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);
 
@@ -145,6 +162,32 @@ void Model::buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &pa
 
     for (const ModelNode &child : node.children)
         buildStaticDistanceFields(child, nodeToModelRoot);
+}
+
+bool Model::isAnimationFinished() const {
+    if (activeAnimation_ >= 0 && !isLoopAnimation_ && animationTime_ >= animations_[activeAnimation_].duration) {
+        return true;
+    }
+    return false;
+}
+
+/// アニメーションを再生する
+void Model::PlayAnimation(const std::string &name, bool isLoopAnimation, float playbackSpeed) {
+    // 探索時に二分木探索をしてもいいかと思ったけど、せいぜい数十個程度のアニメーションしかないので線形探索で十分
+    for (size_t i = 0; i < animations_.size(); ++i) {
+        if (animations_[i].name == name) {
+            if (activeAnimation_ == static_cast<int>(i)) {
+                return; // すでに再生中
+            }
+            activeAnimation_ = static_cast<int>(i);
+            animationTime_ = 0.0f;
+            isLoopAnimation_ = isLoopAnimation;
+            playbackSpeed_ = playbackSpeed;
+
+            return;
+        }
+    }
+    std::cerr << "Animation not found: " << name << std::endl;
 }
 
 /// boneMatrices_ を UBO へ書き込む
@@ -421,12 +464,19 @@ void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTra
         updateBoneMatrices(child, globalTransform, time);
 }
 
+
+
 void Model::UpdateAnimation(float deltaTime) {
     if (activeAnimation_ < 0 || boneMatrices_.empty()) return;
 
     const Animation &animation = animations_[activeAnimation_];
-    animationTime_ += deltaTime * animation.ticksPerSecond;
-    if (animation.duration > 0.0f) animationTime_ = std::fmod(animationTime_, animation.duration);
+    animationTime_ += deltaTime * animation.ticksPerSecond * playbackSpeed_;
+
+    if (!isLoopAnimation_ && isAnimationFinished()) 
+        animationTime_ = animation.duration;
+    
+    if (isLoopAnimation_ && animation.duration > 0.0f)
+        animationTime_ = std::fmod(animationTime_, animation.duration);
 
     updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
     uploadBoneMatrices();

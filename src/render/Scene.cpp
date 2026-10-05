@@ -51,6 +51,8 @@ void Scene::initColliders() {
     constexpr float cubeHalf = 0.5f;
     for (const glm::vec3 &center : gl::layout::cubePositions)
         colliders_.Add({center - glm::vec3(cubeHalf), center + glm::vec3(cubeHalf)});
+
+    colliders_.Add({{-half, gl::units::floorY - 0.1f, -half}, {half, gl::units::floorY, half}}); // 床
 }
 
 void Scene::initMatricesUBO() {

@@ -1,6 +1,7 @@
 #include "scene/Character.h"
 
 #include <cmath>
+#include <iostream>
 
 namespace {
 
@@ -16,16 +17,96 @@ float wrapAngle(float radians) {
     return radians;
 }
 
+CharacterMotionState determineMotionState(bool hasMoveInput, bool hasRunInput) {
+    if (!hasMoveInput)
+        return CharacterMotionState::Idle;
+    if (hasRunInput)
+        return CharacterMotionState::Run;
+
+    return CharacterMotionState::Walk;
+}
 } // namespace
 
 Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height) {
 }
 
-void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float deltaTime,
+void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world) {
-    isMoving_ = glm::dot(input, input) > kInputEpsilon;
-    if (!isMoving_)
-        return;
+
+    /*if (MotionState() != CharacterMotionState::Jump && hasJumpInput) {
+        verticalVelocity_ = gl::units::jumpSpeed;
+        SetMotionState(CharacterMotionState::Jump);
+    }*/
+    const bool hasMoveInput = glm::dot(input, input) > kInputEpsilon;
+    // 滑空は入力を受け付けない
+    /*if (MotionState() != CharacterMotionState::Jump && MotionState() !=CharacterMotionState::Fall) {
+        hasMoveInput = glm::dot(input, input) > kInputEpsilon;
+        SetMotionState(determineMotionState(hasMoveInput, hasRunInput, hasJumpInput));
+    }*/
+
+    const std::optional<float> groundHeight = world.FindGroundHeight(position_);
+   
+    //if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
+    //    SetMotionState(CharacterMotionState::Fall);
+    //}
+
+    verticalVelocity_ -= gl::units::gravity * deltaTime;
+
+    float newHeight = position_.y + verticalVelocity_ * deltaTime; // 移動後の足元の高さ
+    const bool isOnGround = groundHeight.has_value() && newHeight <= groundHeight.value();
+    if (isOnGround) { // 地面にいる
+        position_.y = groundHeight.value();
+        verticalVelocity_ = 0.0f;
+    } else { // 空中にいる
+        position_.y = newHeight;
+    }
+
+    switch (MotionState()) {
+    case CharacterMotionState::Walk:
+    case CharacterMotionState::Run:
+    case CharacterMotionState::Idle:
+        if (!isOnGround) {
+            SetMotionState(CharacterMotionState::Fall);
+        } else if (hasJumpInput) {
+            verticalVelocity_ = gl::units::jumpSpeed;
+            SetMotionState(CharacterMotionState::Jump_Start);
+        } else {
+           SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
+        }
+        break;
+    case CharacterMotionState::Jump_Start:
+        if (verticalVelocity_ <= 0.0f) SetMotionState(CharacterMotionState::Fall);
+        break;
+    case CharacterMotionState::Fall:
+        if (isOnGround) {
+            SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
+        }
+        break;
+    }
+
+    // 状態の更新に応じて水平速度を更新する
+    switch (MotionState()) {
+    case CharacterMotionState::Walk:
+        velocity_ = gl::units::walkSpeed;
+        break;
+    case CharacterMotionState::Run:
+        velocity_ = gl::units::runSpeed;
+        break;
+    case CharacterMotionState::Idle:
+        velocity_ = 0.0f;
+        break;
+    case CharacterMotionState::Jump_Start:
+    case CharacterMotionState::Fall:
+        if (hasMoveInput) {
+            velocity_ = hasRunInput ? gl::units::runSpeed : gl::units::walkSpeed;
+        } else {
+            velocity_ = 0.0f;
+        }
+        break;
+    }
+
+    if (!hasMoveInput) 
+        return; // 注意：この early return を入れないと、以降でのderection の計算で 0 除算が起きる
 
     // 注意: forward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
     const glm::vec3 forward = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
@@ -34,7 +115,9 @@ void Character::Move(const glm::vec3 &cameraFront, const glm::vec2 &input, float
     // 注意: 合成してから正規化しないと斜め移動が sqrt(2) 倍速くなる
     const glm::vec3 direction = glm::normalize(forward * input.y + right * input.x);
 
-    position_ += direction * CharacterDefaults::MOVE_SPEED * deltaTime;
+    //std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
+
+    position_ += direction * velocity_ * deltaTime;
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
     position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);
     // 壁沿いに滑っている間も入力した向きを保つ

@@ -11,6 +11,8 @@ constexpr float kCenterEpsilonSq = 1e-8f;
 // 判定を見た目より太らせて接触する手前で止める
 constexpr float kSkinWidth = 0.02f;
 
+constexpr float kGroundContactTolerance = 0.02f; // 足元の障害物に接触しているとみなす距離
+
 /// XZ 平面での押し出し量を求める 重なっていなければ false
 bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::vec2 &push) {
     // 注意: 判定と押し出し量で違う半径を使うと壁際で震える
@@ -59,7 +61,7 @@ glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radiu
         bool pushed = false;
         for (const AABB &box : boxes_) {
             // 高さが重なっていなければ XZ を調べる必要がない
-            if (result.y >= box.max.y || result.y + height <= box.min.y)
+            if (result.y >= box.max.y - kGroundContactTolerance || result.y + height <= box.min.y)
                 continue;
 
             glm::vec2 push(0.0f);
@@ -74,4 +76,20 @@ glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radiu
             break;
     }
     return result;
+}
+
+std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footPos) const {
+    std::optional<float> groundHeight;
+    for (const AABB &box : boxes_) {
+        // 足元の XZ が矩形の外側にあれば continue
+        if (footPos.x < box.min.x || footPos.x > box.max.x || footPos.z < box.min.z || footPos.z > box.max.z)
+            continue;
+
+        if (footPos.y >= box.max.y - kGroundContactTolerance) {
+            if (!groundHeight.has_value() || box.max.y > *groundHeight) {
+                groundHeight = box.max.y;
+            }
+        }
+    }
+    return groundHeight;
 }

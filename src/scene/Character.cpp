@@ -34,6 +34,7 @@ void Character::Respawn() {
     position_ = spawnPos_;
     verticalVelocity_ = 0.0f;
     yaw_ = 0.0f;
+    
 }
 
 void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime,

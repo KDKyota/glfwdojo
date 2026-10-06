@@ -137,8 +137,11 @@ std::shared_ptr<const MeshDistanceField> MeshDistanceFieldCache::get(const std::
         std::cout << "SDF disk hit: " << key << std::endl;
     } else {
         std::cout << "SDF miss: " << key << std::endl;
+        std::cout << "Baking SDF Field: " << key << std::endl;
+        std::cout << "Wait for a while..." << std::endl;
         baked = BakeDistanceField(mesh, kSdfBakeResolution);
         saveBakedDistanceField(cacheFile, key, *baked);
+        std::cout << "SDF baked and saved: " << key << std::endl;
     }
 
     std::shared_ptr<const MeshDistanceField> field =

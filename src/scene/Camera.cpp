@@ -111,7 +111,12 @@ void Camera::ProcessMouseScroll(float yoffset) {
 };
 
 void Camera::SetFollowTarget(const glm::vec3 &position) {
+    glm::vec3 toTarget = position - followTarget_;
     followTarget_ = position;
+    if (glm::dot(toTarget, toTarget) > 10) {
+            // 注視点が大きく動いたときは smoothedPivot_ も追従させる
+        smoothedPivot_ = PivotPosition();
+    }
     hasFollowTarget_ = true;
 }
 

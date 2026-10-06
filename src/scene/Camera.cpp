@@ -116,6 +116,8 @@ void Camera::SetFollowTarget(const glm::vec3 &position) {
     if (glm::dot(toTarget, toTarget) > 10) {
             // 注視点が大きく動いたときは smoothedPivot_ も追従させる
         smoothedPivot_ = PivotPosition();
+        orbitPitch_ = glm::radians(-10.0f);
+        orbitYaw_ = glm::radians(180.0f);
     }
     hasFollowTarget_ = true;
 }

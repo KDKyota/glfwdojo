@@ -10,8 +10,11 @@ namespace CharacterDefaults {
 constexpr float TURN_STIFFNESS = 12.0f;
 // 衝突判定に使う円柱の半径 見た目のメッシュより少し太い
 constexpr float RADIUS = 0.5f;
+constexpr float RESPAWN_THRESHOLD_Y = -10.0f; // この高さより下に落ちたらリスポーンする
 // 高さはモデルの実寸を渡す これは読み込めなかった場合の既定値
 constexpr float HEIGHT = gl::units::characterHeight;
+constexpr float RESPAWN_HEIGHT = 2.0f * CharacterDefaults::HEIGHT; // リスポーン時の高さ
+
 } // namespace CharacterDefaults
 
 /**
@@ -64,6 +67,8 @@ class Character {
 
     void SetVerticalVelocity(float velocity) { verticalVelocity_ = velocity; }
 
+    void Respawn();
+
   private:
     glm::vec3 position_;
     float yaw_ = 0.0f;
@@ -72,6 +77,8 @@ class Character {
     float velocity_ = gl::units::walkSpeed;
 
     float verticalVelocity_ = 0.0f; // 上下方向の速度
+
+    glm::vec3 spawnPos_ = glm::vec3(0.0f);
 
     /// 進行方向へyawを補間する
     void turnTowards(const glm::vec3 &direction, float deltaTime);

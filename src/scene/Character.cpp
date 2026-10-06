@@ -27,12 +27,20 @@ CharacterMotionState determineMotionState(bool hasMoveInput, bool hasRunInput) {
 }
 } // namespace
 
-Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height) {
+Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height), spawnPos_(position + glm::vec3(0.0f, CharacterDefaults::RESPAWN_HEIGHT, 0.0f)) {
+}
+
+void Character::Respawn() {
+    position_ = spawnPos_;
+    verticalVelocity_ = 0.0f;
+    yaw_ = 0.0f;
 }
 
 void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world) {
-
+    if (position_.y < CharacterDefaults::RESPAWN_THRESHOLD_Y) {
+        Respawn();
+    }
     /*if (MotionState() != CharacterMotionState::Jump && hasJumpInput) {
         verticalVelocity_ = gl::units::jumpSpeed;
         SetMotionState(CharacterMotionState::Jump);
@@ -118,6 +126,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     //std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
 
     position_ += direction * velocity_ * deltaTime;
+    
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
     position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);
     // 壁沿いに滑っている間も入力した向きを保つ

@@ -14,6 +14,7 @@ constexpr float RESPAWN_THRESHOLD_Y = -10.0f; // この高さより下に落ち�
 // 高さはモデルの実寸を渡す これは読み込めなかった場合の既定値
 constexpr float HEIGHT = gl::units::characterHeight;
 constexpr float RESPAWN_HEIGHT = 2.0f * CharacterDefaults::HEIGHT; // リスポーン時の高さ
+constexpr float FOOT_RADIUS = 0.25f;                               // 足元の障害物判定に使う半径
 
 } // namespace CharacterDefaults
 

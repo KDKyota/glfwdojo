@@ -53,7 +53,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         SetMotionState(determineMotionState(hasMoveInput, hasRunInput, hasJumpInput));
     }*/
 
-    const std::optional<float> groundHeight = world.FindGroundHeight(position_);
+    const std::optional<float> groundHeight = world.FindGroundHeight(position_, CharacterDefaults::FOOT_RADIUS);
    
     //if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
     //    SetMotionState(CharacterMotionState::Fall);

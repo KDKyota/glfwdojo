@@ -36,7 +36,7 @@ class CollisionWorld {
      * @param footPos 足元の位置（円柱の底面の中心）
      * @return std::optional<float> 地面から足元までの高さ、見つからなければ nullopt
      */
-    std::optional<float> FindGroundHeight(const glm::vec3 &footPos) const;
+    std::optional<float> FindGroundHeight(const glm::vec3 &footPos, const float radius) const;
 
   private:
     std::vector<AABB> boxes_;

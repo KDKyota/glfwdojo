@@ -78,11 +78,11 @@ glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radiu
     return result;
 }
 
-std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footPos) const {
+std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footPos, const float radius) const {
     std::optional<float> groundHeight;
     for (const AABB &box : boxes_) {
         // 足元の XZ が矩形の外側にあれば continue
-        if (footPos.x < box.min.x || footPos.x > box.max.x || footPos.z < box.min.z || footPos.z > box.max.z)
+        if (footPos.x + radius < box.min.x || footPos.x - radius > box.max.x || footPos.z + radius < box.min.z || footPos.z - radius > box.max.z)
             continue;
 
         if (footPos.y >= box.max.y - kGroundContactTolerance) {

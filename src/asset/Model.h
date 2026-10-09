@@ -179,7 +179,13 @@ class Model {
     /// aiAnimation をすべて読み込む
     void loadAnimations(const aiScene *scene);
     /// チャンネルがあれば時刻 time のローカル変換を作り なければバインドポーズを返す
-    glm::mat4 nodeTransform(const ModelNode &node, float time) const;
+    //glm::mat4 nodeTransform(const ModelNode &node, float time) const;
+
+    /// ノードの姿勢を取得する
+    NodePose nodePose(const ModelNode &node, float time) const;
+    /// NodePose を行列に変換する
+    glm::mat4 nodePoseToMatrix(const NodePose &pose) const;
+
     /// ノード階層をたどり 各ボーンの最終変換行列を計算する
     void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time);
 };

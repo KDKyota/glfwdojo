@@ -71,6 +71,8 @@ inline constexpr int kMaxBones = 128;
 // ボーンパレット用の UBO のバインディング 0 は Scene の Matrices が使っている
 inline constexpr unsigned int kBoneUBOBinding = 1;
 
+inline constexpr float kBlendDuration = 0.05f; // クロスフェードの時間（秒）
+
 /**
  * @brief Assimp で glTF/glb モデルを読み込み Mesh の集合とスキニング用のボーン情報を保持する
  */
@@ -146,7 +148,8 @@ class Model {
     // アニメーションのクロスフェード用
     Pose currentPose_;
     Pose blendSourcePose_;
-    
+    float blendElapsedTime_ = 0.0f; // ticksではなく秒
+    float blendWeight_ = 0.0f;      // 0.0～1.0 クロスフェードの重み
 
     /// Assimp でシーンを読み込む
     void loadModel(const std::string &path);

@@ -187,6 +187,9 @@ void Model::PlayAnimation(const std::string &name, bool isLoopAnimation, float p
             isLoopAnimation_ = isLoopAnimation;
             playbackSpeed_ = playbackSpeed;
 
+            blendSourcePose_ = currentPose_; // クロスフェード用に現在のポーズを保存
+            blendElapsedTime_ = 0.0f;
+
             return;
         }
     }
@@ -500,6 +503,16 @@ void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTra
     const auto found = bones_.find(node.name);
     NodePose &currentPose = currentPose_[node.name] = nodePose(node, time);
 
+    if (blendWeight_ < 1.0f) {
+        if (blendSourcePose_.find(node.name) != blendSourcePose_.end()) {
+            const NodePose &sourcePose = blendSourcePose_.at(node.name);
+            NodePose blendedPose;
+            blendedPose.translation = glm::mix(sourcePose.translation, currentPose.translation, blendWeight_);
+            blendedPose.rotation = glm::slerp(sourcePose.rotation, currentPose.rotation, blendWeight_);
+            blendedPose.scale = glm::mix(sourcePose.scale, currentPose.scale, blendWeight_);
+            currentPose_[node.name] = blendedPose;
+        }
+    }
     const glm::mat4 globalTransform = parentTransform * nodePoseToMatrix(currentPose);
 
     if (found != bones_.end()) {
@@ -518,6 +531,10 @@ void Model::UpdateAnimation(float deltaTime) {
 
     const Animation &animation = animations_[activeAnimation_];
     animationTime_ += deltaTime * animation.ticksPerSecond * playbackSpeed_;
+
+    blendElapsedTime_ += deltaTime;
+
+    blendWeight_ = std::min(blendElapsedTime_ / kBlendDuration, 1.0f);
 
     if (!isLoopAnimation_ && isAnimationFinished()) 
         animationTime_ = animation.duration;

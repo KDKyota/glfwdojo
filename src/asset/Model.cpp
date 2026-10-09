@@ -382,11 +382,10 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
     shader.setBool("hasBones", false);
 }
 
-void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform,
-                     gl::Shader &shader) const {
+void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {
     // updateBoneMatrices と同じ変換を辿らないと アニメーションするノードにぶら下がる
     // 非スキンメッシュだけがバインドポーズに取り残される
-    const glm::mat4 worldTransform = parentTransform * nodePoseToMatrix(nodePose(node, animationTime_));
+    const glm::mat4 worldTransform = parentTransform * nodePoseToMatrix(currentPose_.at(node.name));
 
 
     for (const unsigned int index : node.meshIndices) {
@@ -497,9 +496,12 @@ glm::mat4 Model::nodePoseToMatrix(const NodePose &pose) const {
 
 /// ルートには親がないので 掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
 void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time) {
-    const glm::mat4 globalTransform = parentTransform * nodePoseToMatrix(nodePose(node, time));
     
     const auto found = bones_.find(node.name);
+    NodePose &currentPose = currentPose_[node.name] = nodePose(node, time);
+
+    const glm::mat4 globalTransform = parentTransform * nodePoseToMatrix(currentPose);
+
     if (found != bones_.end()) {
         const BoneInfo &info = found->second;
         // globalInverse を掛けた分 drawNode 側でスキンメッシュに root_.localTransform を掛け直して辻褄を合わせる

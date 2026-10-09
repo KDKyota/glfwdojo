@@ -10,6 +10,9 @@
 #include <utility>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include <glm/gtx/matrix_decompose.hpp>
 
 namespace {
 
@@ -383,7 +386,8 @@ void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, co
                      gl::Shader &shader) const {
     // updateBoneMatrices と同じ変換を辿らないと アニメーションするノードにぶら下がる
     // 非スキンメッシュだけがバインドポーズに取り残される
-    const glm::mat4 worldTransform = parentTransform * nodeTransform(node, animationTime_);
+    const glm::mat4 worldTransform = parentTransform * nodePoseToMatrix(nodePose(node, animationTime_));
+
 
     for (const unsigned int index : node.meshIndices) {
         const Mesh &mesh = meshes_[index];
@@ -436,24 +440,65 @@ void Model::loadAnimations(const aiScene *scene) {
     if (!animations_.empty()) activeAnimation_ = 0;
 }
 
-glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
-    if (activeAnimation_ < 0) return node.localTransform;
+//glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
+//    if (activeAnimation_ < 0) return node.localTransform;
+//
+//    const Animation &animation = animations_[activeAnimation_];
+//    const auto found = animation.channels.find(node.name);
+//    if (found == animation.channels.end()) return node.localTransform;
+//
+//    const NodeAnimation &channel = found->second;
+//    const glm::vec3 position = sampleVec3(channel.positions, time, glm::vec3(0.0f));
+//    const glm::quat rotation = sampleQuat(channel.rotations, time);
+//    const glm::vec3 scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+//
+//    return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+//}
+
+NodePose Model::nodePose(const ModelNode &node, float time) const {
+    NodePose pose;
+    if (activeAnimation_ < 0) {
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(
+            node.localTransform,
+            pose.scale,
+            pose.rotation,
+            pose.translation,
+            skew,
+            perspective);
+        return pose;
+    }
 
     const Animation &animation = animations_[activeAnimation_];
     const auto found = animation.channels.find(node.name);
-    if (found == animation.channels.end()) return node.localTransform;
-
+    if (found == animation.channels.end()) {
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(
+            node.localTransform,
+            pose.scale,
+            pose.rotation,
+            pose.translation,
+            skew,
+            perspective);
+        return pose;
+    }
     const NodeAnimation &channel = found->second;
-    const glm::vec3 position = sampleVec3(channel.positions, time, glm::vec3(0.0f));
-    const glm::quat rotation = sampleQuat(channel.rotations, time);
-    const glm::vec3 scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+    pose.translation = sampleVec3(channel.positions, time, glm::vec3(0.0f));
+    pose.rotation = sampleQuat(channel.rotations, time);
+    pose.scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+    return pose;
+}
 
-    return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+glm::mat4 Model::nodePoseToMatrix(const NodePose &pose) const {
+    return glm::translate(glm::mat4(1.0f), pose.translation) * glm::mat4_cast(pose.rotation) * glm::scale(glm::mat4(1.0f), pose.scale);
 }
 
 /// ルートには親がないので 掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
 void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time) {
-    const glm::mat4 globalTransform = parentTransform * nodeTransform(node, time);
+    const glm::mat4 globalTransform = parentTransform * nodePoseToMatrix(nodePose(node, time));
+    
     const auto found = bones_.find(node.name);
     if (found != bones_.end()) {
         const BoneInfo &info = found->second;

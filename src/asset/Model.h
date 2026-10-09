@@ -40,6 +40,17 @@ struct StaticMeshDistanceField {
     glm::mat4 nodeToModelRoot;
 };
 
+/// 1 フレームのボーン姿勢を表す 1 ノード分の情報
+/// （NodeAnimation が動画のイメージなのに対して写真みたいな感じ）
+struct NodePose {
+    glm::vec3 translation{0.0f};
+    glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec3 scale{1.0f};
+};
+
+/// ボーンの姿勢を表す 1フレーム分の情報（クリップ間のクロスフェードに使う）
+using Pose = std::unordered_map<std::string, NodePose>;
+
 /// 1ノードのキーフレーム列（aiNodeAnim に対応）
 struct NodeAnimation {
     std::vector<AnimationKey<glm::vec3>> positions;
@@ -132,7 +143,9 @@ class Model {
     bool isLoopAnimation_ = true; // ループ再生するかどうか
     float playbackSpeed_ = 1.0f; // 再生速度の倍率
 
-
+    // アニメーションのクロスフェード用
+    Pose currentPose_;
+    Pose blendSourcePose_;
     
 
     /// Assimp でシーンを読み込む

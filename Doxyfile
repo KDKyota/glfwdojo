@@ -16,7 +16,7 @@ TAB_SIZE               = 4
 #---------------------------------------------------------------------------
 # 入力
 #---------------------------------------------------------------------------
-INPUT                  = src　docs/mainpage.md
+INPUT                  = src ./docs/mainpage.md
 RECURSIVE              = YES
 FILE_PATTERNS          = *.h *.cpp *.md
 IMAGE_PATH             = images

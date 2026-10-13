@@ -28,6 +28,8 @@ struct BakedDistanceField {
 
 /**
  * @brief メッシュの距離場を事前に CPU で計算する
+ *
+ * @param resolution 一辺の格子点数 範囲は AABB に余白を足したもの
  */
 BakedDistanceField BakeDistanceField(const Mesh &mesh, int resolution);
 

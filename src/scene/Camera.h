@@ -71,7 +71,7 @@ class Camera {
     // Orientation から Front / Right / Up を作り直す
     void UpdateCameraVectors();
 
-    // pitch は Front から逆算する
+    // 現在の視線の仰角をラジアンで返す
     float CurrentPitch() const;
 
   public:
@@ -95,16 +95,26 @@ class Camera {
     const float &GetZoomValue() const;
 
     void ProcessKeyboard(Camera_Movement direction, float deltaTime);
+    /**
+     * @brief マウス移動量で視線（ThirdPerson では軌道角）を回す
+     *
+     * @param xoffset,yoffset マウスの移動量（ピクセル）
+     * @param constrainPitch true なら仰角を ±PITCH_LIMIT に制限する
+     */
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
     void ProcessMouseScroll(float yoffset);
 
     /* ---- 三人称モード ---- */
 
-    // 追従先は毎フレーム外から与える
+    /**
+     * @brief 三人称カメラの追従先を設定する 毎フレーム外から与える
+     *
+     * @param position 追従対象の足元の位置 注視点はここから TARGET_HEIGHT だけ上になる
+     */
     void SetFollowTarget(const glm::vec3 &position);
     void ClearFollowTarget();
 
-    // 追従先が無いときは三人称へ切り替えない（カメラが動かせなくなるため）
+    /// FreeLook と ThirdPerson を切り替える 追従先が無いときは ThirdPerson へ入らない
     void ToggleMode();
     CameraMode Mode() const;
 

@@ -11,8 +11,10 @@ inline constexpr float kBoundsMarginRatio = 0.25f;
 /**
  * @brief 符号付き距離場をボクセルの一次元配列として計算する
  *
- * @param boundsMin 余白を足した後の範囲　メッシュの AABB そのものではない
- * @param boundsMax 余白を足した後の範囲　メッシュの AABB そのものではない
+ * @param vertices,indices 三角形リストのメッシュ
+ * @param resolution 一辺の格子点数
+ * @param boundsMin,boundsMax 余白を足した後の範囲　メッシュの AABB そのものではない
+ * @return resolution^3 個の距離 内側が負 並びは x + y * resolution + z * resolution^2
  */
 std::vector<float> BuildSignedDistanceField(const std::vector<Vertex> &vertices,
                                             const std::vector<unsigned int> &indices, int resolution,

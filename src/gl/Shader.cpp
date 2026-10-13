@@ -11,7 +11,7 @@ namespace gl {
 
 namespace {
 
-/// GLSL の #include を再帰的に展開する（GLSL 自体には #include が無いため）
+/// GLSL の `#include` を再帰的に展開する（GLSL 自体には `#include` が無いため）
 std::string expandIncludes(const std::string &path, int depth = 0) {
     if (depth > 8) {
         std::cout << "ERROR::SHADER::INCLUDE_TOO_DEEP: " << path << std::endl;

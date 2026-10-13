@@ -18,13 +18,19 @@ class TextureCache {
      * @brief キャッシュにあれば返し 無ければ読み込んで登録する
      *
      * @param path 画像ファイルのパス
+     * @param flip 読み込み時に上下を反転するか
      * @param colorSpace 色かデータかを表す色空間
      */
     std::shared_ptr<Texture> get(const std::string &path, bool flip, ColorSpace colorSpace);
 
-    /*
-     * glb の埋め込みテクスチャ用 実体がファイルではないので 呼び出し側が一意な key を作って渡す
-     * （同じ glb 内でインデックスが衝突しないよう「モデルのパス + 参照名」にする）
+    /**
+     * @brief glb の埋め込みテクスチャを キャッシュにあれば返し 無ければ読み込んで登録する
+     *
+     * @param key キャッシュ上でファイルパスの代わりに使う識別子 呼び出し側が一意に作り 同じ glb 内で衝突しないよう「モデルのパス + 参照名」にする
+     * @param data 圧縮された画像のバイト列
+     * @param byteSize data のバイト数
+     * @param flip 読み込み時に上下を反転するか
+     * @param colorSpace 色かデータかを表す色空間
      */
     std::shared_ptr<Texture> getEmbedded(const std::string &key, const unsigned char *data, int byteSize, bool flip, ColorSpace colorSpace);
 
@@ -32,7 +38,10 @@ class TextureCache {
      * @brief 6枚の画像から GL_TEXTURE_CUBE_MAP を作る
      *
      * キャッシュはしない
-     * @param faces 6面ぶんの画像パス
+     * @param faces 6面ぶんの画像パス +X -X +Y -Y +Z -Z の順
+     * @param flip 読み込み時に上下を反転するか
+     * @param colorSpace 色かデータかを表す色空間
+     * @return 作成した GL テクスチャの ID 呼び出し側が解放する
      */
     unsigned int loadCubemap(const std::vector<std::string> &faces, bool flip, ColorSpace colorSpace);
 };

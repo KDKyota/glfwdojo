@@ -12,7 +12,11 @@ class CollisionDebugDraw {
   public:
     CollisionDebugDraw();
 
-    /// character が nullptr なら何も描かない
+    /**
+     * @brief character の衝突判定円柱を描く
+     *
+     * @param character 描画対象 nullptr なら何も描かない
+     */
     void Draw(const Character *character);
 
   private:

@@ -24,7 +24,13 @@ class ReflectionPass {
   public:
     ReflectionPass();
 
-    /// 注意: Matrices UBO の view を鏡像に書き換えるので呼び出し側で元に戻すこと
+    /**
+     * @brief 床で折り返した鏡像カメラで G-Buffer・ライティング・前方描画を走らせ target へ書く
+     *
+     * 注意: Matrices UBO の view を鏡像に書き換えるので呼び出し側で元に戻すこと
+     * @param camera 鏡像ではない本来のカメラ 内部で鏡像の view を作る
+     * @param matricesUbo view を鏡像へ書き換える Matrices UBO
+     */
     void Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer, GeometryPass &geometryPass,
                  DeferredLightingPass &lightingPass, ForwardPass &forwardPass, const SceneGeometry &geometry,
                  const SceneModels &models,

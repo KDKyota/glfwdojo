@@ -19,6 +19,11 @@ class SdfOcclusionPass {
     /// models の静的メッシュ距離場は起動時（このパスの初期化時）に一度だけ UBO・テクスチャユニットへ焼く
     explicit SdfOcclusionPass(const SceneModels &models);
 
+    /**
+     * @brief SDF のレイマーチで拡散と鏡面の遮蔽を求め ブラーまで掛ける
+     *
+     * @param target 遮蔽率の出力先 RG の2チャンネル（拡散 鏡面）
+     */
     void Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
                  const SceneGeometry &geometry, const Camera &camera, const RenderSettings &settings);
 

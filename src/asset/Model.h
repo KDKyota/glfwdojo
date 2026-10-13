@@ -71,7 +71,7 @@ inline constexpr int kMaxBones = 128;
 // ボーンパレット用の UBO のバインディング 0 は Scene の Matrices が使っている
 inline constexpr unsigned int kBoneUBOBinding = 1;
 
-inline constexpr float kBlendDuration = 0.05f; // クロスフェードの時間（秒）
+inline constexpr float kBlendDuration = 0.1f; // クロスフェードの時間（秒）
 
 /**
  * @brief Assimp で glTF/glb モデルを読み込み Mesh の集合とスキニング用のボーン情報を保持する

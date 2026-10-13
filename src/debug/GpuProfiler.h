@@ -40,7 +40,13 @@ class GpuProfiler {
     void BeginFrame();
     void EndFrame();
 
-    /// body の GPU 実行時間を計測する
+    /**
+     * @brief body の GPU 実行時間を計測する
+     *
+     * @tparam F 引数なしで呼べる関数オブジェクト
+     * @param pass 結果を記録するパス
+     * @param body 計測対象の処理 この中で Measure を呼んではいけない
+     */
     template <typename F> void Measure(GpuPass pass, F &&body) {
         begin(pass);
         body();

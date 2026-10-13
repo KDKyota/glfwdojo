@@ -19,6 +19,9 @@ class DeferredLightingPass {
     DeferredLightingPass();
 
     /**
+     * @brief G-Buffer と影と遮蔽と IBL を合成して HDR ターゲットへ書く
+     *
+     * @param target 合成結果の出力先
      * @param reflectionColor 床に合成する平面反射のテクスチャ 0 なら床は通常の IBL のまま
      */
     void Execute(const TargetView &target, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,

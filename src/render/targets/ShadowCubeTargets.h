@@ -6,9 +6,9 @@
 namespace gl {
 
 /**
- * @brief 点光源ごとの深度キューブマップと ガラスを透過した光の色
+ * @brief 点光源ごとの深度キューブマップと ガラスを透過した光の色を持つ
  *
- * カラーを持たない通常の Point Shadow と違い 1つの FBO へ深度と色を書き分ける
+ * 1つの FBO へ深度と色を書き分ける
  */
 class ShadowCubeTargets {
   public:

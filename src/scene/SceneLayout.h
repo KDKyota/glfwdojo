@@ -21,7 +21,7 @@ inline const std::vector<glm::vec3> cubePositions = {
     glm::vec3(0.0f, 0.0f, 20.0f),  // z=+25 壁の前
 };
 
-// 見つからないモデルは読み飛ばす
+/// 読み込むモデル 1 体ぶんの配置情報 読み込めなかったモデルは配置されない
 struct ModelSpawn {
     std::string path;
     glm::vec3 position;

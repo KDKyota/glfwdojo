@@ -190,6 +190,11 @@ inline const std::array<Vertex, 4> rawTransparentVertices =
 
 inline const std::array<unsigned int, 6> transparentIndices = {0, 1, 2, 2, 3, 0};
 
+/**
+ * @brief 三角形の面法線を求める
+ *
+ * @param v0,v1,v2 頂点座標 表から見て反時計回りの順に渡すと 表向きの法線になる
+ */
 glm::vec3 calcNormal(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 
 /**

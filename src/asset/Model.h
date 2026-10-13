@@ -40,6 +40,17 @@ struct StaticMeshDistanceField {
     glm::mat4 nodeToModelRoot;
 };
 
+/// 1 フレームのボーン姿勢を表す 1 ノード分の情報
+/// （NodeAnimation が動画のイメージなのに対して写真みたいな感じ）
+struct NodePose {
+    glm::vec3 translation{0.0f};
+    glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec3 scale{1.0f};
+};
+
+/// ボーンの姿勢を表す 1フレーム分の情報（クリップ間のクロスフェードに使う）
+using Pose = std::unordered_map<std::string, NodePose>;
+
 /// 1ノードのキーフレーム列（aiNodeAnim に対応）
 struct NodeAnimation {
     std::vector<AnimationKey<glm::vec3>> positions;
@@ -59,6 +70,8 @@ struct Animation {
 inline constexpr int kMaxBones = 128;
 // ボーンパレット用の UBO のバインディング 0 は Scene の Matrices が使っている
 inline constexpr unsigned int kBoneUBOBinding = 1;
+
+inline constexpr float kBlendDuration = 0.1f; // クロスフェードの時間（秒）
 
 /**
  * @brief Assimp で glTF/glb モデルを読み込み Mesh の集合とスキニング用のボーン情報を保持する
@@ -132,8 +145,11 @@ class Model {
     bool isLoopAnimation_ = true; // ループ再生するかどうか
     float playbackSpeed_ = 1.0f; // 再生速度の倍率
 
-
-    
+    // アニメーションのクロスフェード用
+    Pose currentPose_;
+    Pose blendSourcePose_;
+    float blendElapsedTime_ = 0.0f; // ticksではなく秒
+    float blendWeight_ = 0.0f;      // 0.0～1.0 クロスフェードの重み
 
     /// Assimp でシーンを読み込む
     void loadModel(const std::string &path);
@@ -166,7 +182,13 @@ class Model {
     /// aiAnimation をすべて読み込む
     void loadAnimations(const aiScene *scene);
     /// チャンネルがあれば時刻 time のローカル変換を作り なければバインドポーズを返す
-    glm::mat4 nodeTransform(const ModelNode &node, float time) const;
+    //glm::mat4 nodeTransform(const ModelNode &node, float time) const;
+
+    /// ノードの姿勢を取得する
+    NodePose nodePose(const ModelNode &node, float time) const;
+    /// NodePose を行列に変換する
+    glm::mat4 nodePoseToMatrix(const NodePose &pose) const;
+
     /// ノード階層をたどり 各ボーンの最終変換行列を計算する
     void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time);
 };

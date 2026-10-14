@@ -13,7 +13,11 @@ class GBuffer {
     /// 3枚を texunit::kGPosition から連番で割り当てる
     void BindTextures() const;
 
-    /// 深度を dst の FBO へコピーする 前方描画が不透明物と前後判定するために要る
+    /**
+     * @brief 深度を dst の FBO へコピーする 前方描画が不透明物と前後判定するために要る
+     *
+     * @param dst コピー先の FBO の ID 0 ならデフォルトフレームバッファ
+     */
     void BlitDepthTo(GLuint dst) const;
 
     GLuint Fbo() const {

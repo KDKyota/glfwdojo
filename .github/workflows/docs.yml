@@ -1,0 +1,71 @@
+name: Docs
+
+# API ドキュメント（Doxygen）を生成して GitHub Pages に公開する
+on:
+  push:
+    branches: [master]
+    # ドキュメントの内容に影響するファイルが変わったときだけ動かす
+    paths:
+      - "src/**"
+      - "docs/mainpage.md"
+      - "images/**"
+      - "Doxyfile"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+# Pages への公開に必要な権限だけを与える
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 公開中のデプロイを途中で打ち切らないよう キャンセルはせず順番に待たせる
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  # ローカルと見た目を揃えるため Doxygen の版を固定する（apt の版は古く HTML_COLORSTYLE などが違う）
+  DOXYGEN_VERSION: "1.18.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # fonts-noto-cjk が無いと 図の日本語の幅を測れず ノードの大きさが崩れる
+      - name: Install Graphviz and CJK fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz fonts-noto-cjk
+
+      - name: Install Doxygen ${{ env.DOXYGEN_VERSION }}
+        run: |
+          curl -fsSL "https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz" | tar xz
+          echo "$PWD/doxygen-${DOXYGEN_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Generate documentation
+        run: doxygen Doxyfile
+
+      # 警告は公開を止めずに ログへ表示して確認できるようにする
+      - name: Show Doxygen warnings
+        if: always()
+        run: |
+          if [ -s build/doxygen/warnings.log ]; then cat build/doxygen/warnings.log; else echo "警告なし"; fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/doxygen/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

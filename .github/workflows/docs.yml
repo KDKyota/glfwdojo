@@ -45,8 +45,11 @@ jobs:
           curl -fsSL "https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz" | tar xz
           echo "$PWD/doxygen-${DOXYGEN_VERSION}/bin" >> "$GITHUB_PATH"
 
+      # build/ はリポジトリに無く Doxygen は途中のフォルダまでは作れないので 先に作っておく
       - name: Generate documentation
-        run: doxygen Doxyfile
+        run: |
+          mkdir -p build/doxygen
+          doxygen Doxyfile
 
       # 警告は公開を止めずに ログへ表示して確認できるようにする
       - name: Show Doxygen warnings

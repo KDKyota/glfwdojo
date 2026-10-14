@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/KDKyota/glfwdojo/actions/workflows/ci.yml/badge.svg)](https://github.com/KDKyota/glfwdojo/actions/workflows/ci.yml)
 
+**API ドキュメント（GitHub Pages）: <https://kdkyota.github.io/glfwdojo/>**
+
 リポジトリ名は気にしないでください．これは元々Publicにする予定ではなかったので，雑に命名したのでこうなっています．
 
 [LearnOpenGL](https://learnopengl.com/) の内容を、モダンな C++（C++17）で一から実装し直しながら OpenGL とリアルタイムグラフィックスを学ぶための個人学習リポジトリです。
@@ -266,6 +268,7 @@ glfwdojo/
 
 | ファイル                                             | 内容                                                                                                                                 |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| [API ドキュメント（GitHub Pages）](https://kdkyota.github.io/glfwdojo/) | クラスの一覧と役割、描画パイプラインの図、クラス間の関係図。`master` への push で自動的に更新される（Doxygen で生成） |
 | [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)       | 実装ガイド。冒頭に**症状から原因を引く索引**あり。設計意図、作業手順、踏んだ罠、ビルド・ファイル追加時の CMake 設定、WSL2 固有の問題 |
 | [`docs/shadow_mapping.md`](./docs/shadow_mapping.md) | シャドウマッピングの学習メモ                                                                                                         |
 | [`CLAUDE.md`](./CLAUDE.md)                           | Claude Code に作業させる際のルール                                                                                                   |
@@ -283,6 +286,7 @@ glfwdojo/
 | `resources/publishable-objects/` | `DamagedHelmet.glb`                  | PBR の検証用。正解の見た目が広く出回っているので実装の答え合わせに使える                        |
 | `resources/publishable-objects/` | `DragonDispersion.glb`               | 透過・体積減衰・分散を実装するためのモデル（未対応）                                            |
 | `resources/characters/`          | `RiggedSimple.glb` / `CesiumMan.glb` | スキニングの踏み台。Khronos の glTF-Sample-Assets 由来で **CC-BY-4.0**（`*-LICENSE.md` を同梱） |
+| `resources/characters/`          | `UAL1_Standard.glb` / `UAL1_Standard_RM.glb` | 操作キャラクター。多数のアニメーション（歩く・走る・ジャンプなど）を持ち、三人称カメラの追従先として使う。Quaternius の Universal Animation Library [Standard] で **CC0** |
 
 ### 同梱モデルの出典とライセンス
 
@@ -296,17 +300,17 @@ glfwdojo/
 > [!IMPORTANT]
 > どちらのモデルにも **非商用限定の条件が含まれます**。`DamagedHelmet.glb` は元モデル（theblueturtle\_）が CC-BY-NC-4.0 で、`DragonDispersion.glb` のドラゴンは Stanford Graphics Library の条件（"such models or images are not to be used for commercial purposes"）に従います。学習・研究目的での利用と無償の再配布は認められていますが、商用利用はできません。
 
-### 同梱していないモデル
+### キャラクターモデルの出典とライセンス
 
-一方、LearnOpenGL で使われている 3D モデル（backpack / cyborg / nanosuit / planet / rock）は、いずれも再配布が許諾されていない、あるいはライセンスが不明なため **同梱していません**（`resources/objects/` ごと `.gitignore` 済みです）。
+`resources/characters/` のモデルです。
 
-| モデル     | 出典                                                                                                                                                     | ライセンス表記                         |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `backpack` | Berk Gedik（[Sketchfab](https://sketchfab.com/3d-models/survival-guitar-backpack-low-poly-799f8c4511f84fab8c3f12887f7e6b36)） / Joey de Vries により改変 | 出典表記のみ。ライセンス条項の記載なし |
-| `cyborg`   | 3dregenerator（tf3dm.com） / Joey de Vries により改変                                                                                                    | **"For Personal Use Only."** と明記    |
-| `planet`   | Gerhald3D（[TurboSquid](https://www.turbosquid.com/3d-models/realistic-mars-photorealistic-2k-3d-1277433)） / Joey de Vries により改変                   | 出典表記のみ。ライセンス条項の記載なし |
-| `nanosuit` | Crysis（Crytek）由来                                                                                                                                     | 記載なし                               |
-| `rock`     | 不明                                                                                                                                                     | 記載なし                               |
+| モデル                                       | 出典                                                                                  | ライセンス                                                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `RiggedSimple.glb`                           | [glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)              | **CC-BY-4.0** → [RiggedSimple-LICENSE.md](resources/characters/RiggedSimple-LICENSE.md)             |
+| `CesiumMan.glb`                              | [glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)              | **CC-BY-4.0** → [CesiumMan-LICENSE.md](resources/characters/CesiumMan-LICENSE.md)                    |
+| `UAL1_Standard.glb` / `UAL1_Standard_RM.glb` | Universal Animation Library [Standard]（[Quaternius](https://quaternius.com/) 作）    | **CC0 1.0**（パブリックドメイン） → [UAL1-License.txt](resources/characters/UAL1-License.txt)        |
+
+`UAL1_Standard_RM.glb` は、すべてのアニメーションにルートモーション（移動量）を焼き込んだ版で、`UAL1_Standard.glb` はルートモーションなしの版です。シーンでは `UAL1_Standard.glb` を使っています。
 
 ### モデルを追加したい場合
 

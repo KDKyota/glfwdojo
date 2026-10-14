@@ -31,7 +31,7 @@ enum class CharacterMotionState {
 };
 
 /**
- * @brief プレイヤーが操作するキャラクターの位置と向きを持つ
+ * @brief プレイヤーが操作するキャラクターの位置 向き 動作状態を持つ
  */
 class Character {
   public:
@@ -42,8 +42,9 @@ class Character {
 
     /**
      * @brief カメラ基準の入力で移動し 進行方向へ向き直る
-     * @param hasRunInput 走る入力があるか
      * @param cameraFront カメラの視線方向
+     * @param hasRunInput 走る入力があるか
+     * @param hasJumpInput ジャンプの入力があるか
      * @param input xが右方向yが前方向の -1〜1
      * @param deltaTime 前フレームからの経過時間
      * @param world 移動後のめり込みを解消する障害物

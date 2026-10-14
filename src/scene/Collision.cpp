@@ -13,7 +13,11 @@ constexpr float kSkinWidth = 0.02f;
 
 constexpr float kGroundContactTolerance = 0.02f; // 足元の障害物に接触しているとみなす距離
 
-/// XZ 平面での押し出し量を求める 重なっていなければ false
+/**
+ * @brief XZ 平面での押し出し量を求める 重なっていなければ false
+ *
+ * @param[out] push 重なっているときの押し出し量
+ */
 bool pushOutXZ(const gl::AABB &box, const glm::vec3 &center, float radius, glm::vec2 &push) {
     // 注意: 判定と押し出し量で違う半径を使うと壁際で震える
     const float skinRadius = radius + kSkinWidth;

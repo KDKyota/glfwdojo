@@ -21,9 +21,13 @@ class SceneGeometry {
     void DrawCubes(Shader &shader) const;
     void DrawFloor(Shader &shader) const;
     void DrawWalls(Shader &shader) const;
-    /// instanceCount には並べ替え済みの窓の枚数を渡す
+    /**
+     * @brief 透明な窓をインスタンス描画する
+     *
+     * @param instanceCount 並べ替え済みの窓の枚数
+     */
     void DrawWindows(Shader &shader, std::size_t instanceCount) const;
-    /// テクスチャを使わない立方体 ライトキューブと IBL のキャプチャで使う
+    /// テクスチャを使わない立方体を描く
     void DrawCubeMesh() const;
     void DrawSkyboxMesh() const;
     void DrawScreenQuad() const;

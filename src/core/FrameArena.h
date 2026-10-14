@@ -8,7 +8,9 @@
 
 namespace gl {
 
-/// FrameArena::Allocate が返す 寿命がフレーム内に限られる配列への参照
+/**
+ * @brief FrameArena::Allocate が返す 寿命がフレーム内に限られる配列への参照
+ */
 template <typename T>
 struct ArraySpan {
     T *data = nullptr;
@@ -41,7 +43,14 @@ class FrameArena {
         offset_ = 0;
     }
 
-    /// アライメントを合わせた領域を offset から切り出す
+    /**
+     * @brief アライメントを合わせた領域を offset から切り出す
+     *
+     * 容量を超えると abort する
+     * @tparam T 確保する要素の型 リセット時にデストラクタを呼ばないので自明に破棄できる型に限る
+     * @param count バイト数ではなく要素数
+     * @return 次の Reset まで有効な配列
+     */
     template <typename T>
     ArraySpan<T> Allocate(std::size_t count) {
         static_assert(std::is_trivially_destructible_v<T>, "FrameArena はリセット時にデストラクタを呼ばない");

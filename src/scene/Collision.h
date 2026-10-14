@@ -34,6 +34,7 @@ class CollisionWorld {
      * @brief 地面となる高さ（障害物を含む）を返す
      *
      * @param footPos 足元の位置（円柱の底面の中心）
+     * @param radius 足元の判定に使う円柱の半径
      * @return std::optional<float> 地面から足元までの高さ、見つからなければ nullopt
      */
     std::optional<float> FindGroundHeight(const glm::vec3 &footPos, const float radius) const;

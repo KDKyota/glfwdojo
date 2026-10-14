@@ -5,12 +5,15 @@ namespace gl {
 
 /**
  * @brief 遮蔽率を書くパスの出力先 本体とブラー後の2枚を持つ
- *
- * @param debugName FBO が不完全だったときに報告へ添える名前
- * @param channelCount 1 なら R のみ 2 なら RG（SDF 遮蔽が拡散と鏡面を1枚に持つ）
  */
 class OcclusionTarget {
   public:
+    /**
+     * @brief 出力先を確保する
+     *
+     * @param debugName FBO が不完全だったときに報告へ添える名前
+     * @param channelCount 1 なら R のみ 2 なら RG（SDF 遮蔽が拡散と鏡面を1枚に持つ）
+     */
     OcclusionTarget(int width, int height, const char *debugName, int channelCount = 1);
 
     GLuint Fbo() const {

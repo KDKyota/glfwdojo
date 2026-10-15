@@ -66,6 +66,7 @@ add_executable(
   src/scene/Camera.cpp
   src/scene/Character.cpp
   src/scene/Collision.cpp
+  src/scene/HeightField.cpp
   src/scene/SceneModels.cpp
   third_party/stb_image_impl.cpp)
 

@@ -8,6 +8,8 @@
 
 class HeightField {
   public:
+    /// ハイトマップの読み込みをして、失敗したらエラー出力
+    HeightField();
     /// x, z 座標からハイトマップのワールドの高さを返す関数
     float GetHeightAt(float x, float z) const;
     /// 法線ベクトルを返す関数

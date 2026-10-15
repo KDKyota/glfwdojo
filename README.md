@@ -9,14 +9,17 @@
 [LearnOpenGL](https://learnopengl.com/) の内容を、モダンな C++（C++17）で一から実装し直しながら OpenGL とリアルタイムグラフィックスを学ぶための個人学習リポジトリです。
 
 <table>
-<tr>
-<td colspan="3"><img src="images/Screenshot_3Dmodel.png"></td>
-</tr>
-<tr>
-<td><img src="images/Screenshot.png"></td>
-<td><img src="images/Screenshot_skip.png"></td>
-<td><img src="images/Screenshot_ssao.png"></td>
-</tr>
+  <!-- 1行目：2枚の画像を均等に並べる（各セル3マス分、合計6マス） -->
+  <tr>
+    <td colspan="3"><img src="images/Screenshot_SDF.png" width="100%"></td>
+    <td colspan="3"><img src="images/Screenshot_3Dmodel.png" width="100%"></td>
+  </tr>
+  <!-- 2行目：3枚の画像を均等に並べる（各セル2マス分、合計6マス） -->
+  <tr>
+    <td colspan="2"><img src="images/Screenshot.png" width="100%"></td>
+    <td colspan="2"><img src="images/Screenshot_skip.png" width="100%"></td>
+    <td colspan="2"><img src="images/Screenshot_ssao.png" width="100%"></td>
+  </tr>
 </table>
 
 ---

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include "core/SceneUnits.h"
 
+namespace gl {
 class HeightField {
   public:
     /// ハイトマップの読み込みをして、失敗したらエラー出力
@@ -27,3 +28,4 @@ class HeightField {
     // 高さマップの格子一つの一辺の大きさ（縦横の大きさが等しいことを前提とする）
     float resolutionLength = 0;
 };
+} // namespace gl

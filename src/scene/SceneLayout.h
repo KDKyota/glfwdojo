@@ -55,6 +55,6 @@ inline const std::vector<glm::vec3> windowPositions = {glm::vec3(-1.5f, 0.0f, -0
                                                        glm::vec3(0.5f, 0.0f, -0.6f), glm::vec3(-15.0f, 0.0f, -8.0f)};
 
 // 高さマップの配置原点
-glm::vec3 heightMapOrigin{gl::units::floorHalfExtent, 0, gl::units::heightMapExtent.z / 2 * (-1.0)};
+inline const glm::vec3 heightMapOrigin{gl::units::floorHalfExtent, 0, gl::units::heightMapExtent.z / 2 * (-1.0f)};
 
 } // namespace gl::layout

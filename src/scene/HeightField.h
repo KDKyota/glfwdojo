@@ -16,7 +16,7 @@ class HeightField {
     /// 法線ベクトルを返す関数
     glm::vec3 GetNormalAt(float x, float z) const;
     /// resolutionLength の値を返す
-    glm::vec3 GetResolutionLength(glm::vec3 resolutionLength);
+    glm::vec3 GetResolutionLength();
     /// PNG 画像から高さデータを読み込む
     bool LoadFromFile(const std::string &filePath);
     // resolutionLength を計算する

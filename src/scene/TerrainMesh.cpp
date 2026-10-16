@@ -1,4 +1,4 @@
-#include "Terrainmesh.h"
+#include "TerrainMesh.h"
 
 namespace gl {
 /*
@@ -16,20 +16,24 @@ for z in 0..行数-1:
         三角形2枚 を追加（巻き方向を床と揃える）
 */
 
-TerrainMeshData TerrainMesh::BuildTerrainMeshconst(HeightField &field, const glm::vec3 &origin, const glm::vec3 &extent,
-                                                   uint32_t cellCountX, uint32_t cellCountZ, float uvTileSize) {
+TerrainMeshData BuildTerrainMesh(HeightField &field, const glm::vec3 &extent, uint32_t cellCountX, uint32_t cellCountZ,
+                                 float uvTileSize) {
     TerrainMeshData data{};
     data.vertices.reserve((cellCountX + 1) * (cellCountZ + 1));
-    for (unsigned int i = 0; i < cellCountZ; ++i) {
-        for (unsigned int j = 0; j < cellCountX; ++j) {
-            glm::vec3 pos = origin + glm::vec3(extent.x * (j / cellCountX),
-                                               field.GetHeightAt(field.GetResolutionLength().x * j,
-                                                                 field.GetResolutionLength().z * i),
-                                               extent.z * (i / cellCountZ));
-            glm::vec3 normal = field.GetNormalAt(field.GetResolutionLength().x * j, field.GetResolutionLength().z * i);
-            glm::vec2 uv = uvTileSize * glm::vec2(j / cellCountX, i / cellCountZ);
+    for (unsigned int i = 0; i <= cellCountZ; ++i) {
+        for (unsigned int j = 0; j <= cellCountX; ++j) {
+            glm::vec3 pos{};
+            // ワールド座標の x, z を計算してから、その値を y の計算に利用する
+            pos.x = field.GetOrigin().x + extent.x * static_cast<float>(j) / static_cast<float>(cellCountX);
+            pos.z = field.GetOrigin().z + extent.z * static_cast<float>(i) / static_cast<float>(cellCountZ);
+            pos.y = field.GetHeightAt(pos.x, pos.z);
+            glm::vec3 normal = field.GetNormalAt(pos.x, pos.z);
+            glm::vec2 uv = uvTileSize * glm::vec2(static_cast<float>(j) / static_cast<float>(cellCountX),
+                                                  static_cast<float>(i) / static_cast<float>(cellCountZ));
+            data.vertices.push_back({pos, normal, uv});
         }
     }
+    return data;
 }
 
 } // namespace gl

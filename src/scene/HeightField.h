@@ -29,5 +29,7 @@ class HeightField {
     std::uint32_t heightMapDataWidth_ = 0;
     // 高さマップの格子一つの一辺の大きさ（基本的には y は 0として xz の辺の大きさを格納する）
     glm::vec3 resolutionLength_{};
+    // 地形マップの原点
+    glm::vec3 origin_{};
 };
 } // namespace gl

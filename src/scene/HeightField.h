@@ -11,13 +11,15 @@ class HeightField {
   public:
     /// ハイトマップの読み込みをして、失敗したらエラー出力
     HeightField();
-    /// x, z 座標からハイトマップのワールドの高さを返す関数
+    /// ワールド空間の x, z 座標からハイトマップのワールドの高さを返す関数
     float GetHeightAt(float x, float z) const;
-    /// 法線ベクトルを返す関数
+    /// ワールド空間の x, z 座標から法線ベクトルを返す関数
     glm::vec3 GetNormalAt(float x, float z) const;
     /// resolutionLength の値を返す
-    glm::vec3 GetResolutionLength();
-    /// PNG 画像から高さデータを読み込む
+    glm::vec3 GetResolutionLength() { return resolutionLength_; }
+    void SetOrigin(const glm::vec3 &origin) { origin_ = origin; }
+    glm::vec3 GetOrigin() const { return origin_; }
+    /// PNG 画像から高さデータを読み込む（TODO:実装時にファイルサイズが 0 ならエラーを出す）
     bool LoadFromFile(const std::string &filePath);
     // resolutionLength を計算する
     glm::vec3 CalcResolutionLength();

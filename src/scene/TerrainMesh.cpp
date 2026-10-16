@@ -1,23 +1,13 @@
 #include "TerrainMesh.h"
+#include <stdexcept>
 
 namespace gl {
-/*
-vertices = 空の vector<Vertex>
-for z in 0..行数:
-    for x in 0..列数:
-        pos    = 格子点のワールド座標（origin + 格子の間隔 * (x,z)、高さは HeightField）
-        normal = HeightField.GetNormalAt(pos.x, pos.z)
-        uv     = (x / 列数, z / 行数) に繰り返し係数を掛ける
-        vertices に追加
-indices = 空の vector<unsigned int>
-for z in 0..行数-1:
-    for x in 0..列数-1:
-        左上 = z*列数 + x   （右上は +1、左下は +列数、右下は +列数+1）
-        三角形2枚 を追加（巻き方向を床と揃える）
-*/
 
 TerrainMeshData BuildTerrainMesh(HeightField &field, const glm::vec3 &extent, uint32_t cellCountX, uint32_t cellCountZ,
                                  float uvTileSize) {
+    if (cellCountX == 0 || cellCountZ == 0) {
+        throw std::invalid_argument("cellCountX and cellCountZ must be greater than 0");
+    }
     TerrainMeshData data{};
     data.vertices.reserve((cellCountX + 1) * (cellCountZ + 1));
     for (unsigned int i = 0; i <= cellCountZ; ++i) {
@@ -33,6 +23,24 @@ TerrainMeshData BuildTerrainMesh(HeightField &field, const glm::vec3 &extent, ui
             data.vertices.push_back({pos, normal, uv});
         }
     }
+
+    data.indices.reserve(cellCountX * cellCountZ * 6);
+    for (unsigned int i = 0; i < cellCountZ; ++i) {
+        for (unsigned int j = 0; j < cellCountX; ++j) {
+            unsigned int topLeft = i * (cellCountX + 1) + j;
+            unsigned int topRight = topLeft + 1;
+            unsigned int bottomLeft = topLeft + (cellCountX + 1);
+            unsigned int bottomRight = bottomLeft + 1;
+
+            data.indices.push_back(topLeft);
+            data.indices.push_back(bottomLeft);
+            data.indices.push_back(topRight);
+            data.indices.push_back(topRight);
+            data.indices.push_back(bottomLeft);
+            data.indices.push_back(bottomRight);
+        }
+    }
+
     return data;
 }
 

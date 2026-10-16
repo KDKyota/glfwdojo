@@ -22,10 +22,10 @@ class HeightField {
 
   private:
     // 座標ごとの高さマップの情報 単位：m
-    std::vector<float> heightData{};
+    std::vector<float> heightData_{};
     // 高さマップの column のデータ数（画像の読み込み時にこの変数に値を代入する）
-    std::uint32_t heightMapDataWidth = 0;
-    // 高さマップの格子一つの一辺の大きさ（縦横の大きさが等しいことを前提とする）
-    float resolutionLength = 0;
+    std::uint32_t heightMapDataWidth_ = 0;
+    // 高さマップの格子一つの一辺の大きさ（基本的には y は 0として xz の辺の大きさを格納する）
+    glm::vec3 resolutionLength_{};
 };
 } // namespace gl

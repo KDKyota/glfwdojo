@@ -37,11 +37,11 @@ class SceneGeometry {
     void initTextures(TextureCache &cache);
 
     /* メッシュのVAO / VBO / EBO */
-    VertexArrayHandle cubeVAO_, planeVAO_, transparentVAO_, quadVAO_, skyboxVAO_, wallVAO_;
-    BufferHandle cubeVBO_, planeVBO_, transparentVBO_, quadVBO_, skyboxVBO_, wallVBO_;
+    VertexArrayHandle cubeVAO_, planeVAO_, transparentVAO_, quadVAO_, skyboxVAO_, wallVAO_, terrainVAO_;
+    BufferHandle cubeVBO_, planeVBO_, transparentVBO_, quadVBO_, skyboxVBO_, wallVBO_, terrainVBO_;
     BufferHandle cubeInstanceVBO_;
     BufferHandle transparentInstanceVBO_;
-    BufferHandle cubeEBO_, planeEBO_, transparentEBO_, wallEBO_;
+    BufferHandle cubeEBO_, planeEBO_, transparentEBO_, wallEBO_, terrainEBO_;
 
     /* Textures */
     std::shared_ptr<Texture> cubeTexture_;

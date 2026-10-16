@@ -28,8 +28,14 @@ bool HeightField::LoadFromFile(const std::string &filepath) {
             heightData_.push_back(normalized * static_cast<float>(gl::units::heightMapExtent.y));
         }
     }
-
+    CalcResolutionLength();
     stbi_image_free(pixels);
     return true;
 }
+
+void HeightField::CalcResolutionLength() {
+    resolutionLength_ = glm::vec3(static_cast<float>(gl::units::heightMapExtent.x / (heightMapDataWidth_ - 1)), 0.f,
+                                  static_cast<float>(gl::units::heightMapExtent.z / (heightMapDataHeight_ - 1)));
+}
+
 } // namespace gl

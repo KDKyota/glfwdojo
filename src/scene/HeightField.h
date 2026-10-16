@@ -22,7 +22,7 @@ class HeightField {
     /// PNG 画像から高さデータを読み込む
     bool LoadFromFile(const std::string &filePath);
     // resolutionLength を計算する
-    glm::vec3 CalcResolutionLength();
+    void CalcResolutionLength();
 
   private:
     // 座標ごとの高さマップの情報 単位：m

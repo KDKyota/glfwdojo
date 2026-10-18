@@ -56,5 +56,12 @@ inline const std::vector<glm::vec3> windowPositions = {glm::vec3(-1.5f, 0.0f, -0
 
 // 高さマップの配置原点
 inline const glm::vec3 heightMapOrigin{gl::units::floorHalfExtent, 0, gl::units::heightMapExtent.z / 2 * (-1.0f)};
+struct HeightMapSpawn {
+    std::string filepath;
+    glm::vec3 origin;
+};
+
+inline const std::vector<HeightMapSpawn> heightMapSpawns = {
+    {"resources/terrain/Small-Ridge-Through-Terrain/Ridge-Through-Terrain-Height-Map.png", heightMapOrigin}};
 
 } // namespace gl::layout

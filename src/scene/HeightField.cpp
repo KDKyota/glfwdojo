@@ -1,6 +1,8 @@
 #include "HeightField.h"
 #include <stb_image.h>
 #include <cstdint>
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 
 namespace gl {
@@ -36,6 +38,31 @@ bool HeightField::LoadFromFile(const std::string &filepath) {
 void HeightField::CalcResolutionLength() {
     resolutionLength_ = glm::vec3(static_cast<float>(gl::units::heightMapExtent.x / (heightMapDataWidth_ - 1)), 0.f,
                                   static_cast<float>(gl::units::heightMapExtent.z / (heightMapDataHeight_ - 1)));
+}
+
+float HeightField::GetHeightAt(float x, float z) const {
+    float localX = x - origin_.x;
+    float localZ = z - origin_.z;
+
+    float gridCoordX = std::clamp(localX / resolutionLength_.x, 0.f, static_cast<float>(heightMapDataWidth_) - 1.f);
+    float gridCoordZ = std::clamp(localZ / resolutionLength_.z, 0.f, static_cast<float>(heightMapDataHeight_) - 1.f);
+
+    std::uint32_t pixelIndexX = std::clamp(std::floor(gridCoordX), 0.f, static_cast<float>(heightMapDataWidth_) - 2.f);
+    std::uint32_t pixelIndexZ = std::clamp(std::floor(gridCoordZ), 0.f, static_cast<float>(heightMapDataHeight_) - 2.f);
+
+    float bilinearWeightX = gridCoordX - static_cast<float>(pixelIndexX);
+    float bilinearWeightZ = gridCoordZ - static_cast<float>(pixelIndexZ);
+
+    // 4近傍の読み込み
+    std::uint32_t topleft = pixelIndexZ * heightMapDataWidth_ + pixelIndexX;
+    std::uint32_t topright = topleft + 1;
+    std::uint32_t bottomleft = topleft + heightMapDataWidth_;
+    std::uint32_t bottomright = bottomleft + 1;
+
+    // 4 近傍のバイリニア補完
+    float topValue = glm::mix(heightData_[topleft], heightData_[topright], bilinearWeightX);
+    float bottomValue = glm::mix(heightData_[bottomleft], heightData_[bottomright], bilinearWeightX);
+    return glm::mix(topValue, bottomValue, bilinearWeightZ);
 }
 
 } // namespace gl

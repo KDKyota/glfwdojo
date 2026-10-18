@@ -75,6 +75,8 @@ glm::vec3 HeightField::GetNormalAt(float x, float z) const {
     // 本来はここからx 方向の接線として (1, dh/dx, 0)、z 方向の接線として (0, dh/dz, 1)
     // を計算してからこれらを外積する必要があるけど、計算結果は以下なので、外積の計算は省略
     return glm::vec3(-1 * dhPerdx, 1, -dhPerdz);
+    return glm::normalize(glm::vec3(-1 * dhPerdx, 1, -dhPerdz));
+}
 }
 
 } // namespace gl

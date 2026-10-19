@@ -38,7 +38,7 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
                              const ShadowCubeTargets &shadows, const OcclusionTarget &ssao,
                              const OcclusionTarget &sdfOcclusion, const IblMaps &ibl, const Camera &camera,
                              const RenderSettings &settings, GLuint matricesUbo, float heightScale,
-                             std::size_t windowCount) {
+                             std::size_t windowCount, const SceneTerrain &terrain) {
     const glm::mat4 mirror = MakeMirrorMatrix(units::floorY);
     // 先にワールドを折り返してから通常の view をかける
     const RenderView mirroredView{camera.GetViewMatrix() * mirror,
@@ -60,7 +60,7 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
     // 注意: ここで描くシェーダーは全て gl_ClipDistance[0] を書くこと
     glEnable(GL_CLIP_DISTANCE0);
     geometryPass.Execute(reflectionGBuffer, geometry, models, mirroredView, reflectionSettings, heightScale,
-                         windowCount, kFloorClipPlane);
+                         windowCount, terrain, kFloorClipPlane);
     glDisable(GL_CLIP_DISTANCE0);
     glFrontFace(GL_CCW);
 

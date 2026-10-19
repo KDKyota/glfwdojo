@@ -19,7 +19,7 @@ constexpr int kReflectionResolutionDivisor = 2;
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     : scrWidth_(scrWidth), scrHeight_(scrHeight), camera_(camera), geometry_(cache_), models_(cache_, sdfCache_),
-      gBuffer_(scrWidth, scrHeight), hdrTarget_(scrWidth, scrHeight),
+      terrain_(cache_), gBuffer_(scrWidth, scrHeight), hdrTarget_(scrWidth, scrHeight),
       // 注意: 深度を Blit で受け渡すので反射ターゲットと反射用 G-Buffer は同じサイズにすること
       reflectionTarget_(scrWidth / kReflectionResolutionDivisor, scrHeight / kReflectionResolutionDivisor),
       reflectionGBuffer_(scrWidth / kReflectionResolutionDivisor, scrHeight / kReflectionResolutionDivisor),
@@ -84,14 +84,14 @@ void Scene::Render(float deltaTime, float heightScale) {
         profiler_.Measure(gl::GpuPass::Reflection, [&] {
             reflectionPass_.Execute(reflectionTarget_, reflectionGBuffer_, geometryPass_, deferredLightingPass_,
                                     forwardPass_, geometry_, models_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_,
-                                    iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount);
+                                    iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount, terrain_);
         });
         updateMatricesUBO(); // 注意: 反射パスが UBO の view を書き換えるので戻す
     }
     const gl::RenderView mainView{camera_->GetViewMatrix(), camera_->GetViewPosition()};
     // [3] 不透明物の幾何情報を G-Buffer へ
     profiler_.Measure(gl::GpuPass::Geometry, [&] {
-        geometryPass_.Execute(gBuffer_, geometry_, models_, mainView, settings_, heightScale, windowCount);
+        geometryPass_.Execute(gBuffer_, geometry_, models_, mainView, settings_, heightScale, windowCount, terrain_);
     });
     // [4] G-Buffer から遮蔽率を求めてブラーまで
     profiler_.Measure(gl::GpuPass::Ssao, [&] { ssaoPass_.Execute(ssaoTarget_, gBuffer_, noise_, geometry_); });

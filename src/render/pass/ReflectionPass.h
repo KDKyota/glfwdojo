@@ -12,6 +12,7 @@
 #include "render/targets/ShadowCubeTargets.h"
 #include "scene/Camera.h"
 #include "scene/SceneModels.h"
+#include "scene/SceneTerrain.h"
 
 namespace gl {
 
@@ -30,7 +31,7 @@ class ReflectionPass {
                  const SceneModels &models,
                  const ShadowCubeTargets &shadows, const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion,
                  const IblMaps &ibl, const Camera &camera, const RenderSettings &settings, GLuint matricesUbo,
-                 float heightScale, std::size_t windowCount);
+                 float heightScale, std::size_t windowCount, const SceneTerrain &terrain);
 
   private:
     Shader skyboxShader_;

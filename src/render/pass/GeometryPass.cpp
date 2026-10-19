@@ -29,7 +29,7 @@ GeometryPass::GeometryPass()
 
 void GeometryPass::Execute(const GBuffer &gbuffer, const SceneGeometry &geometry, const SceneModels &models,
                            const RenderView &view, const RenderSettings &settings, float heightScale,
-                           std::size_t windowCount, const glm::vec4 &clipPlane) {
+                           std::size_t windowCount, const SceneTerrain &terrain, const glm::vec4 &clipPlane) {
     glViewport(0, 0, gbuffer.Width(), gbuffer.Height());
     glEnable(GL_DEPTH_TEST);
     // ブレンドが有効なままだと アルファ未定義の出力は書き込みが丸ごと消える
@@ -73,12 +73,15 @@ void GeometryPass::Execute(const GBuffer &gbuffer, const SceneGeometry &geometry
     modelShader_.use();
     modelShader_.setVec4("clipPlane", clipPlane);
     models.Draw(modelShader_);
+    /* terrain */
+    terrain.Draw(modelShader_);
 
     /* 窓枠 */
     windowShader_.use();
     windowShader_.setVec4("clipPlane", clipPlane);
     settings.windowMaterial.applyToShader(windowShader_);
     geometry.DrawWindows(windowShader_, windowCount);
+
 }
 
 } // namespace gl

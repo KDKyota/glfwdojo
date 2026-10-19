@@ -5,6 +5,7 @@
 #include "render/SceneGeometry.h"
 #include "render/targets/GBuffer.h"
 #include "scene/SceneModels.h"
+#include "scene/SceneTerrain.h"
 
 namespace gl {
 
@@ -24,7 +25,7 @@ class GeometryPass {
      */
     void Execute(const GBuffer &gbuffer, const SceneGeometry &geometry, const SceneModels &models,
                  const RenderView &view, const RenderSettings &settings, float heightScale, std::size_t windowCount,
-                 const glm::vec4 &clipPlane = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+                 const SceneTerrain &terrain, const glm::vec4 &clipPlane = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 
   private:
     Shader floorShader_;

@@ -22,7 +22,7 @@ ShadowPass::ShadowPass()
 
 // 深度とガラスの透過色を同じ FBO へ glDrawBuffer で書き込み先を切り替えて作る
 void ShadowPass::Execute(const ShadowCubeTargets &targets, const SceneGeometry &geometry, const SceneModels &models,
-                         std::size_t windowCount, bool staticCasters) {
+                         std::size_t windowCount, bool staticCasters, const SceneTerrain &terrain) {
     glViewport(0, 0, shadow::kMapWidth, shadow::kMapHeight);
     glEnable(GL_DEPTH_TEST);
     for (std::size_t j = 0; j < layout::kPointLightCount; ++j) {
@@ -61,6 +61,7 @@ void ShadowPass::Execute(const ShadowCubeTargets &targets, const SceneGeometry &
             geometry.DrawWalls(depthShader_);
         }
         models.Draw(depthShader_);
+        terrain.Draw(depthShader_);
         depthShader_.setBool("useAlphaTest", true);
         geometry.DrawWindows(depthShader_, windowCount);
 

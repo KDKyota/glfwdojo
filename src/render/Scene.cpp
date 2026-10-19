@@ -77,7 +77,7 @@ void Scene::Render(float deltaTime, float heightScale) {
 
     // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
     profiler_.Measure(gl::GpuPass::Shadow, [&] {
-        shadowPass_.Execute(shadowTargets_, geometry_, models_, windowCount, settings_.shadowMapStaticCasters);
+        shadowPass_.Execute(shadowTargets_, geometry_, models_, windowCount, settings_.shadowMapStaticCasters, terrain_);
     });
     updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO
                          // は定数の集まりなのでupdateしない

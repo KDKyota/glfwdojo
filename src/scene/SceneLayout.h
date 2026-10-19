@@ -22,7 +22,7 @@ inline const std::vector<glm::vec3> cubePositions = {
     glm::vec3(0.0f, 0.0f, 20.0f),  // z=+25 壁の前
 };
 
-// 見つからないモデルは読み飛ばす
+/// 読み込むモデル 1 体ぶんの配置情報 読み込めなかったモデルは配置されない
 struct ModelSpawn {
     std::string path;
     glm::vec3 position;
@@ -34,7 +34,7 @@ struct ModelSpawn {
 inline const std::vector<ModelSpawn> modelSpawns = {
     {"resources/publishable-objects/DamagedHelmet.glb", glm::vec3(-3.0f, gl::units::floorY + 1.0f, -3.0f), glm::vec3(0.0f), 1.0f},
     {"resources/characters/RiggedSimple.glb", glm::vec3(0.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f},
-    {"resources/characters/CesiumMan.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f, true},
+    {"resources/characters/UAL1_Standard.glb", glm::vec3(3.0f, gl::units::floorY, -3.0f), glm::vec3(0.0f), 1.0f, true},
 };
 
 inline const std::array<PointLight, kPointLightCount> pointLights = {

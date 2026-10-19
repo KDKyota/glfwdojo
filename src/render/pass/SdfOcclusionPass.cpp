@@ -46,6 +46,8 @@ void SdfOcclusionPass::uploadSceneUbo(const SceneModels &models) {
         glm::vec4 wallCenters[2];
         glm::vec4 boxHalfSize;
         glm::vec4 wallHalfSize;
+        glm::vec4 floorHalfSize;
+        glm::vec4 floorCenter;
         glm::vec4 sceneParams;
         glm::mat4 modelWorldToLocalMatrices[texunit::kSdfMaxModels];
         glm::vec4 modelBoundsMin[texunit::kSdfMaxModels];
@@ -65,11 +67,14 @@ void SdfOcclusionPass::uploadSceneUbo(const SceneModels &models) {
 
     // 厚さゼロの板ポリは内外が定義できないので薄い厚みで近似する
     constexpr float wallHalfThickness = 0.1f;
+    constexpr float floorHalfThickness = 0.1f;
     constexpr float wallCenterY = (units::floorY + units::wallTopY) * 0.5f;
     constexpr float wallHalfHeight = (units::wallTopY - units::floorY) * 0.5f;
     block.wallCenters[0] = glm::vec4(0.0f, wallCenterY, -units::floorHalfExtent - wallHalfThickness, 0.0f);
     block.wallCenters[1] = glm::vec4(0.0f, wallCenterY, units::floorHalfExtent + wallHalfThickness, 0.0f);
     block.wallHalfSize = glm::vec4(units::floorHalfExtent, wallHalfHeight, wallHalfThickness, 0.0f);
+    block.floorHalfSize = glm::vec4(units::floorHalfExtent, floorHalfThickness, units::floorHalfExtent, 0.f);
+    block.floorCenter = glm::vec4(0.f, units::floorY - floorHalfThickness, 0.f, 0.f);
 
     // w はレイがシーンを確実に抜けきる距離（床の横幅）
     block.sceneParams = glm::vec4(units::floorY, static_cast<float>(layout::cubePositions.size()), 2.0f,

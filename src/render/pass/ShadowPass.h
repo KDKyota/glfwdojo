@@ -3,6 +3,7 @@
 #include "render/SceneGeometry.h"
 #include "render/targets/ShadowCubeTargets.h"
 #include "scene/SceneModels.h"
+#include "scene/SceneTerrain.h"
 
 namespace gl {
 
@@ -20,7 +21,7 @@ class ShadowPass {
      * @param staticCasters 床とキューブと壁もシャドウマップへ描くか
      */
     void Execute(const ShadowCubeTargets &targets, const SceneGeometry &geometry, const SceneModels &models,
-                 std::size_t windowCount, bool staticCasters);
+                 std::size_t windowCount, bool staticCasters, const SceneTerrain &terrain);
 
   private:
     Shader depthShader_;

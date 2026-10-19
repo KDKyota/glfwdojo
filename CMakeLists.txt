@@ -69,6 +69,7 @@ add_executable(
   src/scene/HeightField.cpp
   src/scene/TerrainMesh.cpp
   src/scene/SceneModels.cpp
+  src/scene/SceneTerrain.cpp
   third_party/stb_image_impl.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)

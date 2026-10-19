@@ -63,7 +63,7 @@ float HeightField::GetHeightAt(float x, float z) const {
     // 4 近傍のバイリニア補完
     float topValue = glm::mix(heightData_[topleft], heightData_[topright], bilinearWeightX);
     float bottomValue = glm::mix(heightData_[bottomleft], heightData_[bottomright], bilinearWeightX);
-    return glm::mix(topValue, bottomValue, bilinearWeightZ);
+    return glm::mix(topValue, bottomValue, bilinearWeightZ) + origin_.y;
 }
 
 glm::vec3 HeightField::GetNormalAt(float x, float z) const {

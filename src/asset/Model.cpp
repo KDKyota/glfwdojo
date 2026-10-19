@@ -10,6 +10,9 @@
 #include <utility>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include <glm/gtx/matrix_decompose.hpp>
 
 namespace {
 
@@ -95,6 +98,23 @@ void Model::loadModel(const std::string &path) {
     buildStaticDistanceFields(root_, glm::mat4(1.0f));
 
     loadAnimations(scene);
+
+    // アニメーションのログ出力
+    /*std::cout << "path: " << path_ << std::endl;
+    for (const auto &animation: animations_) {
+        std::cout << "Animation name: " << animation.name << std::endl;
+        std::cout << "duration: " << animation.duration << std::endl;
+        std::cout << "ticksPerSecond: " << animation.ticksPerSecond << std::endl;
+        std::cout << "duration in seconds: " << animation.duration / animation.ticksPerSecond << std::endl;
+        for (const auto &channel : animation.channels) {
+            std::cout << " node: " << channel.first << std::endl;
+            std::cout << "  positions: " << channel.second.positions.size() << std::endl;
+            std::cout << "  rotations: " << channel.second.rotations.size() << std::endl;
+            std::cout << "  scales: " << channel.second.scales.size() << std::endl;
+        }
+        
+    }*/
+
     boneMatrices_.assign(bones_.size(), glm::mat4(1.0f));
     updateBoneMatrices(root_, glm::mat4(1.0f), 0.0f);
 
@@ -145,6 +165,35 @@ void Model::buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &pa
 
     for (const ModelNode &child : node.children)
         buildStaticDistanceFields(child, nodeToModelRoot);
+}
+
+bool Model::isAnimationFinished() const {
+    if (activeAnimation_ >= 0 && !isLoopAnimation_ && animationTime_ >= animations_[activeAnimation_].duration) {
+        return true;
+    }
+    return false;
+}
+
+/// アニメーションを再生する
+void Model::PlayAnimation(const std::string &name, bool isLoopAnimation, float playbackSpeed) {
+    // 探索時に二分木探索をしてもいいかと思ったけど、せいぜい数十個程度のアニメーションしかないので線形探索で十分
+    for (size_t i = 0; i < animations_.size(); ++i) {
+        if (animations_[i].name == name) {
+            if (activeAnimation_ == static_cast<int>(i)) {
+                return; // すでに再生中
+            }
+            activeAnimation_ = static_cast<int>(i);
+            animationTime_ = 0.0f;
+            isLoopAnimation_ = isLoopAnimation;
+            playbackSpeed_ = playbackSpeed;
+
+            blendSourcePose_ = currentPose_; // クロスフェード用に現在のポーズを保存
+            blendElapsedTime_ = 0.0f;
+
+            return;
+        }
+    }
+    std::cerr << "Animation not found: " << name << std::endl;
 }
 
 /// boneMatrices_ を UBO へ書き込む
@@ -336,11 +385,11 @@ void Model::Draw(gl::Shader &shader, const glm::mat4 &modelMatrix) const {
     shader.setBool("hasBones", false);
 }
 
-void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform,
-                     gl::Shader &shader) const {
+void Model::drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform, gl::Shader &shader) const {
     // updateBoneMatrices と同じ変換を辿らないと アニメーションするノードにぶら下がる
     // 非スキンメッシュだけがバインドポーズに取り残される
-    const glm::mat4 worldTransform = parentTransform * nodeTransform(node, animationTime_);
+    const glm::mat4 worldTransform = parentTransform * nodePoseToMatrix(currentPose_.at(node.name));
+
 
     for (const unsigned int index : node.meshIndices) {
         const Mesh &mesh = meshes_[index];
@@ -393,25 +442,79 @@ void Model::loadAnimations(const aiScene *scene) {
     if (!animations_.empty()) activeAnimation_ = 0;
 }
 
-glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
-    if (activeAnimation_ < 0) return node.localTransform;
+//glm::mat4 Model::nodeTransform(const ModelNode &node, float time) const {
+//    if (activeAnimation_ < 0) return node.localTransform;
+//
+//    const Animation &animation = animations_[activeAnimation_];
+//    const auto found = animation.channels.find(node.name);
+//    if (found == animation.channels.end()) return node.localTransform;
+//
+//    const NodeAnimation &channel = found->second;
+//    const glm::vec3 position = sampleVec3(channel.positions, time, glm::vec3(0.0f));
+//    const glm::quat rotation = sampleQuat(channel.rotations, time);
+//    const glm::vec3 scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+//
+//    return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+//}
+
+NodePose Model::nodePose(const ModelNode &node, float time) const {
+    NodePose pose;
+    if (activeAnimation_ < 0) {
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(
+            node.localTransform,
+            pose.scale,
+            pose.rotation,
+            pose.translation,
+            skew,
+            perspective);
+        return pose;
+    }
 
     const Animation &animation = animations_[activeAnimation_];
     const auto found = animation.channels.find(node.name);
-    if (found == animation.channels.end()) return node.localTransform;
-
+    if (found == animation.channels.end()) {
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(
+            node.localTransform,
+            pose.scale,
+            pose.rotation,
+            pose.translation,
+            skew,
+            perspective);
+        return pose;
+    }
     const NodeAnimation &channel = found->second;
-    const glm::vec3 position = sampleVec3(channel.positions, time, glm::vec3(0.0f));
-    const glm::quat rotation = sampleQuat(channel.rotations, time);
-    const glm::vec3 scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+    pose.translation = sampleVec3(channel.positions, time, glm::vec3(0.0f));
+    pose.rotation = sampleQuat(channel.rotations, time);
+    pose.scale = sampleVec3(channel.scales, time, glm::vec3(1.0f));
+    return pose;
+}
 
-    return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+glm::mat4 Model::nodePoseToMatrix(const NodePose &pose) const {
+    return glm::translate(glm::mat4(1.0f), pose.translation) * glm::mat4_cast(pose.rotation) * glm::scale(glm::mat4(1.0f), pose.scale);
 }
 
 /// ルートには親がないので 掛けても影響がない glm::mat4(1.0f) を第二引数として渡す
 void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time) {
-    const glm::mat4 globalTransform = parentTransform * nodeTransform(node, time);
+    
     const auto found = bones_.find(node.name);
+    NodePose &currentPose = currentPose_[node.name] = nodePose(node, time);
+
+    if (blendWeight_ < 1.0f) {
+        if (blendSourcePose_.find(node.name) != blendSourcePose_.end()) {
+            const NodePose &sourcePose = blendSourcePose_.at(node.name);
+            NodePose blendedPose;
+            blendedPose.translation = glm::mix(sourcePose.translation, currentPose.translation, blendWeight_);
+            blendedPose.rotation = glm::slerp(sourcePose.rotation, currentPose.rotation, blendWeight_);
+            blendedPose.scale = glm::mix(sourcePose.scale, currentPose.scale, blendWeight_);
+            currentPose_[node.name] = blendedPose;
+        }
+    }
+    const glm::mat4 globalTransform = parentTransform * nodePoseToMatrix(currentPose);
+
     if (found != bones_.end()) {
         const BoneInfo &info = found->second;
         // globalInverse を掛けた分 drawNode 側でスキンメッシュに root_.localTransform を掛け直して辻褄を合わせる
@@ -421,12 +524,23 @@ void Model::updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTra
         updateBoneMatrices(child, globalTransform, time);
 }
 
+
+
 void Model::UpdateAnimation(float deltaTime) {
     if (activeAnimation_ < 0 || boneMatrices_.empty()) return;
 
     const Animation &animation = animations_[activeAnimation_];
-    animationTime_ += deltaTime * animation.ticksPerSecond;
-    if (animation.duration > 0.0f) animationTime_ = std::fmod(animationTime_, animation.duration);
+    animationTime_ += deltaTime * animation.ticksPerSecond * playbackSpeed_;
+
+    blendElapsedTime_ += deltaTime;
+
+    blendWeight_ = std::min(blendElapsedTime_ / kBlendDuration, 1.0f);
+
+    if (!isLoopAnimation_ && isAnimationFinished()) 
+        animationTime_ = animation.duration;
+    
+    if (isLoopAnimation_ && animation.duration > 0.0f)
+        animationTime_ = std::fmod(animationTime_, animation.duration);
 
     updateBoneMatrices(root_, glm::mat4(1.0f), animationTime_);
     uploadBoneMatrices();

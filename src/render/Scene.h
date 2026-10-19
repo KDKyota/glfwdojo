@@ -54,7 +54,7 @@ class Scene {
      */
     void Render(float deltaTime, float heightScale);
 
-    // ImGui のパネルから直接編集する
+    /// 実行時に変更できる描画設定への参照
     gl::RenderSettings &Settings() { return settings_; }
 
     // 三人称カメラの追従先 対象のモデルが読み込めていなければ nullptr
@@ -67,7 +67,7 @@ class Scene {
 
     const gl::GpuProfiler &Profiler() const { return profiler_; }
 
-    // 床の反射テクスチャ ImGui での確認用
+    /// 床の平面反射を描いたテクスチャを返す
     GLuint ReflectionColor() const { return reflectionTarget_.Color(); }
 
   private:

@@ -111,7 +111,15 @@ void Camera::ProcessMouseScroll(float yoffset) {
 };
 
 void Camera::SetFollowTarget(const glm::vec3 &position) {
+    glm::vec3 toTarget = position - followTarget_;
     followTarget_ = position;
+    if (glm::dot(toTarget, toTarget) > 10) { // TODO: この定数はかなり雑なので調整が必要
+        // 注視点が大きく動いたときは smoothedPivot_ も追従させる
+        smoothedPivot_ = PivotPosition();
+        orbitYaw_ = glm::radians(180.0f);
+        orbitPitch_ = glm::radians(-10.0f);
+
+    }
     hasFollowTarget_ = true;
 }
 
@@ -133,8 +141,8 @@ void Camera::ToggleMode() {
     if (!hasFollowTarget_) return;
 
     // 現在の視線を軌道角へ引き継ぐ 合わせないと切り替えた瞬間に画面が飛ぶ
-    orbitYaw_ = std::atan2(-Front.x, -Front.z);
-    orbitPitch_ = std::asin(glm::clamp(Front.y, -1.0f, 1.0f));
+    orbitYaw_ = glm::radians(180.0f);
+    orbitPitch_ = glm::radians(-10.0f);
     smoothedPivot_ = PivotPosition();
 
     mode_ = CameraMode::ThirdPerson;

@@ -40,6 +40,16 @@ struct StaticMeshDistanceField {
     glm::mat4 nodeToModelRoot;
 };
 
+/// 特定の時刻における 1 ノードの姿勢 NodeAnimation のキー列を補間して得る
+struct NodePose {
+    glm::vec3 translation{0.0f};
+    glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec3 scale{1.0f};
+};
+
+/// ボーンの姿勢を表す 1フレーム分の情報（クリップ間のクロスフェードに使う）
+using Pose = std::unordered_map<std::string, NodePose>;
+
 /// 1ノードのキーフレーム列（aiNodeAnim に対応）
 struct NodeAnimation {
     std::vector<AnimationKey<glm::vec3>> positions;
@@ -60,6 +70,8 @@ inline constexpr int kMaxBones = 128;
 // ボーンパレット用の UBO のバインディング 0 は Scene の Matrices が使っている
 inline constexpr unsigned int kBoneUBOBinding = 1;
 
+inline constexpr float kBlendDuration = 0.1f; // クロスフェードの時間（秒）
+
 /**
  * @brief Assimp で glTF/glb モデルを読み込み Mesh の集合とスキニング用のボーン情報を保持する
  */
@@ -69,8 +81,8 @@ class Model {
      * @brief モデルを読み込む
      *
      * @param path モデルファイルのパス
-     * @param cache テクスチャの多重ロードを避けるための共有キャッシュ
-     * @param sdfCache 距離場の多重焼き込みを避けるための共有キャッシュ
+     * @param[in,out] cache テクスチャの共有キャッシュ 読み込んだテクスチャが登録される
+     * @param[in,out] sdfCache 距離場の共有キャッシュ 焼いた距離場が登録される
      */
     Model(const std::string &path, TextureCache &cache, gl::MeshDistanceFieldCache &sdfCache);
 
@@ -96,12 +108,25 @@ class Model {
 
     /* ---- ここから下はスキニングのための情報 ---- */
     const ModelNode &RootNode() const { return root_; }
-    // ルートノードの変換の逆行列 掛け忘れるとモデル全体が変な位置とスケールで出る
+    // ルートノードの変換の逆行列 スキニング行列の計算に掛ける
     const glm::mat4 &GlobalInverseTransform() const { return globalInverseTransform_; }
     const std::unordered_map<std::string, BoneInfo> &Bones() const { return bones_; }
 
     // SDF 遮蔽物として使う 静的メッシュ（ボーン無し）ぶんの距離場
     const std::vector<StaticMeshDistanceField> &StaticDistanceFields() const { return staticDistanceFields_; }
+
+    /**
+     * @brief 名前でアニメーションを切り替え 現在のポーズからクロスフェードする
+     *
+     * 再生中と同じ名前なら何もしない 見つからなければ標準エラーへ報告して続行する
+     * @param name 再生するアニメーションの名前
+     * @param isLoopAnimation false なら1回だけ再生する
+     * @param playbackSpeed 再生速度の倍率
+     */
+    void PlayAnimation(const std::string &name, bool isLoopAnimation = true, float playbackSpeed = 1.0f);
+
+    /// 再生中のアニメーションが終了したかどうかを返す ループ再生中は常に false
+    bool isAnimationFinished() const;  
 
   private:
     std::vector<Mesh> meshes_;
@@ -124,6 +149,14 @@ class Model {
     std::vector<Animation> animations_;
     int activeAnimation_ = -1;   // 再生中のアニメーション -1 でなし
     float animationTime_ = 0.0f; // アニメーションの再生時間
+    bool isLoopAnimation_ = true; // ループ再生するかどうか
+    float playbackSpeed_ = 1.0f; // 再生速度の倍率
+
+    // アニメーションのクロスフェード用
+    Pose currentPose_;
+    Pose blendSourcePose_;
+    float blendElapsedTime_ = 0.0f; // ticksではなく秒
+    float blendWeight_ = 0.0f;      // 0.0～1.0 クロスフェードの重み
 
     /// Assimp でシーンを読み込む
     void loadModel(const std::string &path);
@@ -131,7 +164,11 @@ class Model {
     ModelNode processNode(const aiNode *node, const aiScene *scene);
     /// aiMesh から Mesh を組み立てる
     Mesh processMesh(const aiMesh *mesh, const aiScene *scene);
-    /// aiMesh のボーン情報を頂点へ書き込む
+    /**
+     * @brief aiMesh のボーン情報を頂点へ書き込む
+     *
+     * @param[in,out] vertices ボーン ID と重みを書き足す頂点列
+     */
     void loadBones(const aiMesh *mesh, std::vector<gl::Vertex> &vertices);
     /// aiMaterial から PbrMaterial を組み立てる
     gl::PbrMaterial loadMaterial(const aiMaterial *mat, const aiScene *scene);
@@ -139,11 +176,11 @@ class Model {
                                          const aiScene *scene);
     /**
      * @brief ノードを描画する
-     * @param [in] node 今書こうとしているノード
-     * @param [in] parentTransform このノードの親までの累積変換
-     * @param [in] skinnedWorldTransform スキンメッシュに使うワールド変換（modelMatrix * root_.localTransform
-     * 全ノード共通）
-     * @param [in] shader 描画に使うシェーダ
+     * @param node 描画するノード
+     * @param parentTransform このノードの親までの累積変換
+     * @param skinnedWorldTransform スキンメッシュに使うワールド変換
+     * （modelMatrix * root_.localTransform 全ノード共通）
+     * @param shader 描画に使うシェーダ
      */
     void drawNode(const ModelNode &node, const glm::mat4 &parentTransform, const glm::mat4 &skinnedWorldTransform,
                   gl::Shader &shader) const;
@@ -155,8 +192,19 @@ class Model {
     void buildStaticDistanceFields(const ModelNode &node, const glm::mat4 &parentTransform);
     /// aiAnimation をすべて読み込む
     void loadAnimations(const aiScene *scene);
-    /// チャンネルがあれば時刻 time のローカル変換を作り なければバインドポーズを返す
-    glm::mat4 nodeTransform(const ModelNode &node, float time) const;
-    /// ノード階層をたどり 各ボーンの最終変換行列を計算する
+    /**
+     * @brief ノードの姿勢を取得する
+     *
+     * @param time アニメーションの tick 単位の時刻（秒ではない）
+     */
+    NodePose nodePose(const ModelNode &node, float time) const;
+    /// NodePose を行列に変換する
+    glm::mat4 nodePoseToMatrix(const NodePose &pose) const;
+
+    /**
+     * @brief ノード階層をたどり 各ボーンの最終変換行列を計算する
+     *
+     * @param time アニメーションの tick 単位の時刻（秒ではない）
+     */
     void updateBoneMatrices(const ModelNode &node, const glm::mat4 &parentTransform, float time);
 };

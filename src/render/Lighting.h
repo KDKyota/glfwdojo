@@ -7,7 +7,9 @@
 
 namespace gl {
 /**
- * @brief 点光源 constant/linear/quadratic は距離による減衰係数
+ * @brief 点光源 位置と色（ambient/diffuse/specular）と 半影の幅を決める光源半径を持つ
+ *
+ * constant/linear/quadratic は逆二乗減衰へ移行したため未使用
  */
 struct PointLight {
     glm::vec3 position;
@@ -25,6 +27,11 @@ struct PointLight {
      */
     float calcRadius() const;
 
+    /**
+     * @brief ライトの各項をシェーダーの uniform へ送る
+     *
+     * @param name uniform の接頭辞 配列要素なら "pointLights[0]" のように添字まで含める
+     */
     void applyToShader(const Shader &shader, const std::string &name) const;
 };
 
@@ -36,6 +43,11 @@ struct DirectionalLight {
     glm::vec3 ambient = glm::vec3(0.05f, 0.05f, 0.05f);
     glm::vec3 diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
     glm::vec3 specular = glm::vec3(0.5f, 0.5f, 0.5f);
+    /**
+     * @brief ライトの各項をシェーダーの uniform へ送る
+     *
+     * @param name uniform の接頭辞
+     */
     void applyToShader(const Shader &shader, const std::string &name) const;
 };
 
@@ -53,7 +65,12 @@ struct SpotLight {
     float constant = 1.0f;
     float linear = 0.09f;
     float quadratic = 0.032f;
-    // position/direction はカメラに追従させる（ヘッドライト的な使い方）ため camera を受け取る
+    /**
+     * @brief ライトの各項をシェーダーの uniform へ送る
+     *
+     * @param name uniform の接頭辞
+     * @param camera position と direction を追従させるカメラ（ヘッドライト的な使い方）
+     */
     void applyToShader(const Shader &shader, const std::string &name, const Camera &camera) const;
 };
 

@@ -33,8 +33,8 @@ constexpr float ZOOM = 45.0f;
 constexpr float ORBIT_DISTANCE = 4.0f;
 constexpr float ORBIT_MIN_DISTANCE = 1.5f;
 constexpr float ORBIT_MAX_DISTANCE = 12.0f;
-// 注視点は足元ではなく胸のあたり
-constexpr float TARGET_HEIGHT = gl::units::characterHeight * 0.7f;
+
+constexpr float TARGET_HEIGHT = gl::units::characterHeight * 0.7f; // 注視点の位置（キャラクターの胸のあたり）
 // 追従の追いつく速さ
 constexpr float FOLLOW_STIFFNESS = 8.0f; // FPS による依存をなくす
 constexpr float PITCH_LIMIT = 89.0f;
@@ -65,13 +65,13 @@ class Camera {
     float MouseSensitivity;
     float Zoom;
 
-    // 注視点の式を一本化する Update() と ToggleMode() で食い違うと切り替え時だけ縦にずれる
+    // 三人称カメラの注視点位置を返す
     glm::vec3 PivotPosition() const;
 
     // Orientation から Front / Right / Up を作り直す
     void UpdateCameraVectors();
 
-    // pitch は Front から逆算する
+    // 現在の視線の仰角をラジアンで返す
     float CurrentPitch() const;
 
   public:
@@ -95,16 +95,26 @@ class Camera {
     const float &GetZoomValue() const;
 
     void ProcessKeyboard(Camera_Movement direction, float deltaTime);
+    /**
+     * @brief マウス移動量で視線（ThirdPerson では軌道角）を回す
+     *
+     * @param xoffset,yoffset マウスの移動量（ピクセル）
+     * @param constrainPitch true なら仰角を ±PITCH_LIMIT に制限する
+     */
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
     void ProcessMouseScroll(float yoffset);
 
     /* ---- 三人称モード ---- */
 
-    // 追従先は毎フレーム外から与える
+    /**
+     * @brief 三人称カメラの追従先を設定する 毎フレーム外から与える
+     *
+     * @param position 追従対象の足元の位置 注視点はここから TARGET_HEIGHT だけ上になる
+     */
     void SetFollowTarget(const glm::vec3 &position);
     void ClearFollowTarget();
 
-    // 追従先が無いときは三人称へ切り替えない（カメラが動かせなくなるため）
+    /// FreeLook と ThirdPerson を切り替える 追従先が無いときは ThirdPerson へ入らない
     void ToggleMode();
     CameraMode Mode() const;
 

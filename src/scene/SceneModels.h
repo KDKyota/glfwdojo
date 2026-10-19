@@ -27,10 +27,15 @@ struct StaticSdfInstance {
  */
 class SceneModels {
   public:
-    /// SceneLayout の modelSpawns に従って各モデルを読み込む
+    /**
+     * @brief SceneLayout の modelSpawns に従って各モデルを読み込む
+     *
+     * @param[in,out] cache テクスチャの共有キャッシュ 読み込んだテクスチャが登録される
+     * @param[in,out] sdfCache 距離場の共有キャッシュ 焼いた距離場が登録される
+     */
     explicit SceneModels(TextureCache &cache, MeshDistanceFieldCache &sdfCache);
 
-    /// アニメーションを進める 操作対象は待機モーションが無いので停止中は進めない
+    /// アニメーションを進める 
     void UpdateAnimation(float deltaTime);
 
     /// 操作対象のモデル行列を現在の位置と向きから作り直す
@@ -41,7 +46,7 @@ class SceneModels {
     // 操作対象 読み込めていなければ nullptr
     Character *PlayerCharacter() { return character_.get(); }
 
-    // 三人称カメラの追従先 対象のモデルが読み込めていなければ nullptr
+    /// 三人称カメラの追従先となるキャラクターの位置を返す 読み込めていなければ nullptr
     const glm::vec3 *FollowTargetPosition() const { return character_ ? &character_->Position() : nullptr; }
 
     /// SDF 遮蔽物として使う 静的メッシュの情報を 全モデルから集める
@@ -56,6 +61,15 @@ class SceneModels {
     int playerModelIndex_ = -1;
     // 操作対象の正面軸の補正とスケール 毎フレーム yaw を左から掛けて使う
     glm::mat4 playerBaseTransform_{1.0f}; // yaw 以外の回転とスケールを畳んだ行列
+
+    bool isPlayingLandAnimation_ = false; // ジャンプ着地アニメーションを再生中かどうか
+    CharacterMotionState prevMotionState_ = CharacterMotionState::Idle; // 前フレームでのモーション状態
+
+    bool IsPrevFallNowLand() const {
+        return (prevMotionState_ == CharacterMotionState::Fall  &&
+               character_->MotionState() == CharacterMotionState::Idle);
+    }
+
 };
 
 } // namespace gl

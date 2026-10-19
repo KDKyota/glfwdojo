@@ -1,0 +1,83 @@
+# API ドキュメント生成の設定 変更した項目だけを書いている（他は Doxygen の既定値）
+# 生成: リポジトリのルートで doxygen を実行する  出力: build/doxygen/html/index.html
+# 注意: クラス図の生成には Graphviz の dot が PATH に通っている必要がある
+
+#---------------------------------------------------------------------------
+# プロジェクト
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "glfwdojo"
+PROJECT_BRIEF          = "LearnOpenGL をモダンな C++ で実装し直して学ぶリポジトリ"
+OUTPUT_DIRECTORY       = build/doxygen
+OUTPUT_LANGUAGE        = Japanese
+DOXYFILE_ENCODING      = UTF-8
+INPUT_ENCODING         = UTF-8
+TAB_SIZE               = 4
+
+#---------------------------------------------------------------------------
+# 入力
+#---------------------------------------------------------------------------
+INPUT                  = src ./docs/mainpage.md
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.cpp *.md
+IMAGE_PATH             = images
+# 先頭の文を要約として扱う（/// の一行コメントを @brief 扱いにするため）
+JAVADOC_AUTOBRIEF      = YES
+
+#---------------------------------------------------------------------------
+# 抽出する範囲
+#---------------------------------------------------------------------------
+# コメントの有無にかかわらず全クラスを出す（関係図を欠けなく描くため）
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+# .cpp 内の無名名前空間のヘルパー関数も出す
+EXTRACT_ANON_NSPACES   = YES
+
+#---------------------------------------------------------------------------
+# 警告
+#---------------------------------------------------------------------------
+QUIET                  = YES
+WARNINGS               = YES
+# @param の名前が実際の引数と合わないなどの誤りを報告する
+WARN_IF_DOC_ERROR      = YES
+# 自明な引数は @param を省く方針なので 一部の引数だけ説明がある場合も報告しない
+WARN_NO_PARAMDOC       = NO
+WARN_IF_INCOMPLETE_DOC = NO
+WARN_LOGFILE           = build/doxygen/warnings.log
+
+#---------------------------------------------------------------------------
+# HTML 出力
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+SEARCHENGINE           = YES
+# ソースコードへのリンクを付け クラスや関数から定義へ飛べるようにする
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+# OS のダークモードに従わず常にライト表示にする
+HTML_COLORSTYLE        = LIGHT
+# 色味 彩度 明るさ 色相は 0〜359 彩度は 0〜255 ガンマは 40〜240 で 大きいほど明るくなる
+HTML_COLORSTYLE_HUE    = 210
+HTML_COLORSTYLE_SAT    = 120
+HTML_COLORSTYLE_GAMMA  = 120
+
+#---------------------------------------------------------------------------
+# 関係図（Graphviz）
+#---------------------------------------------------------------------------
+HAVE_DOT               = YES
+DOT_IMAGE_FORMAT       = svg
+# 図を拡大 縮小 ドラッグできるようにする
+INTERACTIVE_SVG        = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GRAPHICAL_HIERARCHY    = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+# メンバー名を載せた UML 風の図にする
+UML_LOOK               = YES
+UML_LIMIT_NUM_FIELDS   = 10
+# 呼び出し関係は図が大きくなりすぎるので出さない
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+DOT_GRAPH_MAX_NODES    = 60

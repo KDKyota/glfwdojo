@@ -25,9 +25,24 @@ class Texture {
     void uploadPixels(unsigned char *pixels, int width, int height, int channels);
 
   public:
-    // colorSpace にデフォルト値を持たせないのは 色かデータかを呼び出し側に必ず選ばせるため
+    /**
+     * @brief 画像ファイルを読み込んで GPU へ送る
+     *
+     * colorSpace にデフォルト値を持たせないのは 色かデータかを呼び出し側に必ず選ばせるため
+     *
+     * @param flip 読み込み時に上下を反転するか
+     * @param colorSpace 色なら SRGB データなら Linear
+     */
     Texture(const char *path, const bool flip, const ColorSpace colorSpace);
-    // glb の埋め込みテクスチャ用 data はメモリ上の圧縮画像 key はファイルとして存在しない識別子
+    /**
+     * @brief glb の埋め込みテクスチャをメモリから読み込んで GPU へ送る
+     *
+     * @param key キャッシュ上でファイルパスの代わりに使う識別子
+     * @param data 圧縮された画像のバイト列
+     * @param byteSize data のバイト数
+     * @param flip 読み込み時に上下を反転するか
+     * @param colorSpace 色なら SRGB データなら Linear
+     */
     Texture(const std::string &key, const unsigned char *data, int byteSize, const bool flip,
             const ColorSpace colorSpace);
     ~Texture();
@@ -39,6 +54,11 @@ class Texture {
     Texture(Texture &&other) noexcept;
     Texture &operator=(Texture &&) noexcept;
 
+    /**
+     * @brief このテクスチャを unit へバインドする
+     *
+     * @param unit テクスチャユニット番号（GL_TEXTURE0 からの連番）
+     */
     void bind(unsigned int unit) const;
     unsigned int getId() const;
 };

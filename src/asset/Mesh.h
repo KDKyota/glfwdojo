@@ -36,7 +36,7 @@ class Mesh {
     bool IsSkinned() const { return isSkinned_; }
     const glm::vec3 &BoundsMin() const { return boundsMin_; }
     const glm::vec3 &BoundsMax() const { return boundsMax_; }
-    // 距離場の焼き込みなど CPU 側で三角形データが必要な処理向け
+    // GPU へ送った後も CPU 側に保持している頂点とインデックス
     const std::vector<gl::Vertex> &Vertices() const { return vertices_; }
     const std::vector<unsigned int> &Indices() const { return indices_; }
 

@@ -10,7 +10,7 @@
 namespace gl {
 namespace {
 
-/// 点 p から三角形 (a, b, c) への最短距離　Ericson "Real-Time Collision Detection" 5.1.5 の実装
+/// 点 p から三角形 (a, b, c) への最短距離を返す
 float pointToTriangleDistance(const glm::vec3 &p, const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c) {
     const glm::vec3 ab = b - a;
     const glm::vec3 ac = c - a;
@@ -70,8 +70,7 @@ float closestUnsignedDistance(const glm::vec3 &p, const std::vector<Vertex> &ver
     return minDist;
 }
 
-/// 一般化巻き数（Jacobson et al.）で内外を判定する　三角形が張る立体角の総和が 4π に近ければ内側
-/// 奇偶則と違いメッシュが閉じていなくても破綻しない　DamagedHelmet.glb は境界エッジを 1800 本以上持つ
+/// 点が立体の内側にあるかを一般化巻き数で判定する　メッシュが閉じていなくても使える
 bool isInsideByWindingNumber(const glm::vec3 &p, const std::vector<Vertex> &vertices, const std::vector<unsigned int> &indices) {
     double solidAngleSum = 0.0;
     for (size_t i = 0; i + 2 < indices.size(); i += 3) {

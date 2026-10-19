@@ -14,6 +14,11 @@ class SsaoPass {
   public:
     SsaoPass();
 
+    /**
+     * @brief G-Buffer から遮蔽率を求め ブラーまで掛ける
+     *
+     * @param target 遮蔽率の出力先 本体とブラー後の2枚を持つ
+     */
     void Execute(const OcclusionTarget &target, const GBuffer &gbuffer, const NoiseTexture &noise,
                  const SceneGeometry &geometry);
 

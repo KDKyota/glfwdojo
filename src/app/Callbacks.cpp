@@ -46,6 +46,9 @@ void processInput(GLFWwindow *window, float deltaTime, Character *character, con
 
     if (camera->Mode() == CameraMode::ThirdPerson && character != nullptr) {
         glm::vec2 move(0.0f);
+        bool hasRunInput = false;
+        bool hasJumpInput = false;
+
         // 入力キーごとに移動する方向に割り当てる
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             move.y += 1.0f;
@@ -55,7 +58,10 @@ void processInput(GLFWwindow *window, float deltaTime, Character *character, con
             move.x += 1.0f;
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
             move.x -= 1.0f;
-        character->Move(camera->GetViewFront(), move, deltaTime, colliders);
+
+        hasRunInput = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+        hasJumpInput = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        character->Move(camera->GetViewFront(), hasRunInput, hasJumpInput, move, deltaTime, colliders);
     } else {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             camera->ProcessKeyboard(Camera_Movement::FORWARD, deltaTime);

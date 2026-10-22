@@ -4,17 +4,20 @@
 #include "render/GeometryData.h"
 #include "render/ibl/IblBaker.h"
 #include "scene/SceneLayout.h"
+#include "scene/SceneTerrain.h"
+#include "scene/HeightField.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace {
-// 全パスが view / projection を読む binding
-constexpr GLuint kMatricesUboBinding = 0;
-// 反射の解像度を画面の何分の1にするか 上げるとシーンをもう一度描く画素数がそのぶん減る
-constexpr int kReflectionResolutionDivisor = 2;
+namespace
+{
+    // 全パスが view / projection を読む binding
+    constexpr GLuint kMatricesUboBinding = 0;
+    // 反射の解像度を画面の何分の1にするか 上げるとシーンをもう一度描く画素数がそのぶん減る
+    constexpr int kReflectionResolutionDivisor = 2;
 } // namespace
 
 Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
@@ -29,7 +32,8 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
       // skyboxVAO と screen quad が必要なので geometry_ より後に置くこと
       iblMaps_(gl::BakeIblMaps(geometry_, scrWidth, scrHeight)),
       // models_ が先に構築されている前提（Scene.h でのメンバ宣言順を参照）
-      sdfOcclusionPass_(models_), bloomPass_(scrWidth, scrHeight) {
+      sdfOcclusionPass_(models_), bloomPass_(scrWidth, scrHeight)
+{
     frameArena_.Init(kFrameArenaBytes);
     // 既定の 0.5 では環境が高いミップまでぼけ 浅い角度で白い靄になる
     settings_.glassMaterial.roughness = 0.08f;
@@ -39,13 +43,21 @@ Scene::Scene(std::shared_ptr<Camera> camera, int scrWidth, int scrHeight)
     profiler_.Init();
 }
 
-void Scene::initColliders() {
+void Scene::initColliders()
+{
     constexpr float half = gl::units::floorHalfExtent;
     // 平面のままだと厚みが 0 で押し出す向きが決まらないので外側へ伸ばす
     constexpr float wallThickness = 5.0f;
 
     colliders_.Add({{-half, gl::units::floorY, -half - wallThickness}, {half, gl::units::wallTopY, -half}});
     colliders_.Add({{-half, gl::units::floorY, half}, {half, gl::units::wallTopY, half + wallThickness}});
+
+    std::vector<const gl::HeightField *> heightFields = terrain_.getHeightFields(); // terrains_ メンバを代入するための vector
+
+    for (const auto heightField : heightFields)
+    {
+        colliders_.Add(heightField);
+    }
 
     // cubeVertices は ±0.5 なので中心から半分ずつ広げる
     constexpr float cubeHalf = 0.5f;
@@ -55,7 +67,8 @@ void Scene::initColliders() {
     colliders_.Add({{-half, gl::units::floorY - 0.1f, -half}, {half, gl::units::floorY, half}}); // 床
 }
 
-void Scene::initMatricesUBO() {
+void Scene::initMatricesUBO()
+{
     matricesUBO_.create();
     glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO_);
     glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), nullptr, GL_STATIC_DRAW);
@@ -63,7 +76,8 @@ void Scene::initMatricesUBO() {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Scene::Render(float deltaTime, float heightScale) {
+void Scene::Render(float deltaTime, float heightScale)
+{
     models_.SyncPlayerMatrix();
     models_.UpdateAnimation(deltaTime);
 
@@ -76,61 +90,63 @@ void Scene::Render(float deltaTime, float heightScale) {
     const std::size_t windowCount = transparentPositions_.size();
 
     // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
-    profiler_.Measure(gl::GpuPass::Shadow, [&] {
-        shadowPass_.Execute(shadowTargets_, geometry_, models_, windowCount, settings_.shadowMapStaticCasters, terrain_);
-    });
+    profiler_.Measure(gl::GpuPass::Shadow, [&]
+                      { shadowPass_.Execute(shadowTargets_, geometry_, models_, windowCount, settings_.shadowMapStaticCasters, terrain_); });
     updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO
                          // は定数の集まりなのでupdateしない
     // [2.5] 床で折り返した鏡像カメラからシーンを描く
-    if (settings_.planarReflection) {
-        profiler_.Measure(gl::GpuPass::Reflection, [&] {
-            reflectionPass_.Execute(reflectionTarget_, reflectionGBuffer_, geometryPass_, deferredLightingPass_,
-                                    forwardPass_, geometry_, models_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_,
-                                    iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount, terrain_);
-        });
+    if (settings_.planarReflection)
+    {
+        profiler_.Measure(gl::GpuPass::Reflection, [&]
+                          { reflectionPass_.Execute(reflectionTarget_, reflectionGBuffer_, geometryPass_, deferredLightingPass_,
+                                                    forwardPass_, geometry_, models_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_,
+                                                    iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount, terrain_); });
         updateMatricesUBO(); // 注意: 反射パスが UBO の view を書き換えるので戻す
     }
     const gl::RenderView mainView{camera_->GetViewMatrix(), camera_->GetViewPosition()};
     // [3] 不透明物の幾何情報を G-Buffer へ
-    profiler_.Measure(gl::GpuPass::Geometry, [&] {
-        geometryPass_.Execute(gBuffer_, geometry_, models_, mainView, settings_, heightScale, windowCount, terrain_);
-    });
+    profiler_.Measure(gl::GpuPass::Geometry, [&]
+                      { geometryPass_.Execute(gBuffer_, geometry_, models_, mainView, settings_, heightScale, windowCount, terrain_); });
     // [4] G-Buffer から遮蔽率を求めてブラーまで
-    profiler_.Measure(gl::GpuPass::Ssao, [&] { ssaoPass_.Execute(ssaoTarget_, gBuffer_, noise_, geometry_); });
+    profiler_.Measure(gl::GpuPass::Ssao, [&]
+                      { ssaoPass_.Execute(ssaoTarget_, gBuffer_, noise_, geometry_); });
     // [4.5] SSAO が届かない数m規模の遮蔽を SDF から求める
-    profiler_.Measure(gl::GpuPass::SdfOcclusion, [&] {
-        sdfOcclusionPass_.Execute(sdfOcclusionTarget_, gBuffer_, noise_, geometry_, *camera_, settings_);
-    });
+    profiler_.Measure(gl::GpuPass::SdfOcclusion, [&]
+                      { sdfOcclusionPass_.Execute(sdfOcclusionTarget_, gBuffer_, noise_, geometry_, *camera_, settings_); });
     // [5] G-Buffer の深度を hdrTarget_ へ複製（前方描画の深度テスト用）
-    profiler_.Measure(gl::GpuPass::BlitDepth, [&] { gBuffer_.BlitDepthTo(hdrTarget_.Fbo()); });
+    profiler_.Measure(gl::GpuPass::BlitDepth, [&]
+                      { gBuffer_.BlitDepthTo(hdrTarget_.Fbo()); });
     // [6] G-Buffer + 影 + AO を合成
-    profiler_.Measure(gl::GpuPass::Lighting, [&] {
+    profiler_.Measure(gl::GpuPass::Lighting, [&]
+                      {
         const GLuint reflectionColor = settings_.planarReflection ? reflectionTarget_.Color() : 0;
         deferredLightingPass_.Execute(hdrTarget_.View(), gBuffer_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_,
-                                      iblMaps_, geometry_, mainView, settings_, reflectionColor);
-    });
+                                      iblMaps_, geometry_, mainView, settings_, reflectionColor); });
     // [7] G-Buffer に入れられないもの（ライトキューブ・空・ガラス）
-    profiler_.Measure(gl::GpuPass::Forward, [&] {
-        forwardPass_.Execute(hdrTarget_, geometry_, iblMaps_, shadowTargets_, *camera_, settings_, windowCount,
-                             collisionDebugDraw_, models_.PlayerCharacter());
-    });
+    profiler_.Measure(gl::GpuPass::Forward, [&]
+                      { forwardPass_.Execute(hdrTarget_, geometry_, iblMaps_, shadowTargets_, *camera_, settings_, windowCount,
+                                             collisionDebugDraw_, models_.PlayerCharacter()); });
     // [8] 明るい部分をぼかして Bloom の素材を作る
-    profiler_.Measure(gl::GpuPass::Bloom, [&] { bloomPass_.Execute(hdrTarget_); });
+    profiler_.Measure(gl::GpuPass::Bloom, [&]
+                      { bloomPass_.Execute(hdrTarget_); });
     // [9] トーンマッピングとガンマ補正をしてデフォルトFBOへ
     profiler_.Measure(gl::GpuPass::ToScreen,
-                      [&] { tonemapPass_.Execute(hdrTarget_, bloomPass_.Result(), geometry_, settings_); });
+                      [&]
+                      { tonemapPass_.Execute(hdrTarget_, bloomPass_.Result(), geometry_, settings_); });
 
     profiler_.EndFrame();
 }
 
 // 現在のガラスは乗算／加算ブレンドなので この並べ替えは正しさには影響しない
-void Scene::updateTransparentInstances() {
+void Scene::updateTransparentInstances()
+{
     const auto &windowPositions = gl::layout::windowPositions;
     auto sorted = frameArena_.Allocate<gl::TransparentDraw>(windowPositions.size());
     for (unsigned int i = 0; i < windowPositions.size(); ++i)
         sorted.data[i] = {glm::length(camera_->GetViewPosition() - windowPositions[i]), i};
     std::sort(sorted.begin(), sorted.end(),
-              [](const gl::TransparentDraw &a, const gl::TransparentDraw &b) { return a.distance > b.distance; });
+              [](const gl::TransparentDraw &a, const gl::TransparentDraw &b)
+              { return a.distance > b.distance; });
     transparentPositions_.clear();
     for (const auto &draw : sorted)
         transparentPositions_.push_back(windowPositions[draw.index]);
@@ -138,7 +154,8 @@ void Scene::updateTransparentInstances() {
     geometry_.UploadWindowInstances(transparentPositions_);
 }
 
-void Scene::updateMatricesUBO() {
+void Scene::updateMatricesUBO()
+{
     glm::mat4 view = camera_->GetViewMatrix();
     glm::mat4 projection =
         glm::perspective(glm::radians(camera_->GetZoomValue()), (float)scrWidth_ / (float)scrHeight_, 0.1f, 100.0f);

@@ -42,7 +42,7 @@ void HeightField::CalcResolutionLength() {
 }
 
 float HeightField::GetHeightAt(float x, float z) const {
-    float localX = x - origin_.x;
+    float localX = x - origin_.x; // 地形マップ上のローカル座標
     float localZ = z - origin_.z;
 
     float gridCoordX = std::clamp(localX / resolutionLength_.x, 0.f, static_cast<float>(heightMapDataWidth_) - 1.f);
@@ -64,6 +64,13 @@ float HeightField::GetHeightAt(float x, float z) const {
     float topValue = glm::mix(heightData_[topleft], heightData_[topright], bilinearWeightX);
     float bottomValue = glm::mix(heightData_[bottomleft], heightData_[bottomright], bilinearWeightX);
     return glm::mix(topValue, bottomValue, bilinearWeightZ) + origin_.y;
+}
+
+bool HeightField::IsOnTerrain(float x, float z) const {
+    float localX = x - origin_.x; // 地形マップ上のローカル座標
+    float localZ = z - origin_.z;
+
+    return 0 <= localX && localX < units::heightMapExtent.x && 0 <= localZ && localZ < units::heightMapExtent.z;
 }
 
 glm::vec3 HeightField::GetNormalAt(float x, float z) const {

@@ -37,7 +37,7 @@ namespace gl
         }
     }
 
-    std::vector<const HeightField *> SceneTerrain::getHeightField()
+    std::vector<const HeightField *> SceneTerrain::getHeightFields() const
     {
         std::vector<const HeightField *> result;
         for (const auto &terrain : terrains_)

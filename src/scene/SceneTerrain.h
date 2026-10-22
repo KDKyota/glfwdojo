@@ -21,7 +21,7 @@ class SceneTerrain {
     explicit SceneTerrain(TextureCache &cache);
     static Mesh buildMesh(HeightField &field, PbrMaterial material, const layout::HeightMapSpawn &spawn);
     void Draw(Shader &shader) const;
-    std::vector<const HeightField*> getHeightField();
+    std::vector<const HeightField*> getHeightFields() const;
 
   private:
     std::vector<std::unique_ptr<TerrainData>> terrains_;

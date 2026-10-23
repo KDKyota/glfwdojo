@@ -59,6 +59,13 @@ namespace gl
      */
     std::optional<float> FindGroundHeight(const glm::vec3 &footPos, const float radius) const;
 
+    /**
+     * @brief 地形の急な斜面方向に移動できないように補正する関数
+     * @param footPos 足元の位置
+     * @param horizontalMove そのフレームでの移動量
+     */
+    glm::vec3 ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::vec3 horizontalMove) const;
+
   private:
     std::vector<AABB> boxes_;
     std::vector<const HeightField *> terrains_;

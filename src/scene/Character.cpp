@@ -171,7 +171,14 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     // std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
 
-    position_ += direction * velocity_ * deltaTime;
+    // 水平移動量を扱う変数（この二行で水平量を取得する）
+    glm::vec3 horizontalMove = direction * velocity_ * deltaTime;
+    horizontalMove.y = 0.f; // 水平移動量なので、y成分を 0.f に
+    // position_ += direction * velocity_ * deltaTime;
+
+    // 崖などに移動する場合に補正した水平移動量に更新
+    horizontalMove = world.ConstrainMoveToSteepSlope(position_, horizontalMove);
+    position_ += horizontalMove;
 
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
     position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);

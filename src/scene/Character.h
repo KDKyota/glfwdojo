@@ -5,23 +5,26 @@
 #include "scene/Collision.h"
 #include "core/SceneUnits.h"
 
-namespace CharacterDefaults {
-// 進行方向へ向き直る速さ
-constexpr float TURN_STIFFNESS = 12.0f;
-// 衝突判定に使う円柱の半径 見た目のメッシュより少し太い
-constexpr float RADIUS = 0.5f;
-constexpr float RESPAWN_THRESHOLD_Y = -10.0f; // この高さより下に落ちたらリスポーンする
-// 高さはモデルの実寸を渡す これは読み込めなかった場合の既定値
-constexpr float HEIGHT = gl::units::characterHeight;
-constexpr float RESPAWN_HEIGHT = 2.0f * CharacterDefaults::HEIGHT; // リスポーン時の高さ
-constexpr float FOOT_RADIUS = 0.25f;                               // 足元の障害物判定に使う半径
+namespace CharacterDefaults
+{
+    // 進行方向へ向き直る速さ
+    constexpr float TURN_STIFFNESS = 12.0f;
+    // 衝突判定に使う円柱の半径 見た目のメッシュより少し太い
+    constexpr float RADIUS = 0.5f;
+    constexpr float RESPAWN_THRESHOLD_Y = -10.0f; // この高さより下に落ちたらリスポーンする
+    // 高さはモデルの実寸を渡す これは読み込めなかった場合の既定値
+    constexpr float HEIGHT = gl::units::characterHeight;
+    constexpr float RESPAWN_HEIGHT = 2.0f * CharacterDefaults::HEIGHT; // リスポーン時の高さ
+    constexpr float FOOT_RADIUS = 0.25f;                               // 足元の障害物判定に使う半径
+    constexpr float CLIMB_MAX_DEGREE = 45.f;
 
 } // namespace CharacterDefaults
 
 /**
  * @brief キャラクターのモーション状態
  */
-enum class CharacterMotionState {
+enum class CharacterMotionState
+{
     Idle,
     Walk,
     Run,
@@ -33,8 +36,9 @@ enum class CharacterMotionState {
 /**
  * @brief プレイヤーが操作するキャラクターの位置 向き 動作状態を持つ
  */
-class Character {
-  public:
+class Character
+{
+public:
     /**
      * @brief 足元の位置を指定して生成する
      */
@@ -51,16 +55,20 @@ class Character {
      */
     void Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime, const gl::CollisionWorld &world);
 
-    const glm::vec3 &Position() const {
+    const glm::vec3 &Position() const
+    {
         return position_;
     }
-    float Radius() const {
+    float Radius() const
+    {
         return CharacterDefaults::RADIUS;
     }
-    float Height() const {
+    float Height() const
+    {
         return height_;
     }
-    float Yaw() const {
+    float Yaw() const
+    {
         return yaw_;
     }
 
@@ -71,7 +79,7 @@ class Character {
 
     void Respawn();
 
-  private:
+private:
     glm::vec3 position_;
     float yaw_ = 0.0f;
     float height_ = CharacterDefaults::HEIGHT;

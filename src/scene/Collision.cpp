@@ -1,5 +1,6 @@
 #include "scene/Collision.h"
 #include "HeightField.h"
+#include "Character.h"
 
 #include <algorithm>
 #include <cmath>
@@ -121,4 +122,32 @@ std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footP
     }
 
     return groundHeight;
+}
+
+glm::vec3 gl::CollisionWorld::ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::vec3 horizontalMove) const
+{
+    glm::vec3 nextFramePos = footPos + horizontalMove;
+    glm::vec3 moveAmount = horizontalMove; // 移動量（return の値）
+    for (const auto &terrain : terrains_)
+    {
+        if (!terrain->IsOnTerrain(nextFramePos.x, nextFramePos.z)) // 地形ではないなら関係ない（TODO: 床に階段をつくとなったときには変更が必要）
+            continue;
+        if (terrain->GetHeightAt(nextFramePos.x, nextFramePos.z) <= footPos.y) // 登らないときは関係ない
+            continue;
+
+        glm::vec3 normal = terrain->GetNormalAt(nextFramePos.x, nextFramePos.z);
+
+        if (normal.y >= glm::cos(glm::radians(CharacterDefaults::CLIMB_MAX_DEGREE))) // ここでは登れる傾きなので何もしない
+            continue;
+
+        // 下る向き（水平成分）
+        glm::vec3 downDirection = glm::normalize(glm::vec3(normal.x, 0.f, normal.z));
+        // 登る量（horizontalMove と downDirection が逆向きなら崖へ向かっていることになる）
+        float climbAmount = glm::dot(moveAmount, downDirection);
+        if (climbAmount < 0) { // 崖へ向かっているとき
+            moveAmount -= downDirection * climbAmount;
+        }
+    }
+    return moveAmount;
+    
 }

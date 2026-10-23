@@ -1,45 +1,53 @@
 #include "scene/Character.h"
+#include "core/SceneUnits.h"
 
 #include <cmath>
 #include <iostream>
 
-namespace {
+namespace
+{
 
-constexpr float kPi = 3.14159265358979323846f;
-constexpr float kInputEpsilon = 1e-4f; // 0 より大きいけど十分に小さい数
+    constexpr float kPi = 3.14159265358979323846f;
+    constexpr float kInputEpsilon = 1e-4f; // 0 より大きいけど十分に小さい数
+    constexpr float kStickDist = gl::units::stairRiser;
 
-/// 角度を -π〜π の範囲へ正規化する
-float wrapAngle(float radians) {
-    while (radians > kPi)
-        radians -= 2.0f * kPi;
-    while (radians < -kPi)
-        radians += 2.0f * kPi;
-    return radians;
-}
+    /// 角度を -π〜π の範囲へ正規化する
+    float wrapAngle(float radians)
+    {
+        while (radians > kPi)
+            radians -= 2.0f * kPi;
+        while (radians < -kPi)
+            radians += 2.0f * kPi;
+        return radians;
+    }
 
-CharacterMotionState determineMotionState(bool hasMoveInput, bool hasRunInput) {
-    if (!hasMoveInput)
-        return CharacterMotionState::Idle;
-    if (hasRunInput)
-        return CharacterMotionState::Run;
+    CharacterMotionState determineMotionState(bool hasMoveInput, bool hasRunInput)
+    {
+        if (!hasMoveInput)
+            return CharacterMotionState::Idle;
+        if (hasRunInput)
+            return CharacterMotionState::Run;
 
-    return CharacterMotionState::Walk;
-}
+        return CharacterMotionState::Walk;
+    }
 } // namespace
 
-Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height), spawnPos_(position + glm::vec3(0.0f, CharacterDefaults::RESPAWN_HEIGHT, 0.0f)) {
+Character::Character(const glm::vec3 &position, float height) : position_(position), height_(height), spawnPos_(position + glm::vec3(0.0f, CharacterDefaults::RESPAWN_HEIGHT, 0.0f))
+{
 }
 
-void Character::Respawn() {
+void Character::Respawn()
+{
     position_ = spawnPos_;
     verticalVelocity_ = 0.0f;
     yaw_ = 0.0f;
-    
 }
 
 void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime,
-                     const gl::CollisionWorld &world) {
-    if (position_.y < CharacterDefaults::RESPAWN_THRESHOLD_Y) {
+                     const gl::CollisionWorld &world)
+{
+    if (position_.y < CharacterDefaults::RESPAWN_THRESHOLD_Y)
+    {
         Respawn();
     }
     /*if (MotionState() != CharacterMotionState::Jump && hasJumpInput) {
@@ -54,47 +62,81 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     }*/
 
     const std::optional<float> groundHeight = world.FindGroundHeight(position_, CharacterDefaults::FOOT_RADIUS);
-   
-    //if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
-    //    SetMotionState(CharacterMotionState::Fall);
-    //}
+
+    // if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
+    //     SetMotionState(CharacterMotionState::Fall);
+    // }
 
     verticalVelocity_ -= gl::units::gravity * deltaTime;
 
     float newHeight = position_.y + verticalVelocity_ * deltaTime; // 移動後の足元の高さ
-    const bool isOnGround = groundHeight.has_value() && newHeight <= groundHeight.value();
-    if (isOnGround) { // 地面にいる
+
+    // 前フレームのステートを取得して接地しているか
+    const bool isPrevFrameOnGround = (MotionState() == CharacterMotionState::Idle || MotionState() == CharacterMotionState::Walk || MotionState() == CharacterMotionState::Run);
+    // 上向きに動いていない
+    const bool isNotMoveToUp = verticalVelocity_ <= 0;
+    // 地面に吸着していい条件
+    const bool canStickToGround = isPrevFrameOnGround && isNotMoveToUp;
+
+    bool isOnGround = groundHeight.has_value() && newHeight <= groundHeight.value();
+
+    if (groundHeight.has_value()) // 地面がある
+    {
+        // 地面にめり込んでいるか
+        const bool isSinkIntoGround = newHeight <= groundHeight.value();
+        // 吸着距離にいるか
+        const bool isInStickDist = (newHeight - groundHeight.value()) <= kStickDist;
+        isOnGround = isSinkIntoGround || (canStickToGround && isInStickDist);
+    }
+    else // 地面がないとき
+    {
+        isOnGround = false;
+    }
+
+    if (isOnGround)
+    { // 地面にいる
         position_.y = groundHeight.value();
         verticalVelocity_ = 0.0f;
-    } else { // 空中にいる
+    }
+    else
+    { // 空中にいる
         position_.y = newHeight;
     }
 
-    switch (MotionState()) {
+    switch (MotionState())
+    {
     case CharacterMotionState::Walk:
     case CharacterMotionState::Run:
     case CharacterMotionState::Idle:
-        if (!isOnGround) {
+        if (!isOnGround)
+        {
             SetMotionState(CharacterMotionState::Fall);
-        } else if (hasJumpInput) {
+        }
+        else if (hasJumpInput)
+        {
             verticalVelocity_ = gl::units::jumpSpeed;
             SetMotionState(CharacterMotionState::Jump_Start);
-        } else {
-           SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
+        }
+        else
+        {
+            SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
         }
         break;
     case CharacterMotionState::Jump_Start:
-        if (verticalVelocity_ <= 0.0f) SetMotionState(CharacterMotionState::Fall);
+        if (verticalVelocity_ <= 0.0f)
+            SetMotionState(CharacterMotionState::Fall);
         break;
     case CharacterMotionState::Fall:
-        if (isOnGround) {
+        if (isOnGround)
+        {
             SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
         }
         break;
     }
 
     // 状態の更新に応じて水平速度を更新する
-    switch (MotionState()) {
+    switch (MotionState())
+    {
     case CharacterMotionState::Walk:
         velocity_ = gl::units::walkSpeed;
         break;
@@ -106,15 +148,18 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         break;
     case CharacterMotionState::Jump_Start:
     case CharacterMotionState::Fall:
-        if (hasMoveInput) {
+        if (hasMoveInput)
+        {
             velocity_ = hasRunInput ? gl::units::runSpeed : gl::units::walkSpeed;
-        } else {
+        }
+        else
+        {
             velocity_ = 0.0f;
         }
         break;
     }
 
-    if (!hasMoveInput) 
+    if (!hasMoveInput)
         return; // 注意：この early return を入れないと、以降でのderection の計算で 0 除算が起きる
 
     // 注意: forward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
@@ -124,17 +169,18 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     // 注意: 合成してから正規化しないと斜め移動が sqrt(2) 倍速くなる
     const glm::vec3 direction = glm::normalize(forward * input.y + right * input.x);
 
-    //std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
+    // std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
 
     position_ += direction * velocity_ * deltaTime;
-    
+
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
     position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);
     // 壁沿いに滑っている間も入力した向きを保つ
     turnTowards(direction, deltaTime);
 }
 
-void Character::turnTowards(const glm::vec3 &direction, float deltaTime) {
+void Character::turnTowards(const glm::vec3 &direction, float deltaTime)
+{
     const float targetYaw = std::atan2(direction.x, direction.z);
     // 注意: ここで差を折り返さないと 180 度付近で逆回りする
     const float delta = wrapAngle(targetYaw - yaw_);

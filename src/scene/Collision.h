@@ -60,6 +60,13 @@ namespace gl
     std::optional<float> FindGroundHeight(const glm::vec3 &footPos, const float radius) const;
 
     /**
+     * @brief 足元の位置が急な斜面かどうかを判定する関数
+     * @param normal 足元の地形の法線ベクトル
+     * @return 急な斜面なら true
+     */
+    bool IsSteepGround(glm::vec3 normal) const;
+
+    /**
      * @brief 地形の急な斜面方向に移動できないように補正する関数
      * @param footPos 足元の位置
      * @param horizontalMove そのフレームでの移動量

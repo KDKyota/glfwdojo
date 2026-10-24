@@ -124,6 +124,10 @@ std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footP
     return groundHeight;
 }
 
+bool gl::CollisionWorld::IsSteepGround(glm::vec3 normal) const{
+    return normal.y < glm::cos(glm::radians(CharacterDefaults::CLIMB_MAX_DEGREE));
+}
+
 glm::vec3 gl::CollisionWorld::ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::vec3 horizontalMove) const
 {
     glm::vec3 nextFramePos = footPos + horizontalMove;
@@ -137,7 +141,7 @@ glm::vec3 gl::CollisionWorld::ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::
 
         glm::vec3 normal = terrain->GetNormalAt(nextFramePos.x, nextFramePos.z);
 
-        if (normal.y >= glm::cos(glm::radians(CharacterDefaults::CLIMB_MAX_DEGREE))) // ここでは登れる傾きなので何もしない
+        if (!IsSteepGround(normal)) // ここでは登れる傾きなので何もしない
             continue;
 
         // 下る向き（水平成分）

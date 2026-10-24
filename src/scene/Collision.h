@@ -60,6 +60,14 @@ namespace gl
     std::optional<float> FindGroundHeight(const glm::vec3 &footPos, const float radius) const;
 
     /**
+     * @brief 地面の法線を返す
+     * @param footPos 足元の位置
+     * @return std::optional<glm::vec3> 地面の法線 見つからなければ nullopt
+     * TODO: 地形の上に AABB があっても地形の法線を返す状態になっている
+     */
+    std::optional<glm::vec3> FindGroundNormal(const glm::vec3 &footPos) const;
+
+    /**
      * @brief 足元の位置が急な斜面かどうかを判定する関数
      * @param normal 足元の地形の法線ベクトル
      * @return 急な斜面なら true

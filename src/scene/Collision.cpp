@@ -124,7 +124,21 @@ std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footP
     return groundHeight;
 }
 
-bool gl::CollisionWorld::IsSteepGround(glm::vec3 normal) const{
+std::optional<glm::vec3> gl::CollisionWorld::FindGroundNormal(const glm::vec3 &footPos) const
+{
+    std::optional<glm::vec3> groundNormal;
+    for (const HeightField *terrain : terrains_)
+    {
+        // 足元が地形の外なら continue 
+        if (!terrain->IsOnTerrain(footPos.x, footPos.z))
+            continue;
+        groundNormal = terrain->GetNormalAt(footPos.x, footPos.z);
+    }
+    return groundNormal;
+}
+
+bool gl::CollisionWorld::IsSteepGround(glm::vec3 normal) const
+{
     return normal.y < glm::cos(glm::radians(CharacterDefaults::CLIMB_MAX_DEGREE));
 }
 
@@ -148,10 +162,10 @@ glm::vec3 gl::CollisionWorld::ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::
         glm::vec3 downDirection = glm::normalize(glm::vec3(normal.x, 0.f, normal.z));
         // 登る量（horizontalMove と downDirection が逆向きなら崖へ向かっていることになる）
         float climbAmount = glm::dot(moveAmount, downDirection);
-        if (climbAmount < 0) { // 崖へ向かっているとき
+        if (climbAmount < 0)
+        { // 崖へ向かっているとき
             moveAmount -= downDirection * climbAmount;
         }
     }
     return moveAmount;
-    
 }

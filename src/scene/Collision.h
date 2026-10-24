@@ -16,6 +16,13 @@ namespace gl
     glm::vec3 max{0.0f};
   };
 
+  /// 地形情報をまとめた構造体
+  struct GroundContact
+  {
+    float height;
+    glm::vec3 normal;
+  };
+
   /**
    * @brief 障害物の一覧を持ち 円柱との重なりを解消する
    */
@@ -57,7 +64,30 @@ namespace gl
      * @param radius 足元の判定に使う円柱の半径
      * @return std::optional<float> 地面から足元までの高さ、見つからなければ nullopt
      */
-    std::optional<float> FindGroundHeight(const glm::vec3 &footPos, const float radius) const;
+    // std::optional<float> FindGroundHeight(const glm::vec3 &footPos, const float radius) const;
+
+    /**
+     * @brief 地面の法線を返す
+     * @param footPos 足元の位置
+     * @return std::optional<glm::vec3> 地面の法線 見つからなければ nullopt
+     * TODO: 地形の上に AABB があっても地形の法線を返す状態になっている
+     */
+    // std::optional<glm::vec3> FindGroundNormal(const glm::vec3 &footPos) const;
+
+    /**
+     * @brief 地形情報を返す
+     * @param footPos 足元の位置（円柱の底面の中心）
+     * @param radius 足元の判定に使う円柱の半径
+     * @return std::optional<GroundContact> 地面の高さと法線 そこに地面がないなら nullopt
+     */
+    std::optional<GroundContact> FindGround(const glm::vec3 &footPos, const float radius) const;
+
+    /**
+     * @brief 足元の位置が急な斜面かどうかを判定する関数
+     * @param normal 足元の地形の法線ベクトル
+     * @return 急な斜面なら true
+     */
+    bool IsSteepGround(glm::vec3 normal) const;
 
     /**
      * @brief 地形の急な斜面方向に移動できないように補正する関数

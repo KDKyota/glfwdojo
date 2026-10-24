@@ -46,6 +46,8 @@ void Character::Respawn()
 void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world)
 {
+
+    /* ---- 奈落に落ちていたらスポーン地点へ戻し 移動入力の有無を確かめる ---- */
     if (position_.y < CharacterDefaults::RESPAWN_THRESHOLD_Y)
     {
         Respawn();
@@ -61,16 +63,20 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         SetMotionState(determineMotionState(hasMoveInput, hasRunInput, hasJumpInput));
     }*/
 
-    const std::optional<float> groundHeight = world.FindGroundHeight(position_, CharacterDefaults::FOOT_RADIUS);
+    /* ---- 足元の地面を調べる 以降の接地判定と状態遷移はこの結果を使う ---- */
+    const std::optional<gl::GroundContact> ground = world.FindGround(position_, CharacterDefaults::FOOT_RADIUS);
 
     // if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
     //     SetMotionState(CharacterMotionState::Fall);
     // }
 
+    /* ---- 重力で縦速度を更新し 移動後の足元の高さを求める ---- */
+
     verticalVelocity_ -= gl::units::gravity * deltaTime;
 
     float newHeight = position_.y + verticalVelocity_ * deltaTime; // 移動後の足元の高さ
 
+    /* ---- 接地判定 めり込みか吸着なら接地とみなして足を地面に合わせる ここでの MotionState() はまだ前フレームの状態 ---- */
     // 前フレームのステートを取得して接地しているか
     const bool isPrevFrameOnGround = (MotionState() == CharacterMotionState::Idle || MotionState() == CharacterMotionState::Walk || MotionState() == CharacterMotionState::Run);
     // 上向きに動いていない
@@ -78,14 +84,15 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     // 地面に吸着していい条件
     const bool canStickToGround = isPrevFrameOnGround && isNotMoveToUp;
 
-    bool isOnGround = groundHeight.has_value() && newHeight <= groundHeight.value();
 
-    if (groundHeight.has_value()) // 地面がある
+    bool isOnGround = ground.has_value() && newHeight <= ground->height;
+
+    if (ground.has_value()) // 地面がある
     {
         // 地面にめり込んでいるか
-        const bool isSinkIntoGround = newHeight <= groundHeight.value();
+        const bool isSinkIntoGround = newHeight <= ground->height;
         // 吸着距離にいるか
-        const bool isInStickDist = (newHeight - groundHeight.value()) <= kStickDist;
+        const bool isInStickDist = (newHeight - ground->height) <= kStickDist;
         isOnGround = isSinkIntoGround || (canStickToGround && isInStickDist);
     }
     else // 地面がないとき
@@ -95,7 +102,8 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     if (isOnGround)
     { // 地面にいる
-        position_.y = groundHeight.value();
+
+        position_.y = ground->height;
         verticalVelocity_ = 0.0f;
     }
     else
@@ -103,6 +111,8 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         position_.y = newHeight;
     }
 
+
+    /* ---- 状態遷移 前フレームの状態と接地判定と入力から今フレームの状態を決める ---- */
     switch (MotionState())
     {
     case CharacterMotionState::Walk:
@@ -134,7 +144,8 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         break;
     }
 
-    // 状態の更新に応じて水平速度を更新する
+
+    /* ---- 今のフレームの状態から水平速度を決める ---- */
     switch (MotionState())
     {
     case CharacterMotionState::Walk:
@@ -159,6 +170,8 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         break;
     }
 
+
+    /* ---- 水平移動 入力の向きへ動かし 崖と箱の壁で補正してから向き直る ---- */
     if (!hasMoveInput)
         return; // 注意：この early return を入れないと、以降でのderection の計算で 0 除算が起きる
 

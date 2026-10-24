@@ -61,7 +61,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         SetMotionState(determineMotionState(hasMoveInput, hasRunInput, hasJumpInput));
     }*/
 
-    const std::optional<float> groundHeight = world.FindGroundHeight(position_, CharacterDefaults::FOOT_RADIUS);
+    const std::optional<gl::GroundContact> ground = world.FindGround(position_, CharacterDefaults::FOOT_RADIUS);
 
     // if (!groundHeight.has_value()) { // 床がない場合は落下状態にする
     //     SetMotionState(CharacterMotionState::Fall);
@@ -78,14 +78,14 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     // 地面に吸着していい条件
     const bool canStickToGround = isPrevFrameOnGround && isNotMoveToUp;
 
-    bool isOnGround = groundHeight.has_value() && newHeight <= groundHeight.value();
+    bool isOnGround = ground.has_value() && newHeight <= ground->height;
 
-    if (groundHeight.has_value()) // 地面がある
+    if (ground.has_value()) // 地面がある
     {
         // 地面にめり込んでいるか
-        const bool isSinkIntoGround = newHeight <= groundHeight.value();
+        const bool isSinkIntoGround = newHeight <= ground->height;
         // 吸着距離にいるか
-        const bool isInStickDist = (newHeight - groundHeight.value()) <= kStickDist;
+        const bool isInStickDist = (newHeight - ground->height) <= kStickDist;
         isOnGround = isSinkIntoGround || (canStickToGround && isInStickDist);
     }
     else // 地面がないとき
@@ -95,7 +95,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     if (isOnGround)
     { // 地面にいる
-        position_.y = groundHeight.value();
+        position_.y = ground->height;
         verticalVelocity_ = 0.0f;
     }
     else

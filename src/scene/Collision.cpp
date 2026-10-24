@@ -90,7 +90,7 @@ glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radiu
     return result;
 }
 
-std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footPos, const float radius) const
+/* std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footPos, const float radius) const
 {
     std::optional<float> groundHeight;
     // 床や箱などの AABB 上の処理
@@ -129,17 +129,53 @@ std::optional<glm::vec3> gl::CollisionWorld::FindGroundNormal(const glm::vec3 &f
     std::optional<glm::vec3> groundNormal;
     for (const HeightField *terrain : terrains_)
     {
-        // 足元が地形の外なら continue 
+        // 足元が地形の外なら continue
         if (!terrain->IsOnTerrain(footPos.x, footPos.z))
             continue;
         groundNormal = terrain->GetNormalAt(footPos.x, footPos.z);
     }
     return groundNormal;
-}
+} */
 
 bool gl::CollisionWorld::IsSteepGround(glm::vec3 normal) const
 {
     return normal.y < glm::cos(glm::radians(CharacterDefaults::CLIMB_MAX_DEGREE));
+}
+
+std::optional<gl::GroundContact> gl::CollisionWorld::FindGround(const glm::vec3 &footPos, const float radius) const
+{
+    std::optional<GroundContact> ground;
+    // 床や箱などの AABB 上の処理
+    for (const AABB &box : boxes_)
+    {
+        // 足元の XZ が矩形の外側にあれば continue
+        if (footPos.x + radius < box.min.x || footPos.x - radius > box.max.x || footPos.z + radius < box.min.z || footPos.z - radius > box.max.z)
+            continue;
+
+        if (footPos.y >= box.max.y - kGroundContactTolerance)
+        {
+            if (!ground.has_value() || box.max.y > ground->height)
+            {                                                   // groundheight の値が box の天井より低いなら
+                ground = {box.max.y, glm::vec3(0.f, 1.f, 0.f)}; // y 正の方向を法線とする
+                // 注意：optional の値に ground->height = ... のようにアロー演算しで値を代入するとエラーは出ないけど結果が壊れる（詳しくはググって）
+            }
+        }
+    }
+
+    // 次のループは地形（Terrain）上での処理
+    for (const HeightField *terrain : terrains_)
+    {
+        const float terrainHeight = terrain->GetHeightAt(footPos.x, footPos.z);
+        // 足元の中心一点を確認する
+        // 足元の中心点が地形の外側にあれば continue
+        if (!terrain->IsOnTerrain(footPos.x, footPos.z))
+            continue;
+        if (!ground.has_value() || terrainHeight > ground->height)
+        {
+            ground = {terrainHeight, terrain->GetNormalAt(footPos.x, footPos.z)};
+        }
+    }
+    return ground;
 }
 
 glm::vec3 gl::CollisionWorld::ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::vec3 horizontalMove) const

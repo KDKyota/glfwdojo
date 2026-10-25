@@ -118,7 +118,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         steepThreshold = CharacterDefaults::CLIMB_MAX_DEGREE;
     bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal, steepThreshold); // 地面にいるけど急斜面ではない
     bool isOnSteepGround = isOnGround && world.IsSteepGround(ground->normal, steepThreshold);     // 地面にいて急斜面
-    if (isOnSteepGround)
+    if (isOnSteepGround) 
     {
         steepCountTime_ += deltaTime;
     }

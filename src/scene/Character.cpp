@@ -112,16 +112,22 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     }
 
     bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal, CharacterDefaults::CLIMB_MAX_DEGREE); // 地面にいるけど急斜面ではない
+    bool isOnSteepGround = isOnGround && world.IsSteepGround(ground->normal, CharacterDefaults::CLIMB_MAX_DEGREE);     // 地面にいて急斜面
 
     /* ---- 状態遷移 前フレームの状態と接地判定と入力から今フレームの状態を決める ---- */
+
     switch (MotionState())
     {
     case CharacterMotionState::Walk:
     case CharacterMotionState::Run:
     case CharacterMotionState::Idle:
-        if (!isOnWalkableGround)
+        if (!isOnGround) // 空中にいたら
         {
             SetMotionState(CharacterMotionState::Fall);
+        }
+        else if (isOnSteepGround)
+        {
+            SetMotionState(CharacterMotionState::Slide);
         }
         else if (hasJumpInput)
         {
@@ -138,13 +144,27 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
             SetMotionState(CharacterMotionState::Fall);
         break;
     case CharacterMotionState::Fall:
-        if (isOnWalkableGround)
+        if (isOnWalkableGround) // 空中にいたけど 立てる地面にいたら
         {
             SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
         }
+        else if (isOnSteepGround) // 急斜面についたら
+        {
+            SetMotionState(CharacterMotionState::Slide);
+        }
+        break;
+    case CharacterMotionState::Slide:
+        if (!isOnGround) // 地面から離れた
+        {
+            SetMotionState(CharacterMotionState::Fall);
+        }
+        else if (isOnWalkableGround) // 立てる地面にいたら
+        {
+            SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
+        }
+
         break;
     }
-
 
     /* ---- 今のフレームの状態から水平速度を決める ---- */
     switch (MotionState())
@@ -169,8 +189,10 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
             velocity_ = 0.0f;
         }
         break;
+    case CharacterMotionState::Slide:
+        velocity_ = 0.f;
+        break;
     }
-
 
     /* ---- 水平移動 入力の向きへ動かし 崖と箱の壁で補正してから向き直る ---- */
     if (!hasMoveInput)

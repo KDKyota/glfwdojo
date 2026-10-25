@@ -78,12 +78,11 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     /* ---- 接地判定 めり込みか吸着なら接地とみなして足を地面に合わせる ここでの MotionState() はまだ前フレームの状態 ---- */
     // 前フレームのステートを取得して接地しているか
-    const bool isPrevFrameOnGround = (MotionState() == CharacterMotionState::Idle || MotionState() == CharacterMotionState::Walk || MotionState() == CharacterMotionState::Run);
+    const bool isPrevFrameOnGround = (MotionState() == CharacterMotionState::Idle || MotionState() == CharacterMotionState::Walk || MotionState() == CharacterMotionState::Run || MotionState() == CharacterMotionState::Slide);
     // 上向きに動いていない
     const bool isNotMoveToUp = verticalVelocity_ <= 0;
     // 地面に吸着していい条件
     const bool canStickToGround = isPrevFrameOnGround && isNotMoveToUp;
-
 
     bool isOnGround = ground.has_value() && newHeight <= ground->height;
 

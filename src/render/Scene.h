@@ -28,6 +28,7 @@
 #include "scene/Collision.h"
 #include "scene/SceneModels.h"
 #include "asset/MeshDistanceFieldCache.h"
+#include "scene/SceneTerrain.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
@@ -88,6 +89,7 @@ class Scene {
     gl::CollisionWorld colliders_; // 壁と立方体を直方体として持つ
     gl::SceneGeometry geometry_;
     gl::SceneModels models_;
+    gl::SceneTerrain terrain_;
     gl::NoiseTexture noise_; // SSAO と SDF 遮蔽が共有する
 
     /* レンダーターゲット パス同士はこれを介して繋がる */

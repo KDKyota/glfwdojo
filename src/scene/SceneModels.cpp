@@ -69,7 +69,9 @@ void SceneModels::UpdateAnimation(float deltaTime) {
                     break;
                 }
                 case CharacterMotionState::Jump:
-                case CharacterMotionState::Fall: {
+                case CharacterMotionState::Fall: 
+                case CharacterMotionState::Slide:
+                {
                     std::string clipName = "Jump_Loop";
                     models_[i]->PlayAnimation(clipName);
                     break;

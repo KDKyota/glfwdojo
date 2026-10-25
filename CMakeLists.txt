@@ -66,7 +66,10 @@ add_executable(
   src/scene/Camera.cpp
   src/scene/Character.cpp
   src/scene/Collision.cpp
+  src/scene/HeightField.cpp
+  src/scene/TerrainMesh.cpp
   src/scene/SceneModels.cpp
+  src/scene/SceneTerrain.cpp
   third_party/stb_image_impl.cpp)
 
 target_compile_features(glfwdojo PRIVATE cxx_std_17)

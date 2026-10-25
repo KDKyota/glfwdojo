@@ -13,6 +13,7 @@ void Texture::uploadPixels(unsigned char *pixels, int width, int height, int cha
         const GLenum internalFormat = (colorSpace_ == ColorSpace::SRGB)
                                           ? ((channels == 4) ? GL_SRGB8_ALPHA8 : GL_SRGB8)
                                           : format;
+        /*glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // 今後 RGB のみの画像を使う場合はコメントアウトを解除*/
         glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, pixels);
         glGenerateMipmap(GL_TEXTURE_2D);
     }

@@ -2,6 +2,7 @@
 #include "core/SceneUnits.h"
 #include "render/Lighting.h"
 #include <array>
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
@@ -53,5 +54,24 @@ inline const std::array<PointLight, kPointLightCount> pointLights = {
 inline const std::vector<glm::vec3> windowPositions = {glm::vec3(-1.5f, 0.0f, -0.48f), glm::vec3(1.5f, 0.0f, 0.51f),
                                                        glm::vec3(0.0f, 0.0f, 0.7f), glm::vec3(-0.3f, 0.0f, -2.3f),
                                                        glm::vec3(0.5f, 0.0f, -0.6f), glm::vec3(-15.0f, 0.0f, -8.0f)};
+
+// 高さマップの配置原点
+inline const glm::vec3 heightMapOrigin{gl::units::floorHalfExtent, -10.f, gl::units::heightMapExtent.z / 2 * (-1.0f)};
+
+// 地形 1 つぶんの配置と メッシュの作り方
+struct HeightMapSpawn {
+    std::string filepath;
+    glm::vec3 origin;
+    glm::vec3 extent;
+    std::uint32_t cellCountX;
+    std::uint32_t cellCountZ;
+    float uvTileSize; // 地形全体に UV を何周ぶん敷くか
+    std::string baseColorTexturePath;
+};
+
+inline const std::vector<HeightMapSpawn> heightMapSpawns = {
+    {"resources/terrain/Small-Ridge-Through-Terrain/Ridge-Through-Terrain-Height-Map.png", heightMapOrigin,
+     gl::units::heightMapExtent, 1024, 1024, 1.0f,
+     "resources/terrain/Small-Ridge-Through-Terrain/Ridge-Through-Terrain.png"}};
 
 } // namespace gl::layout

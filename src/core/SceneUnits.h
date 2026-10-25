@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/glm.hpp>
 
 // このプロジェクトのワールド座標は 1.0f = 1 メートル
 // glTF が既定でメートル・Y-up なので 読み込んだモデルを無変換で置けるようこちらを合わせている
@@ -26,5 +27,9 @@ inline constexpr float wallTopY = 10.0f;
 // テクセル密度を寸法から独立させるため 繰り返し回数ではなく「1タイルあたりの長さ」で持つ
 inline constexpr float floorTileSize = 1.0f;
 inline constexpr float wallTileSize = 2.0f;
+
+/* ---- ハイトマップの設定 ----*/
+// 実際に配置する寸法（TODO: 仮値なので後で修正が必要）
+inline constexpr glm::vec3 heightMapExtent{100.0f, 30.0f, 100.0f};
 
 } // namespace gl::units

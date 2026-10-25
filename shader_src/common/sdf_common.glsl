@@ -14,6 +14,8 @@ layout(std140, binding = 2) uniform SdfScene {
     vec4 wallCenters[2];
     vec4 boxHalfSize;
     vec4 wallHalfSize;
+    vec4 floorHalfSize;
+    vec4 floorCenter;
     vec4 sceneParams; // x: floorY, y: sizeof cubePositions, z: 2.0, w: floor's size
     // 静的メッシュの距離場ぶん　先頭から modelCounts.x 個だけが有効で それ以降の枠は読まない
     mat4 modelWorldToLocalMatrices[SDF_MAX_MODELS]; // ワールド座標をそのメッシュのローカル座標へ変換する(ワールド変換の逆行列)
@@ -61,7 +63,8 @@ float sdBox (vec3 p, vec3 center, vec3 halfSize) {
 
 // 解析的な形状（床・壁・キューブ）までの距離　厳密なので歩幅にも遮蔽にもそのまま使える
 float analyticSDF (vec3 p) {
-    float dist = p.y - sceneParams.x;
+    
+    float dist = sdBox(p, floorCenter.xyz, floorHalfSize.xyz);
     // int boxCount = int(sceneParams.y);
     for (int i = 0; i < SDF_MAX_BOXES; ++i) {
         dist = min(dist, sdBox(p, boxCenters[i].xyz, boxHalfSize.xyz));

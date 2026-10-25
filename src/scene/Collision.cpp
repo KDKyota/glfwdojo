@@ -89,6 +89,7 @@ glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radiu
     return result;
 }
 
+
 /* std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footPos, const float radius) const
 {
     std::optional<float> groundHeight;
@@ -123,6 +124,7 @@ glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radiu
     return groundHeight;
 }
 
+
 std::optional<glm::vec3> gl::CollisionWorld::FindGroundNormal(const glm::vec3 &footPos) const
 {
     std::optional<glm::vec3> groundNormal;
@@ -136,9 +138,9 @@ std::optional<glm::vec3> gl::CollisionWorld::FindGroundNormal(const glm::vec3 &f
     return groundNormal;
 } */
 
-bool gl::CollisionWorld::IsSteepGround(glm::vec3 normal) const
+bool gl::CollisionWorld::IsSteepGround(glm::vec3 normal, float maxDegree) const
 {
-    return normal.y < glm::cos(glm::radians(CharacterDefaults::CLIMB_MAX_DEGREE));
+    return normal.y < glm::cos(glm::radians(maxDegree));
 }
 
 std::optional<gl::GroundContact> gl::CollisionWorld::FindGround(const glm::vec3 &footPos, const float radius) const
@@ -190,13 +192,15 @@ glm::vec3 gl::CollisionWorld::ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::
 
         glm::vec3 normal = terrain->GetNormalAt(nextFramePos.x, nextFramePos.z);
 
-        if (!IsSteepGround(normal)) // ここでは登れる傾きなので何もしない
+
+        if (!IsSteepGround(normal, CharacterDefaults::CLIMB_MAX_DEGREE)) // ここでは登れる傾きなので何もしない
             continue;
 
         // 下る向き（水平成分）
         glm::vec3 downDirection = glm::normalize(glm::vec3(normal.x, 0.f, normal.z));
         // 登る量（horizontalMove と downDirection が逆向きなら崖へ向かっていることになる）
         float climbAmount = glm::dot(moveAmount, downDirection);
+
         if (climbAmount < 0)
         { // 崖へ向かっているとき
             moveAmount -= downDirection * climbAmount;

@@ -87,7 +87,7 @@ namespace gl
      * @param normal 足元の地形の法線ベクトル
      * @return 急な斜面なら true
      */
-    bool IsSteepGround(glm::vec3 normal) const;
+    bool IsSteepGround(glm::vec3 normal, const float maxDegree) const;
 
     /**
      * @brief 地形の急な斜面方向に移動できないように補正する関数

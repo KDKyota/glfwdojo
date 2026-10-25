@@ -111,7 +111,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         position_.y = newHeight;
     }
 
-    bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal); // 地面にいるけど急斜面ではない
+    bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal, CharacterDefaults::CLIMB_MAX_DEGREE); // 地面にいるけど急斜面ではない
 
     /* ---- 状態遷移 前フレームの状態と接地判定と入力から今フレームの状態を決める ---- */
     switch (MotionState())

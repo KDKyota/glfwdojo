@@ -46,6 +46,7 @@ void Character::Respawn()
 void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJumpInput, const glm::vec2 &input, float deltaTime,
                      const gl::CollisionWorld &world)
 {
+
     /* ---- 奈落に落ちていたらスポーン地点へ戻し 移動入力の有無を確かめる ---- */
     if (position_.y < CharacterDefaults::RESPAWN_THRESHOLD_Y)
     {
@@ -70,6 +71,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     // }
 
     /* ---- 重力で縦速度を更新し 移動後の足元の高さを求める ---- */
+
     verticalVelocity_ -= gl::units::gravity * deltaTime;
 
     float newHeight = position_.y + verticalVelocity_ * deltaTime; // 移動後の足元の高さ
@@ -81,6 +83,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     const bool isNotMoveToUp = verticalVelocity_ <= 0;
     // 地面に吸着していい条件
     const bool canStickToGround = isPrevFrameOnGround && isNotMoveToUp;
+
 
     bool isOnGround = ground.has_value() && newHeight <= ground->height;
 
@@ -99,6 +102,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     if (isOnGround)
     { // 地面にいる
+
         position_.y = ground->height;
         verticalVelocity_ = 0.0f;
     }
@@ -107,13 +111,15 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         position_.y = newHeight;
     }
 
+    bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal); // 地面にいるけど急斜面ではない
+
     /* ---- 状態遷移 前フレームの状態と接地判定と入力から今フレームの状態を決める ---- */
     switch (MotionState())
     {
     case CharacterMotionState::Walk:
     case CharacterMotionState::Run:
     case CharacterMotionState::Idle:
-        if (!isOnGround)
+        if (!isOnWalkableGround)
         {
             SetMotionState(CharacterMotionState::Fall);
         }
@@ -132,12 +138,13 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
             SetMotionState(CharacterMotionState::Fall);
         break;
     case CharacterMotionState::Fall:
-        if (isOnGround)
+        if (isOnWalkableGround)
         {
             SetMotionState(determineMotionState(hasMoveInput, hasRunInput));
         }
         break;
     }
+
 
     /* ---- 今のフレームの状態から水平速度を決める ---- */
     switch (MotionState())
@@ -163,6 +170,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         }
         break;
     }
+
 
     /* ---- 水平移動 入力の向きへ動かし 崖と箱の壁で補正してから向き直る ---- */
     if (!hasMoveInput)

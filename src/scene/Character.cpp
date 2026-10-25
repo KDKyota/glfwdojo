@@ -40,6 +40,8 @@ void Character::Respawn()
 {
     position_ = spawnPos_;
     verticalVelocity_ = 0.0f;
+    steepCountTime_ = 0.f;
+    steepVelocity_ = 0.f;
     yaw_ = 0.0f;
 }
 

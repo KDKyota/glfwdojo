@@ -109,9 +109,13 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     { // 空中にいる
         position_.y = newHeight;
     }
-
-    bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal, CharacterDefaults::CLIMB_MAX_DEGREE); // 地面にいるけど急斜面ではない
-    bool isOnSteepGround = isOnGround && world.IsSteepGround(ground->normal, CharacterDefaults::CLIMB_MAX_DEGREE);     // 地面にいて急斜面
+    float steepThreshold = 0.f; // Slide とそれ以外を切り替える閾値（Slide->そのほか と そのほか -> Slide で値が違う）
+    if (MotionState() == CharacterMotionState::Slide)
+        steepThreshold = CharacterDefaults::EXIT_SLIDE;
+    else
+        steepThreshold = CharacterDefaults::CLIMB_MAX_DEGREE;
+    bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal, steepThreshold); // 地面にいるけど急斜面ではない
+    bool isOnSteepGround = isOnGround && world.IsSteepGround(ground->normal, steepThreshold);     // 地面にいて急斜面
     glm::vec3 steepMove = glm::vec3(0.f); // 急斜面を滑った移動量
 
     float downGravity = 0.f;

@@ -17,6 +17,7 @@ namespace CharacterDefaults
     constexpr float RESPAWN_HEIGHT = 2.0f * CharacterDefaults::HEIGHT; // リスポーン時の高さ
     constexpr float FOOT_RADIUS = 0.25f;                               // 足元の障害物判定に使う半径
     constexpr float CLIMB_MAX_DEGREE = 45.f;
+    constexpr float EXIT_SLIDE = 40.f; // 滑り落ちてから滑り続けるまでの角度
 
 } // namespace CharacterDefaults
 

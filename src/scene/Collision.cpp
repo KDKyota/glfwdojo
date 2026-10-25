@@ -157,7 +157,7 @@ std::optional<gl::GroundContact> gl::CollisionWorld::FindGround(const glm::vec3 
             if (!ground.has_value() || box.max.y > ground->height)
             {                                                   // groundheight の値が box の天井より低いなら
                 ground = {box.max.y, glm::vec3(0.f, 1.f, 0.f)}; // y 正の方向を法線とする
-                // 注意：optional の値に ground->height = ... のようにアロー演算しで値を代入するとエラーは出ないけど結果が壊れる（詳しくはググって）
+                // 注意：optional でのアロー演算子は未定義動作なので、丸ごと代入するしかない
             }
         }
     }

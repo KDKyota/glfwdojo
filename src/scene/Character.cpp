@@ -195,20 +195,24 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     }
 
     /* ---- 水平移動 入力の向きへ動かし 崖と箱の壁で補正してから向き直る ---- */
-    if (!hasMoveInput)
-        return; // 注意：この early return を入れないと、以降でのderection の計算で 0 除算が起きる
+    /* if (!hasMoveInput)
+        return; // 注意：この early return を入れないと、以降でのderection の計算で 0 除算が起きる */
 
     // 注意: forward の Y を 0 にしないとカメラが下を向いたとき前進で床に潜る
     const glm::vec3 forward = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
     const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
 
     // 注意: 合成してから正規化しないと斜め移動が sqrt(2) 倍速くなる
-    const glm::vec3 direction = glm::normalize(forward * input.y + right * input.x);
+    glm::vec3 direction = glm::vec3(0.f);
+    if (hasMoveInput)
+        direction = glm::normalize(forward * input.y + right * input.x);
 
     // std::cout << "MotionState: " << static_cast<int>(MotionState()) << ", velocity: " << velocity_ << std::endl;
 
     // 水平移動量を扱う変数（この二行で水平量を取得する）
-    glm::vec3 horizontalMove = direction * velocity_ * deltaTime;
+    glm::vec3 horizontalMove = glm::vec3(0.f);
+    if (hasMoveInput)
+        horizontalMove = direction * velocity_ * deltaTime;
     horizontalMove.y = 0.f; // 水平移動量なので、y成分を 0.f に
     // position_ += direction * velocity_ * deltaTime;
 
@@ -218,8 +222,9 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     // 動かしてから押し戻す 面に沿った成分は残るので壁沿いに滑る
     position_ = world.Resolve(position_, CharacterDefaults::RADIUS, height_);
-    // 壁沿いに滑っている間も入力した向きを保つ
-    turnTowards(direction, deltaTime);
+
+    if (hasMoveInput)
+        turnTowards(direction, deltaTime);
 }
 
 void Character::turnTowards(const glm::vec3 &direction, float deltaTime)

@@ -34,7 +34,7 @@ namespace gl
             {
                 stbi_us raw = pixels[z * width + x];                   // 0〜65535
                 float normalized = static_cast<float>(raw) / 65535.0f; // 0〜1
-                heightData_.push_back(normalized * static_cast<float>(gl::units::heightMapExtent.y));
+                heightData_.push_back(normalized * static_cast<float>(extent_.y));
             }
         }
         CalcResolutionLength();
@@ -44,8 +44,8 @@ namespace gl
 
     void HeightField::CalcResolutionLength()
     {
-        resolutionLength_ = glm::vec3(static_cast<float>(gl::units::heightMapExtent.x / (heightMapDataWidth_ - 1)), 0.f,
-                                      static_cast<float>(gl::units::heightMapExtent.z / (heightMapDataHeight_ - 1)));
+        resolutionLength_ = glm::vec3(static_cast<float>(extent_.x / (heightMapDataWidth_ - 1)), 0.f,
+                                      static_cast<float>(extent_.z / (heightMapDataHeight_ - 1)));
     }
 
     float HeightField::GetHeightAt(float x, float z) const
@@ -79,7 +79,7 @@ namespace gl
         float localX = x - origin_.x; // 地形マップ上のローカル座標
         float localZ = z - origin_.z;
 
-        return 0 <= localX && localX < units::heightMapExtent.x && 0 <= localZ && localZ < units::heightMapExtent.z; // TODO：units::heightMapExtent は生の値なので、spawn.extent を将来導入したい
+        return 0 <= localX && localX < extent_.x && 0 <= localZ && localZ < extent_.z; 
     }
 
     glm::vec3 HeightField::GetNormalAt(float x, float z) const
@@ -95,7 +95,7 @@ namespace gl
         return glm::normalize(glm::vec3(-1 * dhPerdx, 1, -dhPerdz));
     }
 
-    HeightField::HeightField(const std::string &filePath, const glm::vec3 &origin) : origin_(origin)
+    HeightField::HeightField(const std::string &filePath, const glm::vec3 &origin, const glm::vec3 &extent) : origin_(origin), extent_(extent)
     {
         if (!LoadFromFile(filePath))
         {

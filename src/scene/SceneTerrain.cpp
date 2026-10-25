@@ -6,7 +6,7 @@ namespace gl
 {
 
     TerrainData::TerrainData(const layout::HeightMapSpawn &spawn, gl::PbrMaterial material)
-        : heightField(spawn.filepath, spawn.origin), mesh(SceneTerrain::buildMesh(heightField, material, spawn)) {}
+        : heightField(spawn.filepath, spawn.origin, spawn.extent), mesh(SceneTerrain::buildMesh(heightField, material, spawn)) {}
 
     Mesh SceneTerrain::buildMesh(HeightField &field, PbrMaterial material, const layout::HeightMapSpawn &spawn)
     {

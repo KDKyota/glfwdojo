@@ -10,7 +10,7 @@ namespace gl {
 class HeightField {
   public:
     /// ハイトマップの読み込みをして、失敗したらエラー出力
-    HeightField(const std::string &filePath, const glm::vec3 &origin);
+    HeightField(const std::string &filePath, const glm::vec3 &origin, const glm::vec3 &extent);
     /// ワールド空間の x, z 座標からハイトマップのワールドの高さを返す関数
     float GetHeightAt(float x, float z) const;
     /// ワールド空間の x, z 座標が地形であるかを返す関数
@@ -36,5 +36,7 @@ class HeightField {
     glm::vec3 resolutionLength_{};
     // 地形マップの原点
     glm::vec3 origin_{};
+    // 地形マップの大きさ
+    glm::vec3 extent_{};
 };
 } // namespace gl

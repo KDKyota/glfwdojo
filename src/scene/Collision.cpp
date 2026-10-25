@@ -62,7 +62,6 @@ namespace
 
 } // namespace
 
-/// 全ての障害物に対して何度も繰り返して適用する
 glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radius, float height) const
 {
     glm::vec3 result = footPosition;

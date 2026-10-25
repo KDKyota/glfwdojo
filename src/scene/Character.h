@@ -31,6 +31,7 @@ enum class CharacterMotionState
     Jump_Start,
     Jump,
     Fall,
+    Slide, // 急斜面を滑り落ちる
 };
 
 /**

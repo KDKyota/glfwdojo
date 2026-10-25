@@ -113,6 +113,21 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
 
     bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal, CharacterDefaults::CLIMB_MAX_DEGREE); // 地面にいるけど急斜面ではない
     bool isOnSteepGround = isOnGround && world.IsSteepGround(ground->normal, CharacterDefaults::CLIMB_MAX_DEGREE);     // 地面にいて急斜面
+    glm::vec3 steepMove = glm::vec3(0.f); // 急斜面を滑った移動量
+
+    float downGravity = 0.f;
+    if (isOnSteepGround) // 急斜面にいる
+    {
+        glm::vec3 downDirection = glm::normalize(glm::vec3(ground->normal.x, 0.f, ground->normal.z));       // 斜面を下る水平方向ベクトル
+        downGravity = gl::units::gravity * glm::length(glm::vec3(ground->normal.x, 0.f, ground->normal.z)); // 斜面を滑り落ちるときの重力の大きさ
+        steepVelocity_ += downGravity * deltaTime;
+        steepMove = downDirection * steepVelocity_ * deltaTime; // 急斜面を滑った移動量
+    }
+    else // 急斜面ではない
+    {
+        downGravity = 0.f; // 急斜面ではないときは斜面を滑り落ちる加速度を 0 初期化
+        steepVelocity_ = 0.f;
+    }
 
     /* ---- 状態遷移 前フレームの状態と接地判定と入力から今フレームの状態を決める ---- */
 
@@ -216,6 +231,7 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
     horizontalMove.y = 0.f; // 水平移動量なので、y成分を 0.f に
     // position_ += direction * velocity_ * deltaTime;
 
+    horizontalMove += steepMove;
     // 崖などに移動する場合に補正した水平移動量に更新
     horizontalMove = world.ConstrainMoveToSteepSlope(position_, horizontalMove);
     position_ += horizontalMove;

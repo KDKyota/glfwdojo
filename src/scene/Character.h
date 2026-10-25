@@ -88,6 +88,7 @@ private:
     float velocity_ = gl::units::walkSpeed;
 
     float verticalVelocity_ = 0.0f; // 上下方向の速度
+    float steepVelocity_ = 0.f; // 急斜面を滑り落ちる速度
 
     glm::vec3 spawnPos_ = glm::vec3(0.0f);
 

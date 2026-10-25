@@ -18,6 +18,7 @@ namespace CharacterDefaults
     constexpr float FOOT_RADIUS = 0.25f;                               // 足元の障害物判定に使う半径
     constexpr float CLIMB_MAX_DEGREE = 45.f;
     constexpr float EXIT_SLIDE = 40.f; // 滑り落ちてから滑り続けるまでの角度
+    constexpr float SLIDE_ENTER_DELAY = 0.5f; // この時間急斜面に触れ続けたら図べり始めることにする
 
 } // namespace CharacterDefaults
 
@@ -90,6 +91,7 @@ private:
 
     float verticalVelocity_ = 0.0f; // 上下方向の速度
     float steepVelocity_ = 0.f; // 急斜面を滑り落ちる速度
+    float steepCountTime_ = 0.f; // 急斜面に触れ続けている時間（m） 連続して状態が切り替わる対策として導入している
 
     glm::vec3 spawnPos_ = glm::vec3(0.0f);
 

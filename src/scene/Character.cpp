@@ -116,6 +116,14 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         steepThreshold = CharacterDefaults::CLIMB_MAX_DEGREE;
     bool isOnWalkableGround = isOnGround && !world.IsSteepGround(ground->normal, steepThreshold); // 地面にいるけど急斜面ではない
     bool isOnSteepGround = isOnGround && world.IsSteepGround(ground->normal, steepThreshold);     // 地面にいて急斜面
+    if (isOnSteepGround)
+    {
+        steepCountTime_ += deltaTime;
+    }
+    else
+    {
+        steepCountTime_ = 0.f;
+    }
     glm::vec3 steepMove = glm::vec3(0.f); // 急斜面を滑った移動量
 
     float downGravity = 0.f;
@@ -143,11 +151,11 @@ void Character::Move(const glm::vec3 &cameraFront, bool hasRunInput, bool hasJum
         {
             SetMotionState(CharacterMotionState::Fall);
         }
-        else if (isOnSteepGround)
+        else if (isOnSteepGround && steepCountTime_ >= CharacterDefaults::SLIDE_ENTER_DELAY) // 滑り始めるタイミングを少し遅らせることで連続した状態の切り替えを防ぐ
         {
             SetMotionState(CharacterMotionState::Slide);
         }
-        else if (hasJumpInput)
+        else if (hasJumpInput && !isOnSteepGround)
         {
             verticalVelocity_ = gl::units::jumpSpeed;
             SetMotionState(CharacterMotionState::Jump_Start);

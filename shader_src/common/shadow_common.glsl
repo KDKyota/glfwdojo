@@ -15,9 +15,10 @@ struct PointLight {
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
+    float attenuationRadius; // ポイントライトの光が届く範囲（SceneLayout.h で直接決める）
 
     // PointLight::calcRadius() が減衰式から逆算して送ってくる
-    float radius; // 光が届く距離
+    //float radius; // 光が届く距離
     float sourceRadius; // 半影の幅を決める光源の半径
 };
 

@@ -10,6 +10,7 @@ namespace gl {
  * @brief 点光源 位置と色（ambient/diffuse/specular）と 半影の幅を決める光源半径を持つ
  *
  * constant/linear/quadratic は逆二乗減衰へ移行したため未使用
+ * 構造体内の値は仮の値で、SceneLayout.h でそれぞれの変数の値を決める
  */
 struct PointLight {
     glm::vec3 position;
@@ -19,6 +20,7 @@ struct PointLight {
     float constant = 1.0f;
     float linear = 0.02f;
     float quadratic = 0.001f;
+    float attenuationRadius = 15.0f; // ライトの影響範囲（仮値なので SceneLayout.h で値を設定するのがいい）
     float sourceRadius = 0.1f; // 半影の幅を決める光源の半径 
 
     // 明るさが 5/256 未満になる距離 diffuse から一意に決まる派生値なので都度計算する

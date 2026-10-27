@@ -27,7 +27,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
 
     // 逆二乗減衰 変更したら PointLight::calcRadius() も必ず合わせる
     float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (distance * distance);
+    float w = pow(clamp(1.0 - pow(distance/light.attenuationRadius, 4.0), 0.0, 1.0), 2.0);
+    float attenuation = 1.0 / (distance * distance) * w;
     vec3 radiance = light.diffuse * attenuation;
 
     float NDF = DistributionGGX(normal, halfwayDir, roughness);

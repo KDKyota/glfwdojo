@@ -62,6 +62,13 @@ namespace
 
 } // namespace
 
+bool gl::CollisionWorld::isIntersectWithSphere(const AABB &aabb, const glm::vec3 &lightPos, float attenuationRadius) const
+{
+
+    glm::vec3 closest = glm::clamp(lightPos, aabb.min, aabb.max);
+    return dot(closest - lightPos, closest - lightPos) <= attenuationRadius * attenuationRadius;
+}
+
 glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radius, float height) const
 {
     glm::vec3 result = footPosition;
@@ -88,7 +95,6 @@ glm::vec3 gl::CollisionWorld::Resolve(const glm::vec3 &footPosition, float radiu
     }
     return result;
 }
-
 
 /* std::optional<float> gl::CollisionWorld::FindGroundHeight(const glm::vec3 &footPos, const float radius) const
 {
@@ -191,7 +197,6 @@ glm::vec3 gl::CollisionWorld::ConstrainMoveToSteepSlope(glm::vec3 footPos, glm::
             continue;
 
         glm::vec3 normal = terrain->GetNormalAt(nextFramePos.x, nextFramePos.z);
-
 
         if (!IsSteepGround(normal, CharacterDefaults::CLIMB_MAX_DEGREE)) // ここでは登れる傾きなので何もしない
             continue;

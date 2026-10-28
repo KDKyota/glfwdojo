@@ -63,6 +63,7 @@ void ShadowPass::Execute(const ShadowCubeTargets &targets, const SceneGeometry &
         models.Draw(depthShader_);
         //terrain.Draw(depthShader_);
         terrain.DrawIntersectWithSphere(depthShader_, layout::pointLights[j].position, layout::pointLights[j].attenuationRadius);
+
         depthShader_.setBool("useAlphaTest", true);
         geometry.DrawWindows(depthShader_, windowCount);
 

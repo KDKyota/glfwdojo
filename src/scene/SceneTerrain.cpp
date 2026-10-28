@@ -47,4 +47,18 @@ namespace gl
         return result;
     }
 
+    void SceneTerrain::DrawIntersectWithSphere(Shader &shader, glm::vec3 lightPos, float attenuationRadius) const
+    {
+        for (const auto &terrain : terrains_)
+        {
+            glm::vec3 closest = glm::clamp(lightPos, terrain->mesh.BoundsMin(), terrain->mesh.BoundsMax());
+            if (dot(closest - lightPos, closest - lightPos) <= attenuationRadius * attenuationRadius)
+            {
+                shader.setBool("hasBones", false);
+                shader.setMat4("model", glm::mat4(1.f));
+                terrain->mesh.Draw(shader);
+            }
+        }
+    }
+
 } // namespace gl

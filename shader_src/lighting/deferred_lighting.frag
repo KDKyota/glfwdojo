@@ -165,7 +165,7 @@ void main() {
         for (int i = 0; i < NR_LIGHTS; ++i) {
             // PCF で複数回サンプリングする ShadowCalculation() の手前で弾く
             float dist = length(pointLights[i].position - FragPos);
-            if (dist >= pointLights[i].radius)
+            if (dist >= pointLights[i].attenuationRadius)
                 continue;
 
             vec3 lightDir = normalize(pointLights[i].position - FragPos);

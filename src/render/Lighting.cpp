@@ -23,7 +23,8 @@ void PointLight::applyToShader(const Shader &shader, const std::string &name) co
     shader.setFloat(name + ".constant", constant);
     shader.setFloat(name + ".linear", linear);
     shader.setFloat(name + ".quadratic", quadratic);
-    shader.setFloat(name + ".radius", calcRadius());
+    shader.setFloat(name + ".attenuationRadius", attenuationRadius);
+    //shader.setFloat(name + ".radius", calcRadius());
     shader.setFloat(name + ".sourceRadius", sourceRadius);
 }
 

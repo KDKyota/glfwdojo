@@ -49,6 +49,14 @@ namespace gl
     }
 
     /**
+     * @brief オブジェクトのAABBが光源の光が及ぶ半径 attenuationRadius と重なるかを返す それによりそのオブジェクトの影を作るかを決める
+     * @param lightPos 光源の位置
+     * @param attenuationRadius 光源からの光が及ぶ範囲
+     * @return true で重なる
+     */
+    bool isIntersectWithSphere(const AABB &aabb, const glm::vec3 &lightPos, float attenuationRadius) const;
+
+    /**
      * @brief 主にキャラクターに適用する円柱が障害物にめり込んでいれば押し出した位置を返す
      *
      * @param footPosition 円柱の底面の中心

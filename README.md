@@ -22,6 +22,25 @@
   </tr>
 </table>
 
+### 動作の様子（YouTube）
+
+サムネイルをクリックすると YouTube で動画が再生されます。
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="https://youtu.be/VYNhVQRe5Ao">
+        <img src="https://img.youtube.com/vi/VYNhVQRe5Ao/hqdefault.jpg" alt="glfwdojo の動作デモ動画 1" width="100%">
+      </a>
+    </td>
+    <td width="50%">
+      <a href="https://youtu.be/mv12GCQawWo">
+        <img src="https://img.youtube.com/vi/mv12GCQawWo/hqdefault.jpg" alt="glfwdojo の動作デモ動画 2" width="100%">
+      </a>
+    </td>
+  </tr>
+</table>
+
 ---
 
 ## このプロジェクトについて

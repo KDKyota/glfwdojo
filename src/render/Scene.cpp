@@ -92,8 +92,13 @@ void Scene::Render(float deltaTime, float heightScale)
     // [1] 光源視点の深度とガラスの透過色（4灯ぶん）
     profiler_.Measure(gl::GpuPass::Shadow, [&]
                       { shadowPass_.Execute(shadowTargets_, geometry_, models_, windowCount, settings_.shadowMapStaticCasters, terrain_); });
-    updateMatricesUBO(); // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO
-                         // は定数の集まりなのでupdateしない
+    // [2] view / projection を UBO へ 以降の全パスが参照する SDFの UBO は定数の集まりなのでupdateしない
+    updateMatricesUBO(); 
+    
+    const gl::RenderView mainView{camera_->GetViewMatrix(), camera_->GetViewPosition()};
+    // [3] 不透明物の幾何情報を G-Buffer へ
+    profiler_.Measure(gl::GpuPass::Geometry, [&]
+                      { geometryPass_.Execute(gBuffer_, geometry_, models_, mainView, settings_, heightScale, windowCount, terrain_); });
     // [2.5] 床で折り返した鏡像カメラからシーンを描く
     if (settings_.planarReflection)
     {
@@ -103,10 +108,6 @@ void Scene::Render(float deltaTime, float heightScale)
                                                     iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount, terrain_); });
         updateMatricesUBO(); // 注意: 反射パスが UBO の view を書き換えるので戻す
     }
-    const gl::RenderView mainView{camera_->GetViewMatrix(), camera_->GetViewPosition()};
-    // [3] 不透明物の幾何情報を G-Buffer へ
-    profiler_.Measure(gl::GpuPass::Geometry, [&]
-                      { geometryPass_.Execute(gBuffer_, geometry_, models_, mainView, settings_, heightScale, windowCount, terrain_); });
     // [4] G-Buffer から遮蔽率を求めてブラーまで
     profiler_.Measure(gl::GpuPass::Ssao, [&]
                       { ssaoPass_.Execute(ssaoTarget_, gBuffer_, noise_, geometry_); });

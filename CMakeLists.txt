@@ -129,6 +129,7 @@ set(SHADER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/ssao/sdf_occlusion_blur.frag
     # lighting
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting/deferred_lighting.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/lighting/reflection_floor_mask.frag
     # forward
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/glass.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader_src/forward/light_cube.frag

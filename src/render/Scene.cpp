@@ -105,7 +105,7 @@ void Scene::Render(float deltaTime, float heightScale)
         profiler_.Measure(gl::GpuPass::Reflection, [&]
                           { reflectionPass_.Execute(reflectionTarget_, reflectionGBuffer_, geometryPass_, deferredLightingPass_,
                                                     forwardPass_, geometry_, models_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_,
-                                                    iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount, terrain_); });
+                                                    iblMaps_, *camera_, settings_, matricesUBO_, heightScale, windowCount, terrain_, gBuffer_); });
         updateMatricesUBO(); // 注意: 反射パスが UBO の view を書き換えるので戻す
     }
     // [4] G-Buffer から遮蔽率を求めてブラーまで

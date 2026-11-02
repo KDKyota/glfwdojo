@@ -31,16 +31,19 @@ class ReflectionPass {
      * 注意: Matrices UBO の view を鏡像に書き換えるので呼び出し側で元に戻すこと
      * @param camera 鏡像ではない本来のカメラ 内部で鏡像の view を作る
      * @param matricesUbo view を鏡像へ書き換える Matrices UBO
+     * @param reflectionGBuffer 鏡像カメラから見た情報を入れる反射専用のGBuffer
+     * @param mainGBuffer マスクのもととなる本描画のG-Buffer
      */
     void Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer, GeometryPass &geometryPass,
                  DeferredLightingPass &lightingPass, ForwardPass &forwardPass, const SceneGeometry &geometry,
                  const SceneModels &models,
                  const ShadowCubeTargets &shadows, const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion,
                  const IblMaps &ibl, const Camera &camera, const RenderSettings &settings, GLuint matricesUbo,
-                 float heightScale, std::size_t windowCount, const SceneTerrain &terrain);
+                 float heightScale, std::size_t windowCount, const SceneTerrain &terrain, const GBuffer &mainGBuffer);
 
   private:
     Shader skyboxShader_;
+    Shader floorMaskShader_;
 };
 
 } // namespace gl

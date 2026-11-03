@@ -96,12 +96,15 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
 
     glDisable(GL_DEPTH_TEST);
     // アルファチャンネルのみ書き込み可能にする
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+    glEnable(GL_BLEND);
+    // rgb x mask の状態にする
+    glBlendFuncSeparate(GL_ZERO, GL_SRC_ALPHA, GL_ONE, GL_ZERO);
     floorMaskShader_.use();
     mainGBuffer.BindTextures();
     geometry.DrawScreenQuad();
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glEnable(GL_DEPTH_TEST);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_BLEND);
 
     /* -- textureLod で引けるようにミップマップを作る --*/
     // 床の roughness に応じたぼかしを textureLod で引けるようにミップを作り直す

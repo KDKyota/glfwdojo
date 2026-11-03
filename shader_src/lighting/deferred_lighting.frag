@@ -147,7 +147,10 @@ void main() {
         vec3 specularIBL;
         if(isFloor) {
             // 遮蔽で暗くする代わりに その方向を実際に映る色へ置き換える
-            vec3 reflected = textureLod(reflectionColor, TexCoords, Roughness * MAX_REFLECTION_COLOR_LOD).rgb;
+            vec4 reflectedTex = textureLod(reflectionColor, TexCoords, Roughness * MAX_REFLECTION_COLOR_LOD);
+
+            vec3 reflected = vec3(0.0);
+            reflected = (reflectedTex.a >= 0.05) ? reflectedTex.rgb / reflectedTex.a : prefiltered;
 
             // 反射像は遮蔽込みの実測なので重ねると二重に遮ることになる
             if(floorSdfSpecularOcclusion)

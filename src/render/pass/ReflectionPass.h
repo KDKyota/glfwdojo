@@ -44,6 +44,7 @@ class ReflectionPass {
   private:
     Shader skyboxShader_;
     Shader floorMaskShader_;
+    Shader downSampleShader_;
 };
 
 } // namespace gl

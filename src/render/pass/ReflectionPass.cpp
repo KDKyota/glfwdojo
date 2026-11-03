@@ -28,13 +28,17 @@ const glm::vec4 kFloorClipPlane(0.0f, 1.0f, 0.0f, -(units::floorY + kFloorClipBi
 
 } // namespace
 
-ReflectionPass::ReflectionPass() : skyboxShader_("skybox.vert", "skybox.frag"), floorMaskShader_("fragment_quad.vert", "reflection_floor_mask.frag"){
+ReflectionPass::ReflectionPass()
+    : skyboxShader_("skybox.vert", "skybox.frag"),
+      floorMaskShader_("fragment_quad.vert", "reflection_floor_mask.frag") ,
+      downSampleShader_("fragment_quad.vert", "reflection_downsample.frag"){
     skyboxShader_.use();
     skyboxShader_.setInt("skybox", 0);
     floorMaskShader_.use();
     floorMaskShader_.setInt("gPosition", texunit::kGPosition);
     floorMaskShader_.setInt("gNormal", texunit::kGNormal);
     floorMaskShader_.setFloat("floorY", units::floorY);
+    
 }
 
 void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer,

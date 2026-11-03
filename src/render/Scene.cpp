@@ -118,8 +118,11 @@ void Scene::Render(float deltaTime, float heightScale) {
     // [6] G-Buffer + 影 + AO を合成
     profiler_.Measure(gl::GpuPass::Lighting, [&] {
         const GLuint reflectionColor = settings_.planarReflection ? reflectionTarget_.Color() : 0;
+        const GLuint reflectionGPosition = settings_.planarReflection ? reflectionGBuffer_.Position() : 0;
+        const GLuint reflectionGNormal = settings_.planarReflection ? reflectionGBuffer_.Normal() : 0;
         deferredLightingPass_.Execute(hdrTarget_.View(), gBuffer_, shadowTargets_, ssaoTarget_, sdfOcclusionTarget_,
-                                      iblMaps_, geometry_, mainView, settings_, reflectionColor);
+                                      iblMaps_, geometry_, mainView, settings_, reflectionColor, reflectionGPosition,
+                                      reflectionGNormal);
     });
     // [7] G-Buffer に入れられないもの（ライトキューブ・空・ガラス）
     profiler_.Measure(gl::GpuPass::Forward, [&] {

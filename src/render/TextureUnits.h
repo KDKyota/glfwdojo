@@ -16,6 +16,8 @@
  *   15     sdfOcclusion
  *   16..19 modelDistanceFields[4]（3D）現状は 16 だけが使われ 17..19 は空き
  *   20     reflectionColor
+ *   21     reflectionGPosition
+ *   22     reflectionGNormal
  *
  * [G-Buffer を書くパスのマテリアル]
  *   0      diffuseMap
@@ -55,6 +57,8 @@ inline constexpr int kSdfMaxModels = 4;
 inline constexpr int kSdfModelBase = 16;
 // 床の平面反射 kSdfModelBase + kSdfMaxModels の直後
 inline constexpr int kReflectionColor = 20;
+inline constexpr int kReflectionGPosition = 21;
+inline constexpr int kReflectionGNormal = 22;
 
 /* ---- G-Buffer を書くパスのマテリアル 上とは別の文脈の割り当て ---- */
 inline constexpr int kDiffuseMap = 0;

@@ -23,6 +23,8 @@ uniform sampler2D brdfLUT;
 uniform sampler2D sdfOcclusion;
 // 床で折り返した鏡像カメラで描いた反射像
 uniform sampler2D reflectionColor;
+uniform sampler2D reflectionGPosition;
+uniform sampler2D reflectionGNormal;
 uniform bool hasReflection;
 // 反射像へ SDF の鏡面遮蔽も重ねるか 見比べのために切り替えられるようにしている
 uniform bool floorSdfSpecularOcclusion;
@@ -31,6 +33,9 @@ const float MAX_REFLECTION_LOD = 4.0;
 const float FLOOR_PLANE_EPSILON = 0.05;
 // reflectionColor のミップを何段まで使うか roughness=1 で最もぼけたレベルを選ぶ
 const float MAX_REFLECTION_COLOR_LOD = 5.0;
+// この距離以上離れたらボケが最大になる
+const float REFLECTION_FULL_BLUR_DISTANCE = 2.0;
+
 uniform vec3 viewPos;
 
 // 対応表は main.cpp の kDebugModes hdr.frag の debugRawOutput も要有効
@@ -147,7 +152,20 @@ void main() {
         vec3 specularIBL;
         if(isFloor) {
             // 遮蔽で暗くする代わりに その方向を実際に映る色へ置き換える
-            vec4 reflectedTex = textureLod(reflectionColor, TexCoords, Roughness * MAX_REFLECTION_COLOR_LOD);
+            // 鏡像カメラに映る位置と法線を取得
+            vec4 reflectedPos = texture(reflectionGPosition, TexCoords);
+            vec4 reflectedNormal = texture(reflectionGNormal, TexCoords);
+            float blurFactor = 0.0; // ボケ具合
+            float heightAboveFloor = 0.0;
+            if(dot(reflectedNormal.xyz, reflectedNormal.xyz) < 0.05) // Normal の長さがほぼ0のとき
+                blurFactor = 1.0; // 無原因として最大のボケ
+            else {
+                // 映り込んだ物体と床の距離からぼかし具合 blurFactor を決める
+                heightAboveFloor = reflectedPos.y - sceneParams.x; // 床との距離を計算
+                blurFactor = clamp(heightAboveFloor / REFLECTION_FULL_BLUR_DISTANCE, 0.0, 1.0);
+            }
+            float lod = Roughness * MAX_REFLECTION_COLOR_LOD * blurFactor;
+            vec4 reflectedTex = textureLod(reflectionColor, TexCoords, lod);
 
             vec3 reflected = vec3(0.0);
             reflected = (reflectedTex.a >= 0.05) ? reflectedTex.rgb / reflectedTex.a : prefiltered;

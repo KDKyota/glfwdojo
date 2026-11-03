@@ -38,13 +38,13 @@ ReflectionPass::ReflectionPass() : skyboxShader_("skybox.vert", "skybox.frag"), 
 }
 
 void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer,
-                             GeometryPass &geometryPass, DeferredLightingPass &lightingPass,
-                             ForwardPass &forwardPass, const SceneGeometry &geometry, const SceneModels &models,
-                             const ShadowCubeTargets &shadows, const OcclusionTarget &ssao,
-                             const OcclusionTarget &sdfOcclusion, const IblMaps &ibl, const Camera &camera,
-                             const RenderSettings &settings, GLuint matricesUbo, float heightScale,
-                             std::size_t windowCount, const SceneTerrain &terrain, const GBuffer &mainGBuffer) {
-    
+                             GeometryPass &geometryPass, DeferredLightingPass &lightingPass, ForwardPass &forwardPass,
+                             const SceneGeometry &geometry, const SceneModels &models, const ShadowCubeTargets &shadows,
+                             const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion, const IblMaps &ibl,
+                             const Camera &camera, const RenderSettings &settings, GLuint matricesUbo,
+                             float heightScale, std::size_t windowCount, const SceneTerrain &terrain,
+                             const GBuffer &mainGBuffer) {
+
     /* -- ここから 鏡像用のカメラの view を作る -- */
     const glm::mat4 mirror = MakeMirrorMatrix(units::floorY);
     // 先にワールドを折り返してから通常の view をかける

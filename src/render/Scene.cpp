@@ -97,7 +97,7 @@ void Scene::Render(float deltaTime, float heightScale) {
     profiler_.Measure(gl::GpuPass::Geometry, [&] {
         geometryPass_.Execute(gBuffer_, geometry_, models_, mainView, settings_, heightScale, windowCount, terrain_);
     });
-    // [2.5] 床で折り返した鏡像カメラからシーンを描く
+    // [3.5] 床で折り返した鏡像カメラからシーンを描く
     if (settings_.planarReflection) {
         profiler_.Measure(gl::GpuPass::Reflection, [&] {
             reflectionPass_.Execute(reflectionTarget_, reflectionGBuffer_, geometryPass_, deferredLightingPass_,

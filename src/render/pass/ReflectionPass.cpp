@@ -38,7 +38,8 @@ ReflectionPass::ReflectionPass()
     floorMaskShader_.setInt("gPosition", texunit::kGPosition);
     floorMaskShader_.setInt("gNormal", texunit::kGNormal);
     floorMaskShader_.setFloat("floorY", units::floorY);
-    
+    downSampleShader_.use();
+    downSampleShader_.setInt("reductionSrcTex", 0);    
 }
 
 void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer,
@@ -112,7 +113,28 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
 
     /* -- textureLod で引けるようにミップマップを作る --*/
     // 床の roughness に応じたぼかしを textureLod で引けるようにミップを作り直す
+    // glBindTexture(GL_TEXTURE_2D, target.Color());
+    // glGenerateMipmap(GL_TEXTURE_2D);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, target.DownSampleFbo());
+    glDisable(GL_DEPTH_TEST);
+    downSampleShader_.use();
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, target.Color());
-    glGenerateMipmap(GL_TEXTURE_2D);
+    for (int level = 1; level <= 5; ++level) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, level - 1);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, level - 1);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.Color(), level);
+        glViewport(0, 0, target.Width() >> level, target.Height() >> level); // level 回viewportを半分にする
+        bool isKarisAvg = (level == 1);
+        downSampleShader_.setBool("isKarisAvg", isKarisAvg);
+        geometry.DrawScreenQuad();
+    }
+    // レベルをデフォルト値に戻す
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 5);
+    // fboを0に戻す
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glEnable(GL_DEPTH_TEST);
 }
 } // namespace gl

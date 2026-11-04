@@ -35,6 +35,12 @@ const float FLOOR_PLANE_EPSILON = 0.05;
 const float MAX_REFLECTION_COLOR_LOD = 5.0;
 // この距離以上離れたらボケが最大になる
 const float REFLECTION_FULL_BLUR_DISTANCE = 2.0;
+// 反射像をぼかすときに円盤の中で読む回数 増やすほど滑らかになるが床の画素ごとの読み込みが増える
+const int REFLECTION_BLUR_TAP_COUNT = 8;
+// 円盤の中で読む位置を何段細かいミップから取るか 粗いミップの格子が境目に階段として出るのを避ける
+const float REFLECTION_BLUR_FINER_LEVELS = 2.0;
+// 点を螺旋状に並べて円盤を均等に埋めるための角度
+const float GOLDEN_ANGLE = 2.39996323;
 
 uniform vec3 viewPos;
 
@@ -88,6 +94,33 @@ float upsampleSpecularVisibility(vec3 pos, vec3 normal, ivec2 pixel) {
         }
     }
     return weightSum >= SDF_UPSAMPLE_MIN_WEIGHT ? sum / weightSum : -1.0;
+}
+
+// 反射像を lod 相当のぼけで読む 粗いミップを1回読む代わりに細かいミップを円盤状に何か所か読んで平均する
+// 結果は premultiplied のまま返すので 呼び出し側で rgb / a に戻す
+vec4 sampleBlurredReflection(vec2 uv, float lod) {
+    // 鏡のようにくっきり映すところはぼかさない
+    if(lod <= 0.0)
+        return textureLod(reflectionColor, uv, 0.0);
+
+    float finerLod = max(lod - REFLECTION_BLUR_FINER_LEVELS, 0.0);
+    // レベル lod の1テクセルを覆う円盤 画面は横長なので縦横で別々に求める
+    vec2 baseTexelSize = 1.0 / vec2(textureSize(reflectionColor, 0));
+    vec2 blurRadiusUv = exp2(lod - 1.0) * baseTexelSize;
+
+    // 画素ごとに円盤の向きを回し 全画素で同じ位置を読むことによる規則的な模様を細かいノイズに変える
+    float interleavedNoise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    float rotation = interleavedNoise * 2.0 * PI;
+
+    vec4 sum = vec4(0.0);
+    for(int i = 0; i < REFLECTION_BLUR_TAP_COUNT; ++i) {
+        float angle = float(i) * GOLDEN_ANGLE + rotation;
+        // 面積が均等になるように 中心からの距離は平方根で広げる
+        float distanceRatio = sqrt((float(i) + 0.5) / float(REFLECTION_BLUR_TAP_COUNT));
+        vec2 offset = distanceRatio * blurRadiusUv * vec2(cos(angle), sin(angle));
+        sum += textureLod(reflectionColor, uv + offset, finerLod);
+    }
+    return sum / float(REFLECTION_BLUR_TAP_COUNT);
 }
 
 void main() {
@@ -165,7 +198,7 @@ void main() {
                 blurFactor = clamp(heightAboveFloor / REFLECTION_FULL_BLUR_DISTANCE, 0.0, 1.0);
             }
             float lod = Roughness * MAX_REFLECTION_COLOR_LOD * blurFactor;
-            vec4 reflectedTex = textureLod(reflectionColor, TexCoords, lod);
+            vec4 reflectedTex = sampleBlurredReflection(TexCoords, lod);
 
             vec3 reflected = vec3(0.0);
             reflected = (reflectedTex.a >= 0.05) ? reflectedTex.rgb / reflectedTex.a : prefiltered;

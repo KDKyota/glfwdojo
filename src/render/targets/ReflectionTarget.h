@@ -11,6 +11,7 @@ class ReflectionTarget {
   public:
     ReflectionTarget(int width, int height);
     GLuint Fbo() const { return fbo_; }
+    GLuint DownSampleFbo() const { return downSampleFbo_; }
     TargetView View() const { return {fbo_, width_, height_}; }
     GLuint Color() const { return color_; }
     int Width() const { return width_; }
@@ -19,6 +20,7 @@ class ReflectionTarget {
   private:
     int width_, height_;
     FramebufferHandle fbo_;
+    FramebufferHandle downSampleFbo_; // glGenerateMipmap の代わりに反射を平滑化するためのfbo
     TextureHandle color_;
     RenderbufferHandle rbo_;
 };

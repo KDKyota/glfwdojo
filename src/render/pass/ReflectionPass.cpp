@@ -1,6 +1,7 @@
 #include "render/pass/ReflectionPass.h"
 #include "core/SceneUnits.h"
 #include "render/RenderView.h"
+#include "render/TextureUnits.h"
 #include <glm/gtc/type_ptr.hpp>
 
 namespace gl {
@@ -27,18 +28,29 @@ const glm::vec4 kFloorClipPlane(0.0f, 1.0f, 0.0f, -(units::floorY + kFloorClipBi
 
 } // namespace
 
-ReflectionPass::ReflectionPass() : skyboxShader_("skybox.vert", "skybox.frag") {
+ReflectionPass::ReflectionPass()
+    : skyboxShader_("skybox.vert", "skybox.frag"),
+      floorMaskShader_("fragment_quad.vert", "reflection_floor_mask.frag") ,
+      downSampleShader_("fragment_quad.vert", "reflection_downsample.frag"){
     skyboxShader_.use();
     skyboxShader_.setInt("skybox", 0);
+    floorMaskShader_.use();
+    floorMaskShader_.setInt("gPosition", texunit::kGPosition);
+    floorMaskShader_.setInt("gNormal", texunit::kGNormal);
+    floorMaskShader_.setFloat("floorY", units::floorY);
+    downSampleShader_.use();
+    downSampleShader_.setInt("reductionSrcTex", 0);    
 }
 
 void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &reflectionGBuffer,
-                             GeometryPass &geometryPass, DeferredLightingPass &lightingPass,
-                             ForwardPass &forwardPass, const SceneGeometry &geometry, const SceneModels &models,
-                             const ShadowCubeTargets &shadows, const OcclusionTarget &ssao,
-                             const OcclusionTarget &sdfOcclusion, const IblMaps &ibl, const Camera &camera,
-                             const RenderSettings &settings, GLuint matricesUbo, float heightScale,
-                             std::size_t windowCount, const SceneTerrain &terrain) {
+                             GeometryPass &geometryPass, DeferredLightingPass &lightingPass, ForwardPass &forwardPass,
+                             const SceneGeometry &geometry, const SceneModels &models, const ShadowCubeTargets &shadows,
+                             const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion, const IblMaps &ibl,
+                             const Camera &camera, const RenderSettings &settings, GLuint matricesUbo,
+                             float heightScale, std::size_t windowCount, const SceneTerrain &terrain,
+                             const GBuffer &mainGBuffer) {
+
+    /* -- ここから 鏡像用のカメラの view を作る -- */
     const glm::mat4 mirror = MakeMirrorMatrix(units::floorY);
     // 先にワールドを折り返してから通常の view をかける
     const RenderView mirroredView{camera.GetViewMatrix() * mirror,
@@ -48,6 +60,7 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(mirroredView.view));
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+    /* -- ここから 鏡像カメラで GBuffer を作る -- */
     // 画面空間の遮蔽はメインビュー基準で作られているので鏡像では無効化する
     RenderSettings reflectionSettings = settings;
     reflectionSettings.ssaoStrength = 0.0f;
@@ -64,10 +77,12 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
     glDisable(GL_CLIP_DISTANCE0);
     glFrontFace(GL_CCW);
 
+    /* -- ライティングして色にする -- */
     reflectionGBuffer.BlitDepthTo(target.Fbo());
     lightingPass.Execute(target.View(), reflectionGBuffer, shadows, ssao, sdfOcclusion, ibl, geometry, mirroredView,
                          reflectionSettings);
 
+    /* -- GBuffer に通らないものを重ねる（ライトキューブやスカイボックスなど） -- */
     glViewport(0, 0, target.Width(), target.Height());
     glBindFramebuffer(GL_FRAMEBUFFER, target.Fbo());
     glEnable(GL_DEPTH_TEST);
@@ -84,8 +99,42 @@ void ReflectionPass::Execute(const ReflectionTarget &target, const GBuffer &refl
     geometry.DrawSkyboxMesh();
     glDepthFunc(GL_LESS);
 
+    glDisable(GL_DEPTH_TEST);
+    // アルファチャンネルのみ書き込み可能にする
+    glEnable(GL_BLEND);
+    // rgb x mask の状態にする
+    glBlendFuncSeparate(GL_ZERO, GL_SRC_ALPHA, GL_ONE, GL_ZERO);
+    floorMaskShader_.use();
+    mainGBuffer.BindTextures();
+    geometry.DrawScreenQuad();
+    glEnable(GL_DEPTH_TEST);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_BLEND);
+
+    /* -- textureLod で引けるようにミップマップを作る --*/
     // 床の roughness に応じたぼかしを textureLod で引けるようにミップを作り直す
+    // glBindTexture(GL_TEXTURE_2D, target.Color());
+    // glGenerateMipmap(GL_TEXTURE_2D);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, target.DownSampleFbo());
+    glDisable(GL_DEPTH_TEST);
+    downSampleShader_.use();
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, target.Color());
-    glGenerateMipmap(GL_TEXTURE_2D);
+    for (int level = 1; level <= 5; ++level) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, level - 1);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, level - 1);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.Color(), level);
+        glViewport(0, 0, target.Width() >> level, target.Height() >> level); // level 回viewportを半分にする
+        bool isKarisAvg = (level == 1);
+        downSampleShader_.setBool("isKarisAvg", isKarisAvg);
+        geometry.DrawScreenQuad();
+    }
+    // レベルをデフォルト値に戻す
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 5);
+    // fboを0に戻す
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glEnable(GL_DEPTH_TEST);
 }
 } // namespace gl

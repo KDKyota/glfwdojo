@@ -23,6 +23,8 @@ uniform sampler2D brdfLUT;
 uniform sampler2D sdfOcclusion;
 // 床で折り返した鏡像カメラで描いた反射像
 uniform sampler2D reflectionColor;
+uniform sampler2D reflectionGPosition;
+uniform sampler2D reflectionGNormal;
 uniform bool hasReflection;
 // 反射像へ SDF の鏡面遮蔽も重ねるか 見比べのために切り替えられるようにしている
 uniform bool floorSdfSpecularOcclusion;
@@ -31,6 +33,14 @@ const float MAX_REFLECTION_LOD = 4.0;
 const float FLOOR_PLANE_EPSILON = 0.05;
 // reflectionColor のミップを何段まで使うか roughness=1 で最もぼけたレベルを選ぶ
 const float MAX_REFLECTION_COLOR_LOD = 5.0;
+// この距離以上離れたらボケが最大になる
+const float REFLECTION_FULL_BLUR_DISTANCE = 2.0;
+// 反射像をぼかすときに円盤の中で読む回数 増やすほど滑らかになるが床の画素ごとの読み込みが増える
+const int REFLECTION_BLUR_TAP_COUNT = 8;
+// 円盤の中で読む位置を何段細かいミップから取るか 粗いミップの格子が境目に階段として出るのを避ける
+const float REFLECTION_BLUR_FINER_LEVELS = 2.0;
+// 点を螺旋状に並べて円盤を均等に埋めるための角度
+const float GOLDEN_ANGLE = 2.39996323;
 
 uniform vec3 viewPos;
 
@@ -59,10 +69,10 @@ float upsampleSpecularVisibility(vec3 pos, vec3 normal, ivec2 pixel) {
 
     float sum = 0.0;
     float weightSum = 0.0;
-    for (int j = 0; j < 2; ++j) {
-        for (int i = 0; i < 2; ++i) {
+    for(int j = 0; j < 2; ++j) {
+        for(int i = 0; i < 2; ++i) {
             float bilinear = (i == 0 ? 1.0 - fraction.x : fraction.x) * (j == 0 ? 1.0 - fraction.y : fraction.y);
-            if (bilinear <= 0.0)
+            if(bilinear <= 0.0)
                 continue;
 
             ivec2 texel = min(base + ivec2(i, j), halfSize - 1);
@@ -70,7 +80,7 @@ float upsampleSpecularVisibility(vec3 pos, vec3 normal, ivec2 pixel) {
             vec4 repNormal = texelFetch(gNormal, representative, 0);
             float repRoughness = texelFetch(gAlbedoRoughness, representative, 0).a;
             // 背景と 粗くて鏡面をトレースしていない画素の値は使えない
-            if (dot(repNormal.xyz, repNormal.xyz) < 0.5 || repRoughness >= SDF_ROUGHNESS_THRESHOLD)
+            if(dot(repNormal.xyz, repNormal.xyz) < 0.5 || repRoughness >= SDF_ROUGHNESS_THRESHOLD)
                 continue;
 
             vec3 repPos = texelFetch(gPosition, representative, 0).xyz;
@@ -86,6 +96,33 @@ float upsampleSpecularVisibility(vec3 pos, vec3 normal, ivec2 pixel) {
     return weightSum >= SDF_UPSAMPLE_MIN_WEIGHT ? sum / weightSum : -1.0;
 }
 
+// 反射像を lod 相当のぼけで読む 粗いミップを1回読む代わりに細かいミップを円盤状に何か所か読んで平均する
+// 結果は premultiplied のまま返すので 呼び出し側で rgb / a に戻す
+vec4 sampleBlurredReflection(vec2 uv, float lod) {
+    // 鏡のようにくっきり映すところはぼかさない
+    if(lod <= 0.0)
+        return textureLod(reflectionColor, uv, 0.0);
+
+    float finerLod = max(lod - REFLECTION_BLUR_FINER_LEVELS, 0.0);
+    // レベル lod の1テクセルを覆う円盤 画面は横長なので縦横で別々に求める
+    vec2 baseTexelSize = 1.0 / vec2(textureSize(reflectionColor, 0));
+    vec2 blurRadiusUv = exp2(lod - 1.0) * baseTexelSize;
+
+    // 画素ごとに円盤の向きを回し 全画素で同じ位置を読むことによる規則的な模様を細かいノイズに変える
+    float interleavedNoise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    float rotation = interleavedNoise * 2.0 * PI;
+
+    vec4 sum = vec4(0.0);
+    for(int i = 0; i < REFLECTION_BLUR_TAP_COUNT; ++i) {
+        float angle = float(i) * GOLDEN_ANGLE + rotation;
+        // 面積が均等になるように 中心からの距離は平方根で広げる
+        float distanceRatio = sqrt((float(i) + 0.5) / float(REFLECTION_BLUR_TAP_COUNT));
+        vec2 offset = distanceRatio * blurRadiusUv * vec2(cos(angle), sin(angle));
+        sum += textureLod(reflectionColor, uv + offset, finerLod);
+    }
+    return sum / float(REFLECTION_BLUR_TAP_COUNT);
+}
+
 void main() {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb;
@@ -93,15 +130,14 @@ void main() {
     float Roughness = texture(gAlbedoRoughness, TexCoords).a;
     float Metallic = texture(gNormal, TexCoords).a;
 
-    if (debugMode == 0) {
+    if(debugMode == 0) {
         // ---- 通常のライティング ----
-        if (dot(Normal, Normal) < 0.5) {
+        if(dot(Normal, Normal) < 0.5) {
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
         }
-        float AmbientOcclusion =
-            mix(1.0, texture(ssao, TexCoords).r, ssaoStrength);
+        float AmbientOcclusion = mix(1.0, texture(ssao, TexCoords).r, ssaoStrength);
 
         vec3 viewDir = normalize(viewPos - FragPos);
 
@@ -128,17 +164,16 @@ void main() {
         bool needsSpecVisibility = !isFloor || floorSdfSpecularOcclusion;
 
         float specVisibility = 1.0;
-        if (needsSpecVisibility) {
+        if(needsSpecVisibility) {
             // Roughness が大きいものは specVisibility を計算してもあまりメリットがない
-            if (Roughness < SDF_ROUGHNESS_THRESHOLD) {
+            if(Roughness < SDF_ROUGHNESS_THRESHOLD) {
                 float specConeTangent = Roughness * Roughness;
-                if (sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
+                if(sdfOcclusionStrength > 0.0) { // 処理速度向上のための分岐
                     float traced = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));
                     // 同じ面の代表点が無い画素（細い物体や輪郭）は 半解像度の値を使わずここでトレースし直す
-                    if (traced < 0.0) {
+                    if(traced < 0.0) {
                         // 鏡面反射は遠くの壁も映り込む必要があるので AO 用の短い tMax ではなくシーン全体を抜ける距離を使う
-                        traced =
-                            sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w);
+                        traced = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), specConeTangent, sceneParams.w);
                     }
                     specVisibility = mix(1.0, traced, sdfOcclusionStrength);
                 }
@@ -148,11 +183,28 @@ void main() {
         }
 
         vec3 specularIBL;
-        if (isFloor) {
+        if(isFloor) {
             // 遮蔽で暗くする代わりに その方向を実際に映る色へ置き換える
-            vec3 reflected = textureLod(reflectionColor, TexCoords, Roughness * MAX_REFLECTION_COLOR_LOD).rgb;
+            // 鏡像カメラに映る位置と法線を取得
+            vec4 reflectedPos = texture(reflectionGPosition, TexCoords);
+            vec4 reflectedNormal = texture(reflectionGNormal, TexCoords);
+            float blurFactor = 0.0; // ボケ具合
+            float heightAboveFloor = 0.0;
+            if(dot(reflectedNormal.xyz, reflectedNormal.xyz) < 0.05) // Normal の長さがほぼ0のとき
+                blurFactor = 1.0; // 無原因として最大のボケ
+            else {
+                // 映り込んだ物体と床の距離からぼかし具合 blurFactor を決める
+                heightAboveFloor = reflectedPos.y - sceneParams.x; // 床との距離を計算
+                blurFactor = clamp(heightAboveFloor / REFLECTION_FULL_BLUR_DISTANCE, 0.0, 1.0);
+            }
+            float lod = Roughness * MAX_REFLECTION_COLOR_LOD * blurFactor;
+            vec4 reflectedTex = sampleBlurredReflection(TexCoords, lod);
+
+            vec3 reflected = vec3(0.0);
+            reflected = (reflectedTex.a >= 0.05) ? reflectedTex.rgb / reflectedTex.a : prefiltered;
+
             // 反射像は遮蔽込みの実測なので重ねると二重に遮ることになる
-            if (floorSdfSpecularOcclusion)
+            if(floorSdfSpecularOcclusion)
                 reflected = mix(reflected, prefiltered, specVisibility);
             specularIBL = reflected * iblSpecularWeight;
         } else {
@@ -162,35 +214,31 @@ void main() {
         // kD が掛かるのは拡散だけ 鏡面は LUT 経由で kS を内包している
         vec3 result = (kD * diffuseIBL + specularIBL) * AmbientOcclusion * ambientStrength;
 
-        for (int i = 0; i < NR_LIGHTS; ++i) {
+        for(int i = 0; i < NR_LIGHTS; ++i) {
             // PCF で複数回サンプリングする ShadowCalculation() の手前で弾く
             float dist = length(pointLights[i].position - FragPos);
-            if (dist >= pointLights[i].attenuationRadius)
+            if(dist >= pointLights[i].attenuationRadius)
                 continue;
 
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
             // NdotL が 0 以下では shadow は寄与しないので早期にはじく
-            if (dot(Normal, lightDir) <= 0.0)
+            if(dot(Normal, lightDir) <= 0.0)
                 continue;
-            float shadow = ShadowCalculation(FragPos, Normal, lightDir,
-                    pointLights[i].position, shadowMap[i]);
-            if (sdfShadowStrength > 0.0 && shadow < 1.0) { // 処理効率工場のための条件
-                float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position,
-                            pointLights[i].sourceRadius);
+            float shadow = ShadowCalculation(FragPos, Normal, lightDir, pointLights[i].position, shadowMap[i]);
+            if(sdfShadowStrength > 0.0 && shadow < 1.0) { // 処理効率工場のための条件
+                float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position, pointLights[i].sourceRadius);
                 shadow = max(shadow, sdfShadow * sdfShadowStrength);
             }
             // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
-            vec3 transmit =
-                texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
-            result += directLightStrength * transmit * CalcPointLight(pointLights[i], Normal, FragPos, viewDir,
-                        Albedo, Roughness, Metallic, F0, shadow);
+            vec3 transmit = texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
+            result += directLightStrength * transmit * CalcPointLight(pointLights[i], Normal, FragPos, viewDir, Albedo, Roughness, Metallic, F0, shadow);
         }
 
         FragColor = vec4(result, 1.0);
 
         // 明るいピクセルだけを BrightColor に残し Bloom の素材にする
         float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
-        if (brightness > 1.0)
+        if(brightness > 1.0)
             BrightColor = vec4(result, 1.0);
         else
             BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -202,23 +250,22 @@ void main() {
     // Bloom が乗ると判定できなくなるので デバッグ中は BrightColor を常に黒にする
     BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 
-    if (debugMode == 1) {
+    if(debugMode == 1) {
         // 必ず1灯だけで見ること 4灯を max() でまとめるとほぼ全面が白くなり判定できない
         vec3 lightDir0 = normalize(pointLights[0].position - FragPos);
-        float shadow0 = ShadowCalculation(FragPos, Normal, lightDir0,
-                pointLights[0].position, shadowMap[0]);
+        float shadow0 = ShadowCalculation(FragPos, Normal, lightDir0, pointLights[0].position, shadowMap[0]);
         FragColor = vec4(vec3(shadow0), 1.0);
-    } else if (debugMode == 2) {
+    } else if(debugMode == 2) {
         vec3 fragToLight0 = FragPos - pointLights[0].position;
         float closest = texture(shadowMap[0], fragToLight0).r;
         FragColor = vec4(vec3(closest), 1.0);
-    } else if (debugMode == 3) {
+    } else if(debugMode == 3) {
         FragColor = vec4(Albedo, 1.0);
-    } else if (debugMode == 4) {
+    } else if(debugMode == 4) {
         FragColor = vec4(Normal * 0.5 + 0.5, 1.0);
-    } else if (debugMode == 5) {
+    } else if(debugMode == 5) {
         FragColor = vec4(abs(FragPos) / farPlane, 1.0);
-    } else if (debugMode == 6) {
+    } else if(debugMode == 6) {
         // 4分割して G-Buffer とシャドウマップを同時に見る
         vec2 uv = TexCoords * 2.0;
         vec2 quad = floor(uv); // (0,0)=左下 (1,0)=右下 (0,1)=左上 (1,1)=右上
@@ -229,11 +276,11 @@ void main() {
         vec4 qAlbedo = texture(gAlbedoRoughness, localUV);
 
         vec3 debugColor;
-        if (quad.y > 0.5 && quad.x < 0.5)
+        if(quad.y > 0.5 && quad.x < 0.5)
             debugColor = qAlbedo.rgb; // 左上: Albedo
-        else if (quad.y > 0.5)
+        else if(quad.y > 0.5)
             debugColor = qNormal * 0.5 + 0.5; // 右上: Normal
-        else if (quad.x < 0.5)
+        else if(quad.x < 0.5)
             debugColor = abs(qPos) / 25.0; // 左下: Position
         else {
             // 右下: shadowMap[0] の生の深度値
@@ -241,74 +288,72 @@ void main() {
             debugColor = vec3(texture(shadowMap[0], dir).r);
         }
 
-        if (abs(TexCoords.x - 0.5) < 0.001 || abs(TexCoords.y - 0.5) < 0.001)
+        if(abs(TexCoords.x - 0.5) < 0.001 || abs(TexCoords.y - 0.5) < 0.001)
             debugColor = vec3(1.0, 0.0, 0.0);
 
         FragColor = vec4(debugColor, 1.0);
-    } else if (debugMode == 7) {
+    } else if(debugMode == 7) {
         // 真っ黒なら FBO・サンプラー・パスの配線が繋がっていない
         float ao = texture(ssao, TexCoords).r;
         FragColor = vec4(vec3(ao), 1.0);
-    } else if (debugMode == 8) {
+    } else if(debugMode == 8) {
         // 白地にガラスのシルエットが色付きで写れば配線は正しい
         vec3 dir0 = FragPos - pointLights[0].position;
         FragColor = vec4(texture(shadowColor[0], dir0).rgb, 1.0);
-    } else if (debugMode == 9) {
+    } else if(debugMode == 9) {
         // オブジェクトごとに一様な明るさで見えれば gNormal.a への書き込みは正しい
         FragColor = vec4(vec3(Metallic), 1.0);
-    } else if (debugMode == 10) {
+    } else if(debugMode == 10) {
         FragColor = vec4(vec3(Roughness), 1.0);
-    } else if (debugMode == 11) {
+    } else if(debugMode == 11) {
         // 上向きの面が空色 下向きが地面色になっていれば畳み込みは成功
         FragColor = vec4(texture(irradianceMap, Normal).rgb, 1.0);
-    } else if (debugMode == 12) {
+    } else if(debugMode == 12) {
         // roughness を上げるほど映り込みがぼけていけば正常
         vec3 R = reflect(-normalize(viewPos - FragPos), Normal);
         FragColor = vec4(textureLod(prefilterMap, R, Roughness * MAX_REFLECTION_LOD).rgb, 1.0);
-    } else if (debugMode == 13) {
+    } else if(debugMode == 13) {
         // 画面全体に LUT を貼る 左下が暗く右上が明るい赤緑のグラデーションが正解
         FragColor = vec4(texture(brdfLUT, TexCoords).rg, 0.0, 1.0);
-    } else if (debugMode == 14) {
+    } else if(debugMode == 14) {
         // SDF関数のデバッグ
-        if (dot(Normal, Normal) < 0.5) { // オブジェクトと HDR を区別して処理
+        if(dot(Normal, Normal) < 0.5) { // オブジェクトと HDR を区別して処理
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
             FragColor = vec4(vec3(texture(sdfOcclusion, TexCoords).r), 1.0);
         }
-    } else if (debugMode == 15) {
+    } else if(debugMode == 15) {
         // ソフトシャドウのデバッグ
-        if (dot(Normal, Normal) < 0.5) {
+        if(dot(Normal, Normal) < 0.5) {
             FragColor = vec4(0.0, 0.0, 0.0, 0.0);
         } else {
-            float visibility =
-                sdfLightVisibility(FragPos, normalize(Normal), pointLights[0].position, pointLights[0].sourceRadius);
+            float visibility = sdfLightVisibility(FragPos, normalize(Normal), pointLights[0].position, pointLights[0].sourceRadius);
             FragColor = vec4(vec3(visibility), 1.0);
         }
-    } else if (debugMode == 16) {
+    } else if(debugMode == 16) {
         // AO パスのステップ数を正規化して表示 白いほど SDF_MAX_STEPS に近い（重い）
-        if (dot(Normal, Normal) < 0.5) {
+        if(dot(Normal, Normal) < 0.5) {
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
             FragColor = vec4(vec3(texture(sdfOcclusion, TexCoords).r), 1.0);
         }
-    } else if (debugMode == 17 || debugMode == 18) {
+    } else if(debugMode == 17 || debugMode == 18) {
         // 鏡面のコーントレースの生の結果 17 は可視性 18 は使ったステップ数
-        if (dot(Normal, Normal) < 0.5) {
+        if(dot(Normal, Normal) < 0.5) {
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         } else {
             vec3 viewDir = normalize(viewPos - FragPos);
             vec3 R = reflect(-viewDir, Normal);
             int steps;
-            float visibility = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R),
-                    Roughness * Roughness, sceneParams.w, steps);
+            float visibility = sdfEnvVisibility(FragPos, normalize(Normal), normalize(R), Roughness * Roughness, sceneParams.w, steps);
             float value = debugMode == 17 ? visibility : float(steps) / float(SDF_MAX_STEPS);
             FragColor = vec4(vec3(value), 1.0);
         }
-    } else if (debugMode == 19) {
+    } else if(debugMode == 19) {
         // 実際にライティングが使う鏡面の可視性（半解像度＋補間） 17 と見比べる 赤はトレースし直した画素
-        if (dot(Normal, Normal) < 0.5) {
+        if(dot(Normal, Normal) < 0.5) {
             FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-        } else if (Roughness >= SDF_ROUGHNESS_THRESHOLD) {
+        } else if(Roughness >= SDF_ROUGHNESS_THRESHOLD) {
             FragColor = vec4(0.0, 0.0, 1.0, 1.0); // 粗い画素は鏡面をトレースしない 青
         } else {
             float visibility = upsampleSpecularVisibility(FragPos, normalize(Normal), ivec2(gl_FragCoord.xy));

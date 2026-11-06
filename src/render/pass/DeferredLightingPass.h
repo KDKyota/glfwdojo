@@ -27,7 +27,7 @@ class DeferredLightingPass {
     void Execute(const TargetView &target, const GBuffer &gbuffer, const ShadowCubeTargets &shadows,
                  const OcclusionTarget &ssao, const OcclusionTarget &sdfOcclusion, const IblMaps &ibl,
                  const SceneGeometry &geometry, const RenderView &view, const RenderSettings &settings,
-                 GLuint reflectionColor = 0);
+                 GLuint reflectionColor = 0, GLuint reflectionGPosition = 0, GLuint reflectionGNormal = 0);
 
   private:
     Shader shader_;

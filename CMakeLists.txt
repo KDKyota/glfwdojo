@@ -161,8 +161,8 @@ add_custom_target(
     $<TARGET_FILE_DIR:glfwdojo>/resources
   DEPENDS ${SHADER_SOURCES}
   COMMENT "Copying shaders and resources")
-# exe の出力先が確定してからコピーする
-add_dependencies(copy_assets glfwdojo)
+# VS の F5 のように glfwdojo だけをビルドする経路でもシェーダーのコピーを先に走らせる
+add_dependencies(glfwdojo copy_assets)
 
 # シェーダーと resources/ は exe の隣にコピーされ、コード側は相対パスで開くので WORKING_DIRECTORY を exe
 # のフォルダにしないと読み込みに失敗する

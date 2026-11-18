@@ -12,8 +12,12 @@ inline constexpr float walkSpeed = 1.4f;
 inline constexpr float runSpeed = 5.0f;
 inline constexpr float jumpSpeed = 5.0f; // ジャンプの初速（m/s）
 // 蹴上げ・踏面 住宅の階段に近い値（TODO: 不自然に見える場合は調整）
-inline constexpr float stairRiser = 0.18f;
-inline constexpr float stairTread = 0.27f;
+inline constexpr float stairRiser = 0.18f;       // 階段の蹴上げ
+inline constexpr float stairTread = 0.27f;       // 階段の踏面
+inline constexpr float stairWidth = 5.0f;        // 階段の横幅
+inline constexpr float stairHeight = 18.0f;      // 階段の上階までの高さ
+inline constexpr float stairProtruding = 0.02f;  // 階段のでっぱり（余裕があれば実装）
+inline constexpr float stairLandingDepth = 2.0f; // 踊り場の奥行き
 
 inline constexpr float gravity = 9.81f; // 重力加速度(m/s^2)
 

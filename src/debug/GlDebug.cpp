@@ -64,6 +64,8 @@ void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severi
 } // namespace
 
 void gl::EnableDebugOutput() {
+    if (glDebugMessageCallback == nullptr) // MacOS では4.2以上が使えないのでここが true になる
+        return;
     GLint flags = 0;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     // Release では debug context を要求していないので ここで抜けるのが既定の動作
@@ -82,5 +84,5 @@ void gl::EnableDebugOutput() {
     // NVIDIA が LOW で出す「確保しました」系の報告 性能警告(131218)は残すので個別に指定する
     const GLuint noisyIds[] = {131169, 131185, 131204};
     glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_OTHER, GL_DONT_CARE,
-                          static_cast<GLsizei>(std::size(noisyIds)), noisyIds, GL_FALSE);
+                          static_cast<GLsizei>(sizeof(noisyIds)/sizeof(noisyIds[0])), noisyIds, GL_FALSE);
 }

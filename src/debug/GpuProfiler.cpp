@@ -38,8 +38,9 @@ void gl::GpuProfiler::begin(GpuPass pass) {
     measuring_ = true;
 
     const std::size_t index = static_cast<std::size_t>(pass);
-    // RenderDoc のイベント一覧をパス単位のツリーにする 入れ子防止の measuring_ が Push/Pop の対応も保証する
-    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, static_cast<GLuint>(index), -1, Name(pass));
+    if (glDebugMessageCallback != nullptr) // MacOS ではここが false になる
+        // RenderDoc のイベント一覧をパス単位のツリーにする 入れ子防止の measuring_ が Push/Pop の対応も保証する
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, static_cast<GLuint>(index), -1, Name(pass));
     glBeginQuery(GL_TIME_ELAPSED, queries_[index][writeSlot_]);
     issued_[index][writeSlot_] = true;
 }
@@ -47,7 +48,8 @@ void gl::GpuProfiler::begin(GpuPass pass) {
 void gl::GpuProfiler::end() {
     if (!measuring_) return;
     glEndQuery(GL_TIME_ELAPSED);
-    glPopDebugGroup();
+    if (glDebugMessageCallback != nullptr)
+        glPopDebugGroup();
     measuring_ = false;
 }
 

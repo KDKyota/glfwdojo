@@ -130,7 +130,7 @@ void Scene::Render(float deltaTime, float heightScale) {
                              collisionDebugDraw_, models_.PlayerCharacter());
     });
     // [8] 明るい部分をぼかして Bloom の素材を作る
-    profiler_.Measure(gl::GpuPass::Bloom, [&] { bloomPass_.Execute(hdrTarget_); });
+    profiler_.Measure(gl::GpuPass::Bloom, [&] { bloomPass_.Execute(hdrTarget_, geometry_); });
     // [9] トーンマッピングとガンマ補正をしてデフォルトFBOへ
     profiler_.Measure(gl::GpuPass::ToScreen,
                       [&] { tonemapPass_.Execute(hdrTarget_, bloomPass_.Result(), geometry_, settings_); });

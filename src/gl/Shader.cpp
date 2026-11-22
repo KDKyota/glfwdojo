@@ -71,7 +71,7 @@ std::string adaptGlslVersion(std::string source) {
 }
 
 /// @brief プログラムが宣言している UBO を binding 番号にリンクさせる
-void linkUniformBlocks(GLuint program) {
+void bindUniformBlocks(GLuint program) {
     for (const ubo::BlockBinding &block : ubo::kBlockBindings) {
         // ブロックインデックス
         const GLuint blockIndex = glGetUniformBlockIndex(program, block.blockName);

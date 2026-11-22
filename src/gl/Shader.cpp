@@ -70,7 +70,7 @@ std::string adaptGlslVersion(std::string source) {
     return source;
 }
 
-/// @brief プログラムが宣言している UBO を binding 番号にリンクさせる
+/// @brief プログラムが宣言している UBO を binding 番号にバインドさせる
 void bindUniformBlocks(GLuint program) {
     for (const ubo::BlockBinding &block : ubo::kBlockBindings) {
         // ブロックインデックス

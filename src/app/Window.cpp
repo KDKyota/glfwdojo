@@ -1,6 +1,7 @@
 #include "app/Window.h"
 #include "app/Callbacks.h"
 #include "debug/GlDebug.h"
+#include "gl/GLPlatform.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -10,9 +11,11 @@ Window::Window(int width, int height, const std::string &title) : width_(width),
 
     glfwSetErrorCallback(error_callback); // エラーのコールバック関数を登録
     // バージョン指定
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, gl::platform::kContextMajorVersion);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, gl::platform::kContextMinorVersion);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,
+                   gl::platform::kRequiresForwardCompatContext ? GLFW_TRUE : GLFW_FALSE);
     // 同期デバッグ出力は計測値を歪めるので GPU 時間を測る Release では要求しない
 #ifndef NDEBUG
     // これが無いとドライバによってはデバッグメッセージが一部しか飛んでこない

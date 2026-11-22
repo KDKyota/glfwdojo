@@ -128,6 +128,7 @@ Shader::Shader(const char *vertexPath, const char *geometryPath,
     glAttachShader(ID, fragment);
     glLinkProgram(ID);
     checkCompileErrors(ID, "PROGRAM");
+    bindUniformBlocks(ID);
     glDeleteShader(vertex);
     glDeleteShader(geometry);
     glDeleteShader(fragment);
@@ -157,6 +158,7 @@ Shader::Shader(const char *vertexPath, const char *fragmentPath) {
     glAttachShader(ID, fragment);
     glLinkProgram(ID);
     checkCompileErrors(ID, "PROGRAM");
+    bindUniformBlocks(ID);
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);

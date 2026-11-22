@@ -1,6 +1,7 @@
 #include "gl/Shader.h"
 #include "gl/GlHandle.h"
 #include "gl/GLPlatform.h"
+#include "gl/UniformBlockBindings.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -67,6 +68,17 @@ std::string adaptGlslVersion(std::string source) {
         return source;
     source.replace(versionPos, kAuthoredGlslVersionLine.size(), platform::kGlslVersionLine);
     return source;
+}
+
+/// @brief プログラムが宣言している UBO を binding 番号にリンクさせる
+void linkUniformBlocks(GLuint program) {
+    for (const ubo::BlockBinding &block : ubo::kBlockBindings) {
+        // ブロックインデックス
+        const GLuint blockIndex = glGetUniformBlockIndex(program, block.blockName);
+        if (blockIndex != GL_INVALID_INDEX) { // 宣言だけで使っていないブロックは GL_INVALID_INDX が返される
+            glUniformBlockBinding(program, blockIndex, block.binding);
+        }
+    }
 }
 
 } // namespace

@@ -8,7 +8,7 @@ layout(location = 4) in vec3 aBitangent;
 layout(location = 6) in ivec4 aBoneIds;
 layout(location = 7) in vec4 aWeights;
 
-layout(std140, binding = 0) uniform Matrices {
+layout(std140) uniform Matrices {
     mat4 view;
     mat4 projection;
 };
@@ -16,7 +16,7 @@ layout(std140, binding = 0) uniform Matrices {
 const int MAX_BONES = 128; // Model.h の kMaxBones と一致させる
 
 // デフォルトブロックの uniform 上限（保証は 1024 component）を超えるので UBO で受け取る
-layout(std140, binding = 1) uniform BoneMatrices {
+layout(std140) uniform BoneMatrices {
     mat4 finalBones[MAX_BONES]; // ボーンごとの最終変換行列
 };
 

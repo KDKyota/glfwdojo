@@ -10,7 +10,7 @@ uniform sampler2D gNormal;    // ワールド法線
 uniform sampler2D texNoise;   // 4x4 のランダム回転ベクトル
 
 // メンバの順序と型は .vert 側と完全に一致させること
-layout (std140, binding = 0) uniform Matrices {
+layout (std140) uniform Matrices {
 	mat4 view;
 	mat4 projection;
 };

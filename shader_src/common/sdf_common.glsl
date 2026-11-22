@@ -9,7 +9,7 @@ const int SDF_MAX_BOXES = 8;
 // 配列長は SdfOcclusionPass.cpp の kSdfMaxModels と一致させること
 const int SDF_MAX_MODELS = 4;
 
-layout(std140, binding = 2) uniform SdfScene {
+layout(std140) uniform SdfScene {
     vec4 boxCenters[SDF_MAX_BOXES];
     vec4 wallCenters[2];
     vec4 boxHalfSize;

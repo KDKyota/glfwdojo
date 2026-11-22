@@ -3,7 +3,7 @@ layout (location = 0) in vec3 aPos;
 
 out vec3 TexCoords;
 
-layout (std140, binding = 0) uniform Matrices {
+layout (std140) uniform Matrices {
     mat4 view;
     mat4 projection;
 };

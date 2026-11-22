@@ -55,7 +55,7 @@ void main() {
     vec4 m = texture(reductionSrcTex, vec2(TexCoords.x + x, TexCoords.y - y));
 
     vec4 groups[5];
-    float groupWeight[5] = {0.125, 0.125, 0.125, 0.125, 0.5};
+    float groupWeight[5] = float[5]{0.125, 0.125, 0.125, 0.125, 0.5};
     vec4 weightedSum = vec4(0.0);
     float totalWeight = 0;
     if(isKarisAvg) {

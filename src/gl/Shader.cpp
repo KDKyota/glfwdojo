@@ -58,16 +58,14 @@ std::string expandIncludes(const std::string &path, int depth = 0) {
     return out.str();
 }
 
-constexpr std::string_view kAuthoredGlslVersionLine = "#version 460 core";
+constexpr std::string_view kAuthoredGlslVersionLine = "#version 460 core"; // シェーダファイルに書いているバージョン行 これを環境ごとに置き換える
 
 /// @brief  460 で書いたシェーダーファイルを環境で作れるコンテキストの GLSL バージョンでコンパイルできるようにする
-/// @param source 
-/// @return 
 std::string adaptGlslVersion(std::string source) {
     const std::size_t versionPos = source.find(kAuthoredGlslVersionLine);
     if (versionPos == std::string::npos) 
         return source;
-    source.replace(versionPos, kAuthoredGlslVersionLine.size(), platform::kGlslversionLine);
+    source.replace(versionPos, kAuthoredGlslVersionLine.size(), platform::kGlslVersionLine);
     return source;
 }
 
@@ -88,7 +86,7 @@ Shader &Shader::operator=(Shader &&other) noexcept {
 
 Shader::Shader(const char *vertexPath, const char *geometryPath,
                const char *fragmentPath) {
-    const std::string vertexCode = adaptGlslVersion(expandIncludes(vertexPath));;
+    const std::string vertexCode = adaptGlslVersion(expandIncludes(vertexPath));
     const std::string geometryCode = adaptGlslVersion(expandIncludes(geometryPath));
     const std::string fragmentCode = adaptGlslVersion(expandIncludes(fragmentPath));
 

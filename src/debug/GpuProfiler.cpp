@@ -8,8 +8,10 @@
 namespace {
 
 // GpuPass の並びと一致させること ずれても動いてしまい表示だけが入れ替わる
+// 注意: 表示側が %-9s で列を揃えているので 9 文字以内にする
+// Light+SDF は Lighting パスで SDF のソフトシャドウも計算していることを表す
 constexpr const char *kPassNames[] = {
-    "Shadow", "Reflect", "Geometry", "SSAO", "SdfOccl", "BlitDepth", "Lighting", "Forward", "Bloom", "ToScreen",
+    "Shadow", "Reflect", "Geometry", "SSAO", "SdfOccl", "BlitDepth", "Light+SDF", "Forward", "Bloom", "ToScreen",
 };
 static_assert(std::size(kPassNames) == gl::GpuProfiler::kPassCount, "GpuPass と名前配列の数が合っていない");
 

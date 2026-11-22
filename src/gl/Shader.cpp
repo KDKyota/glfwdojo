@@ -1,8 +1,10 @@
 #include "gl/Shader.h"
 #include "gl/GlHandle.h"
+#include "gl/GLPlatform.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include <string_view> // 文字の読み取り専用ライブラリ
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -56,6 +58,19 @@ std::string expandIncludes(const std::string &path, int depth = 0) {
     return out.str();
 }
 
+constexpr std::string_view kAuthoredGlslVersionLine = "#version 460 core";
+
+/// @brief  460 で書いたシェーダーファイルを環境で作れるコンテキストの GLSL バージョンでコンパイルできるようにする
+/// @param source 
+/// @return 
+std::string adaptGlslVersion(std::string source) {
+    const std::size_t versionPos = source.find(kAuthoredGlslVersionLine);
+    if (versionPos == std::string::npos) 
+        return source;
+    source.replace(versionPos, kAuthoredGlslVersionLine.size(), platform::kGlslversionLine);
+    return source;
+}
+
 } // namespace
 
 Shader::~Shader() { glDeleteProgram(ID); }
@@ -73,9 +88,9 @@ Shader &Shader::operator=(Shader &&other) noexcept {
 
 Shader::Shader(const char *vertexPath, const char *geometryPath,
                const char *fragmentPath) {
-    const std::string vertexCode = expandIncludes(vertexPath);
-    const std::string geometryCode = expandIncludes(geometryPath);
-    const std::string fragmentCode = expandIncludes(fragmentPath);
+    const std::string vertexCode = adaptGlslVersion(expandIncludes(vertexPath));;
+    const std::string geometryCode = adaptGlslVersion(expandIncludes(geometryPath));
+    const std::string fragmentCode = adaptGlslVersion(expandIncludes(fragmentPath));
 
     const char *vCode = vertexCode.c_str();
     const char *gCode = geometryCode.c_str();
@@ -109,8 +124,8 @@ Shader::Shader(const char *vertexPath, const char *geometryPath,
 }
 
 Shader::Shader(const char *vertexPath, const char *fragmentPath) {
-    const std::string vertexCode = expandIncludes(vertexPath);
-    const std::string fragmentCode = expandIncludes(fragmentPath);
+    const std::string vertexCode = adaptGlslVersion(expandIncludes(vertexPath));
+    const std::string fragmentCode = adaptGlslVersion(expandIncludes(fragmentPath));
 
     const char *vShaderCode = vertexCode.c_str();
     const char *fShaderCode = fragmentCode.c_str();

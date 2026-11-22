@@ -1,5 +1,6 @@
 #include "render/pass/BloomPass.h"
 
+#include "gl/GLPlatform.h"
 #include "gl/RenderTarget.h"
 
 namespace gl {
@@ -10,7 +11,7 @@ constexpr unsigned int kBlurTile = 256;
 
 } // namespace
 
-BloomPass::BloomPass(int width, int height) : width_(width), height_(height), shader_("blur.comp") {
+BloomPass::BloomPass(int width, int height) : width_(width), height_(height), shader_(platform::kSupportComputeShader ? Shader("blur.comp") : Shader("fragment_quad.vert", "blur.frag")) {
     shader_.use();
     shader_.setInt("image", 0);
 
@@ -27,7 +28,14 @@ BloomPass::BloomPass(int width, int height) : width_(width), height_(height), sh
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void BloomPass::Execute(const HdrTarget &hdr) {
+void BloomPass::Execute(const HdrTarget &hdr, const SceneGeometry &geometry) {
+    if (platform::kSupportComputeShader)
+        executeWithCompute(hdr);
+    else
+        executeWithFragment(hdr, geometry);
+}
+
+void BloomPass::executeWithCompute(const HdrTarget &hdr) {
     bool first_iteration = true;
     unsigned int amount = 10;
     shader_.use();
@@ -52,6 +60,25 @@ void BloomPass::Execute(const HdrTarget &hdr) {
     }
     // TonemapPass は結果を imageLoad ではなく sampler で読むので 別のビットが要る
     glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+}
+
+// Fragment の方ではもともと Compute shader を使っていなかった時のコードを利用
+void BloomPass::executeWithFragment(const HdrTarget &hdr, const SceneGeometry &geometry) {
+    glDisable(GL_DEPTH_TEST);
+    bool first_iteration = true;
+    unsigned int amount = 10;
+    shader_.use();
+    for (unsigned int i = 0; i < amount; ++i) {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[blurHorizontal_]);
+        shader_.setInt("horizontal", blurHorizontal_);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D,
+                      first_iteration ? hdr.BrightColor() : pingpongColorBuffers_[!blurHorizontal_].get());
+        geometry.DrawScreenQuad();
+        blurHorizontal_ = !blurHorizontal_;
+        if (first_iteration)
+            first_iteration = false;
+    }
 }
 
 } // namespace gl

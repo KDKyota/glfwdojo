@@ -13,7 +13,7 @@ Gui::Gui(GLFWwindow *window) {
 
     // 第2引数 true で既存のコールバックを保存して連鎖呼び出しする
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(gl::platform::kGlslversionLine);
+    ImGui_ImplOpenGL3_Init(gl::platform::kGlslVersionLine);
 }
 
 Gui::~Gui() {

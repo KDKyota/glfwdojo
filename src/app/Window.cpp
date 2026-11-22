@@ -21,6 +21,8 @@ Window::Window(int width, int height, const std::string &title) : width_(width),
     // これが無いとドライバによってはデバッグメッセージが一部しか飛んでこない
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
+    // Scene の各ターゲットはウィンドウのサイズで作っているので デフォルトフレームバッファも同じサイズに揃える
+    glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GLFW_FALSE);
 
     GLFWmonitor *monitor = glfwGetPrimaryMonitor(); // 今回は利用しない
     // フルスクリーンのためのモニターの解像度を取得

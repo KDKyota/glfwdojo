@@ -48,6 +48,7 @@ void Scene::initColliders() {
 
     colliders_.Add({{-half, gl::units::floorY, -half - wallThickness}, {half, gl::units::wallTopY, -half}});
     colliders_.Add({{-half, gl::units::floorY, half}, {half, gl::units::wallTopY, half + wallThickness}});
+    // TODO: for文で階段の AABB を作る
 
     std::vector<const gl::HeightField *> heightFields =
         terrain_.getHeightFields(); // terrains_ メンバを代入するための vector

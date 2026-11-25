@@ -6,6 +6,7 @@
 #include "render/Scene.h"
 #include "gl/Shader.h"
 #include "app/Window.h"
+#include "debug/startup_timer.h"
 
 #include <imgui.h>
 

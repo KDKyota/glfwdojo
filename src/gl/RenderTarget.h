@@ -36,6 +36,11 @@ void AttachDepthStencilBuffer(RenderbufferHandle &renderbuffer, int width, int h
 void CreateCubemap(TextureHandle &texture, GLint internalFormat, GLenum format, GLenum type, int size,
                    GLint minFilter, GLint magFilter);
 
+/// @brief 同じサイズのキューブマップを cubeCount 個まとめた キューブマップ配列を作る
+// キューブマップ配列は複数のキューブを1枚のテクスチャに収め sampler 1個で番号を指定して読めるようにする
+void CreateCubemapArray(TextureHandle &texture, GLint internalFormat, GLenum format, GLenum type, int size,
+                        int cubeCount, GLint minFilter, GLint magFilter);
+
 /**
  * @brief 現在バインド中の FBO が完全かを確かめ 不完全なら name を添えて報告する
  */

@@ -71,6 +71,41 @@ jobs:
             build/Release/resources/
           retention-days: 7
 
+  # Windows 側だけでは気づけない Clang 固有のエラーや OpenGL 4.1 Core 向けの非互換を拾う
+  build-macos:
+    runs-on: macos-latest
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg_cache
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew list ninja >/dev/null 2>&1 || brew install ninja
+
+      # macOS ランナーには vcpkg が常備されている保証が無いので自前で用意する
+      # builtin-baseline の解決に vcpkg の git 履歴が要るため浅いクローンにはしない
+      - name: Bootstrap vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+
+      - name: Create the vcpkg binary cache directory
+        run: mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+
+      - name: Restore prebuilt vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Configure (Debug)
+        run: cmake --preset macos-debug
+
+      - name: Build (Debug)
+        run: cmake --build --preset macos-debug
+
   # 追加したシェーダーの CMakeLists.txt への登録漏れはビルドが通ってしまい、
   # 実行時にファイルが見つからず初めて発覚するのでここで潰す
   check-shader-list:

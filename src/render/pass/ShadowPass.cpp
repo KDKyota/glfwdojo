@@ -25,7 +25,13 @@ void ShadowPass::Execute(const ShadowCubeTargets &targets, const SceneGeometry &
                          std::size_t windowCount, bool staticCasters, const SceneTerrain &terrain) {
     glViewport(0, 0, shadow::kMapWidth, shadow::kMapHeight);
     glEnable(GL_DEPTH_TEST);
+    glBindFramebuffer(GL_FRAMEBUFFER, targets.Fbo());
+    // 注意: レイヤー付きアタッチメントの glClear は全光源の面をまとめて消すので ループの前に一度だけ行う
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // ガラスを通らない方向 = 減衰なし
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     for (std::size_t j = 0; j < layout::kPointLightCount; ++j) {
+        const int lightIndex = static_cast<int>(j);
         glm::vec3 lightPos = layout::pointLights[j].position;
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f),
                                                 (float)shadow::kMapWidth / (float)shadow::kMapHeight,
@@ -45,11 +51,10 @@ void ShadowPass::Execute(const ShadowCubeTargets &targets, const SceneGeometry &
                                    glm::lookAt(lightPos, lightPos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)));
 
         /* ── Pass 1: Point Shadow Depth Pass ── */
-        glBindFramebuffer(GL_FRAMEBUFFER, targets.Fbo(j));
         // カラーサブパスと交互に使うので ループ内で毎回 use() しないと uniform の送り先がずれる
         depthShader_.use();
         glDrawBuffer(GL_NONE);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        depthShader_.setInt("lightIndex", lightIndex);
         for (int i = 0; i < 6; ++i)
             depthShader_.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         depthShader_.setFloat("farPlane", shadow::kFarPlane);
@@ -69,13 +74,12 @@ void ShadowPass::Execute(const ShadowCubeTargets &targets, const SceneGeometry &
 
         /* ── Pass 1.5: Point Shadow Color Pass ── */
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // ガラスを通らない方向 = 減衰なし
-        glClear(GL_COLOR_BUFFER_BIT);
         // 深度テストは残したまま書き込みだけ止め 不透明物より奥のガラスを弾く
         glDepthMask(GL_FALSE);
         glEnable(GL_BLEND);
         glBlendFunc(GL_ZERO, GL_SRC_COLOR);
         colorShader_.use();
+        colorShader_.setInt("lightIndex", lightIndex);
         for (int i = 0; i < 6; ++i)
             colorShader_.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         colorShader_.setFloat("farPlane", shadow::kFarPlane);

@@ -1,34 +1,30 @@
 #pragma once
 #include "gl/GlHandle.h"
 #include "scene/SceneLayout.h"
-#include <array>
 
 namespace gl {
 
-/**
- * @brief 点光源ごとの深度キューブマップと ガラスを透過した光の色を持つ
- *
- * 1つの FBO へ深度と色を書き分ける
- */
+/// @brief 全点光源の深度と ガラスを透過した光の色をキューブマップ配列で持つ
+// 光源 j の面 f は配列の layer-face j * 6 + f に入る
 class ShadowCubeTargets {
   public:
     ShadowCubeTargets();
 
-    GLuint Fbo(std::size_t light) const {
-        return fbo_[light];
+    GLuint Fbo() const {
+        return fbo_;
     }
 
-    /// 深度キューブマップを texunit::kShadowMap から連番で割り当てる
+    /// @brief 深度キューブマップ配列を texunit::kShadowMap に割り当てる
     void BindDepthMaps() const;
-    /// 透過色キューブマップを texunit::kShadowColor から連番で割り当てる
+    /// @brief 透過色キューブマップ配列を texunit::kShadowColor に割り当てる
     void BindColorMaps() const;
 
   private:
-    std::array<FramebufferHandle, layout::kPointLightCount> fbo_;
+    FramebufferHandle fbo_;
     // 各テクセルは光源からの正規化距離
-    std::array<TextureHandle, layout::kPointLightCount> depthCubemap_;
+    TextureHandle depthCubemapArray_;
     // 各テクセルはガラスを透過した光の色 ガラスを通らない方向は白
-    std::array<TextureHandle, layout::kPointLightCount> shadowColorCubemap_;
+    TextureHandle shadowColorCubemapArray_;
 };
 
 } // namespace gl

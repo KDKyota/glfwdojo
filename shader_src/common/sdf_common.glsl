@@ -7,7 +7,7 @@
 // 配列長は Scene.h の kSdfMaxBoxes と一致させること
 const int SDF_MAX_BOXES = 8;
 // 配列長は SdfOcclusionPass.cpp の kSdfMaxModels と一致させること
-const int SDF_MAX_MODELS = 4;
+const int SDF_MAX_MODELS = 2;
 
 layout(std140) uniform SdfScene {
     vec4 boxCenters[SDF_MAX_BOXES];

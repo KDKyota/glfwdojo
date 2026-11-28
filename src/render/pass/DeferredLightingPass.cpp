@@ -14,13 +14,11 @@ DeferredLightingPass::DeferredLightingPass() : shader_("fragment_quad.vert", "de
     shader_.setInt("gPosition", texunit::kGPosition);
     shader_.setInt("gNormal", texunit::kGNormal);
     shader_.setInt("gAlbedoRoughness", texunit::kGAlbedoRoughness);
-    for (std::size_t i = 0; i < layout::kPointLightCount; ++i)
-        shader_.setInt("shadowMap[" + std::to_string(i) + "]", texunit::kShadowMap + static_cast<int>(i));
+    shader_.setInt("shadowMap", texunit::kShadowMap);
     shader_.setFloat("farPlane", shadow::kFarPlane);
     shader_.setFloat("shadowMapSize", static_cast<float>(shadow::kMapWidth));
     shader_.setInt("ssao", texunit::kSsao);
-    for (std::size_t i = 0; i < layout::kPointLightCount; ++i)
-        shader_.setInt("shadowColor[" + std::to_string(i) + "]", texunit::kShadowColor + static_cast<int>(i));
+    shader_.setInt("shadowColor", texunit::kShadowColor);
     shader_.setInt("irradianceMap", texunit::kIrradianceMap);
     shader_.setInt("prefilterMap", texunit::kPrefilterMap);
     shader_.setInt("brdfLUT", texunit::kBrdfLut);

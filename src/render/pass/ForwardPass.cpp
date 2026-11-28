@@ -14,13 +14,9 @@ ForwardPass::ForwardPass()
       transparentWindowShader_("window.vert", "glass.frag") {
     transparentWindowShader_.use();
     transparentWindowShader_.setInt("diffuseMap", texunit::kDiffuseMap);
-    for (std::size_t i = 0; i < layout::kPointLightCount; ++i)
-        transparentWindowShader_.setInt("shadowMap[" + std::to_string(i) + "]",
-                                        texunit::kShadowMap + static_cast<int>(i));
     // deferredLightingShader_ と割り当てを揃える
-    for (std::size_t i = 0; i < layout::kPointLightCount; ++i)
-        transparentWindowShader_.setInt("shadowColor[" + std::to_string(i) + "]",
-                                        texunit::kShadowColor + static_cast<int>(i));
+    transparentWindowShader_.setInt("shadowMap", texunit::kShadowMap);
+    transparentWindowShader_.setInt("shadowColor", texunit::kShadowColor);
     transparentWindowShader_.setInt("prefilterMap", texunit::kPrefilterMap);
     transparentWindowShader_.setInt("brdfLUT", texunit::kBrdfLut);
     // sdf_common.glsl の距離場 未設定だとユニット0を読み texture() が 0 を返して AABB 全体が遮蔽物になる

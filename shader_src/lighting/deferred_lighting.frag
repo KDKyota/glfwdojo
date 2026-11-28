@@ -224,13 +224,13 @@ void main() {
             // NdotL が 0 以下では shadow は寄与しないので早期にはじく
             if(dot(Normal, lightDir) <= 0.0)
                 continue;
-            float shadow = ShadowCalculation(FragPos, Normal, lightDir, pointLights[i].position, shadowMap[i]);
+            float shadow = ShadowCalculation(FragPos, Normal, lightDir, pointLights[i].position, i);
             if(sdfShadowStrength > 0.0 && shadow < 1.0) { // 処理効率工場のための条件
                 float sdfShadow = 1.0 - sdfLightVisibility(FragPos, normalize(Normal), pointLights[i].position, pointLights[i].sourceRadius);
                 shadow = max(shadow, sdfShadow * sdfShadowStrength);
             }
             // 窓枠は shadow≈1 で黒い影 ガラスは shadow=0 のままここで色付きに減衰する
-            vec3 transmit = texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
+            vec3 transmit = texture(shadowColor, vec4(FragPos - pointLights[i].position, float(i))).rgb;
             result += directLightStrength * transmit * CalcPointLight(pointLights[i], Normal, FragPos, viewDir, Albedo, Roughness, Metallic, F0, shadow);
         }
 
@@ -253,11 +253,11 @@ void main() {
     if(debugMode == 1) {
         // 必ず1灯だけで見ること 4灯を max() でまとめるとほぼ全面が白くなり判定できない
         vec3 lightDir0 = normalize(pointLights[0].position - FragPos);
-        float shadow0 = ShadowCalculation(FragPos, Normal, lightDir0, pointLights[0].position, shadowMap[0]);
+        float shadow0 = ShadowCalculation(FragPos, Normal, lightDir0, pointLights[0].position, 0);
         FragColor = vec4(vec3(shadow0), 1.0);
     } else if(debugMode == 2) {
         vec3 fragToLight0 = FragPos - pointLights[0].position;
-        float closest = texture(shadowMap[0], fragToLight0).r;
+        float closest = texture(shadowMap, vec4(fragToLight0, 0.0)).r;
         FragColor = vec4(vec3(closest), 1.0);
     } else if(debugMode == 3) {
         FragColor = vec4(Albedo, 1.0);
@@ -283,9 +283,9 @@ void main() {
         else if(quad.x < 0.5)
             debugColor = abs(qPos) / 25.0; // 左下: Position
         else {
-            // 右下: shadowMap[0] の生の深度値
+            // 右下: 光源 0 のシャドウマップの生の深度値
             vec3 dir = qPos - pointLights[0].position;
-            debugColor = vec3(texture(shadowMap[0], dir).r);
+            debugColor = vec3(texture(shadowMap, vec4(dir, 0.0)).r);
         }
 
         if(abs(TexCoords.x - 0.5) < 0.001 || abs(TexCoords.y - 0.5) < 0.001)
@@ -299,7 +299,7 @@ void main() {
     } else if(debugMode == 8) {
         // 白地にガラスのシルエットが色付きで写れば配線は正しい
         vec3 dir0 = FragPos - pointLights[0].position;
-        FragColor = vec4(texture(shadowColor[0], dir0).rgb, 1.0);
+        FragColor = vec4(texture(shadowColor, vec4(dir0, 0.0)).rgb, 1.0);
     } else if(debugMode == 9) {
         // オブジェクトごとに一様な明るさで見えれば gNormal.a への書き込みは正しい
         FragColor = vec4(vec3(Metallic), 1.0);

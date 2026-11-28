@@ -8,8 +8,10 @@
 namespace {
 
 // GpuPass の並びと一致させること ずれても動いてしまい表示だけが入れ替わる
+// 注意: 表示側が %-9s で列を揃えているので 9 文字以内にする
+// Light+SDF は Lighting パスで SDF のソフトシャドウも計算していることを表す
 constexpr const char *kPassNames[] = {
-    "Shadow", "Reflect", "Geometry", "SSAO", "SdfOccl", "BlitDepth", "Lighting", "Forward", "Bloom", "ToScreen",
+    "Shadow", "Reflect", "Geometry", "SSAO", "SdfOccl", "BlitDepth", "Light+SDF", "Forward", "Bloom", "ToScreen",
 };
 static_assert(std::size(kPassNames) == gl::GpuProfiler::kPassCount, "GpuPass と名前配列の数が合っていない");
 
@@ -38,8 +40,9 @@ void gl::GpuProfiler::begin(GpuPass pass) {
     measuring_ = true;
 
     const std::size_t index = static_cast<std::size_t>(pass);
-    // RenderDoc のイベント一覧をパス単位のツリーにする 入れ子防止の measuring_ が Push/Pop の対応も保証する
-    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, static_cast<GLuint>(index), -1, Name(pass));
+    if (glDebugMessageCallback != nullptr) // MacOS ではここが false になる
+        // RenderDoc のイベント一覧をパス単位のツリーにする 入れ子防止の measuring_ が Push/Pop の対応も保証する
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, static_cast<GLuint>(index), -1, Name(pass));
     glBeginQuery(GL_TIME_ELAPSED, queries_[index][writeSlot_]);
     issued_[index][writeSlot_] = true;
 }
@@ -47,7 +50,8 @@ void gl::GpuProfiler::begin(GpuPass pass) {
 void gl::GpuProfiler::end() {
     if (!measuring_) return;
     glEndQuery(GL_TIME_ELAPSED);
-    glPopDebugGroup();
+    if (glDebugMessageCallback != nullptr)
+        glPopDebugGroup();
     measuring_ = false;
 }
 

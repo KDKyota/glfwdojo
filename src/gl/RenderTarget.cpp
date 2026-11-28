@@ -38,6 +38,19 @@ void CreateCubemap(TextureHandle &texture, GLint internalFormat, GLenum format, 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
+void CreateCubemapArray(TextureHandle &texture, GLint internalFormat, GLenum format, GLenum type, int size,
+                        int cubeCount, GLint minFilter, GLint magFilter) {
+    texture.create();
+    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, texture);
+    // 注意: 奥行きはキューブの数ではなく面の総数で指定する
+    glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, internalFormat, size, size, cubeCount * 6, 0, format, type, nullptr);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, minFilter);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, magFilter);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+}
+
 void CheckFramebufferComplete(const char *name) {
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::" << name << ":: Framebuffer is not complete!" << std::endl;

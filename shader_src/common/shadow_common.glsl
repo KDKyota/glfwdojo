@@ -23,9 +23,10 @@ struct PointLight {
 };
 
 uniform PointLight pointLights[NR_LIGHTS];
-uniform samplerCube shadowMap[NR_LIGHTS];
+// キューブマップ配列 vec4(方向, 光源番号) で読み 全光源ぶんを sampler 1個で扱う
+uniform samplerCubeArray shadowMap;
 // ガラスを透過した光の色 ガラスを通らない方向は白
-uniform samplerCube shadowColor[NR_LIGHTS];
+uniform samplerCubeArray shadowColor;
 uniform float farPlane;
 // ぼかし量とバイアスをテクセル単位で決めるため 面の一辺の解像度を受け取る
 uniform float shadowMapSize;
@@ -56,8 +57,7 @@ float PcfRotationAngle(vec2 fragCoord) {
 }
 
 // fragPos が影の中にあるかを [0, 1] で返す（0=完全に照らされる, 1=完全な影）
-float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos,
-                        samplerCube shadowMap) {
+float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos, int lightIndex) {
     float distToLight = length(fragPos - lightPos);
     // 面の FOV が 90° 固定なので この距離でテクセル1個が覆う実寸はこう!
     float texelWorld = distToLight * 2.0 / shadowMapSize;
@@ -90,7 +90,7 @@ float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir, vec3 lightPos,
         vec2 disk = poissonDisk[i];
         vec2 rotated = vec2(disk.x * cosA - disk.y * sinA, disk.x * sinA + disk.y * cosA);     // 原点周りに A だけ回転
         vec3 sampleDir = fragToLight + (tangent * rotated.x + bitangent * rotated.y) * radius; // ssao.frag の samplePos と同じ
-        float closestDepth = texture(shadowMap, sampleDir).r * farPlane;
+        float closestDepth = texture(shadowMap, vec4(sampleDir, float(lightIndex))).r * farPlane;
         if (currentDepth - bias > closestDepth)
             shadow += 1.0;
     }

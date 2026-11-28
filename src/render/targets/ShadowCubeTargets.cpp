@@ -7,36 +7,32 @@
 namespace gl {
 
 ShadowCubeTargets::ShadowCubeTargets() {
-    for (std::size_t j = 0; j < layout::kPointLightCount; ++j) {
-        fbo_[j].create();
-        // 各テクセルに入るのは色ではなく 光源からの正規化距離 [0,1]
-        CreateCubemap(depthCubemap_[j], GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_FLOAT, shadow::kMapWidth,
-                      GL_NEAREST, GL_NEAREST);
-        CreateCubemap(shadowColorCubemap_[j], GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, shadow::kMapWidth, GL_LINEAR,
-                      GL_LINEAR);
+    const int lightCount = static_cast<int>(layout::kPointLightCount);
+    // 各テクセルに入るのは色ではなく 光源からの正規化距離 [0,1]
+    CreateCubemapArray(depthCubemapArray_, GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_FLOAT, shadow::kMapWidth,
+                       lightCount, GL_NEAREST, GL_NEAREST);
+    CreateCubemapArray(shadowColorCubemapArray_, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, shadow::kMapWidth, lightCount,
+                       GL_LINEAR, GL_LINEAR);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo_[j]);
-        // glFramebufferTexture なら6面が1アタッチメントになり gl_Layer で面を選べる
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap_[j], 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, shadowColorCubemap_[j], 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-    }
+    fbo_.create();
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+    // レイヤー付きアタッチメント 配列の全ての面を1つのアタッチメントとして繋ぎ 書き込む面は gl_Layer で選ぶ
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemapArray_, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, shadowColorCubemapArray_, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    CheckFramebufferComplete("SHADOW_CUBE_ARRAY");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void ShadowCubeTargets::BindDepthMaps() const {
-    for (std::size_t j = 0; j < layout::kPointLightCount; ++j) {
-        glActiveTexture(GL_TEXTURE0 + texunit::kShadowMap + static_cast<GLenum>(j));
-        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap_[j]);
-    }
+    glActiveTexture(GL_TEXTURE0 + texunit::kShadowMap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemapArray_);
 }
 
 void ShadowCubeTargets::BindColorMaps() const {
-    for (std::size_t j = 0; j < layout::kPointLightCount; ++j) {
-        glActiveTexture(GL_TEXTURE0 + texunit::kShadowColor + static_cast<GLenum>(j));
-        glBindTexture(GL_TEXTURE_CUBE_MAP, shadowColorCubemap_[j]);
-    }
+    glActiveTexture(GL_TEXTURE0 + texunit::kShadowColor);
+    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadowColorCubemapArray_);
 }
 
 } // namespace gl

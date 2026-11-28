@@ -1,4 +1,5 @@
 #include "app/Gui.h"
+#include "gl/GLPlatform.h"
 
 // vcpkg 版はバックエンドのヘッダーを include 直下に置く（公式は backends/ 配下）
 #include <imgui.h>
@@ -12,7 +13,7 @@ Gui::Gui(GLFWwindow *window) {
 
     // 第2引数 true で既存のコールバックを保存して連鎖呼び出しする
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 460 core");
+    ImGui_ImplOpenGL3_Init(gl::platform::kGlslVersionLine);
 }
 
 Gui::~Gui() {

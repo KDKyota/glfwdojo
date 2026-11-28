@@ -1,8 +1,11 @@
 #include "gl/Shader.h"
 #include "gl/GlHandle.h"
+#include "gl/GLPlatform.h"
+#include "gl/UniformBlockBindings.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include <string_view> // 文字の読み取り専用ライブラリ
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -56,6 +59,28 @@ std::string expandIncludes(const std::string &path, int depth = 0) {
     return out.str();
 }
 
+constexpr std::string_view kAuthoredGlslVersionLine = "#version 460 core"; // シェーダファイルに書いているバージョン行 これを環境ごとに置き換える
+
+/// @brief  460 で書いたシェーダーファイルを環境で作れるコンテキストの GLSL バージョンでコンパイルできるようにする
+std::string adaptGlslVersion(std::string source) {
+    const std::size_t versionPos = source.find(kAuthoredGlslVersionLine);
+    if (versionPos == std::string::npos) 
+        return source;
+    source.replace(versionPos, kAuthoredGlslVersionLine.size(), platform::kGlslVersionLine);
+    return source;
+}
+
+/// @brief プログラムが宣言している UBO を binding 番号にバインドさせる
+void bindUniformBlocks(GLuint program) {
+    for (const ubo::BlockBinding &block : ubo::kBlockBindings) {
+        // ブロックインデックス
+        const GLuint blockIndex = glGetUniformBlockIndex(program, block.blockName);
+        if (blockIndex != GL_INVALID_INDEX) { // 宣言だけで使っていないブロックは GL_INVALID_INDX が返される
+            glUniformBlockBinding(program, blockIndex, block.binding);
+        }
+    }
+}
+
 } // namespace
 
 Shader::~Shader() { glDeleteProgram(ID); }
@@ -73,9 +98,9 @@ Shader &Shader::operator=(Shader &&other) noexcept {
 
 Shader::Shader(const char *vertexPath, const char *geometryPath,
                const char *fragmentPath) {
-    const std::string vertexCode = expandIncludes(vertexPath);
-    const std::string geometryCode = expandIncludes(geometryPath);
-    const std::string fragmentCode = expandIncludes(fragmentPath);
+    const std::string vertexCode = adaptGlslVersion(expandIncludes(vertexPath));
+    const std::string geometryCode = adaptGlslVersion(expandIncludes(geometryPath));
+    const std::string fragmentCode = adaptGlslVersion(expandIncludes(fragmentPath));
 
     const char *vCode = vertexCode.c_str();
     const char *gCode = geometryCode.c_str();
@@ -103,14 +128,15 @@ Shader::Shader(const char *vertexPath, const char *geometryPath,
     glAttachShader(ID, fragment);
     glLinkProgram(ID);
     checkCompileErrors(ID, "PROGRAM");
+    bindUniformBlocks(ID);
     glDeleteShader(vertex);
     glDeleteShader(geometry);
     glDeleteShader(fragment);
 }
 
 Shader::Shader(const char *vertexPath, const char *fragmentPath) {
-    const std::string vertexCode = expandIncludes(vertexPath);
-    const std::string fragmentCode = expandIncludes(fragmentPath);
+    const std::string vertexCode = adaptGlslVersion(expandIncludes(vertexPath));
+    const std::string fragmentCode = adaptGlslVersion(expandIncludes(fragmentPath));
 
     const char *vShaderCode = vertexCode.c_str();
     const char *fShaderCode = fragmentCode.c_str();
@@ -132,6 +158,7 @@ Shader::Shader(const char *vertexPath, const char *fragmentPath) {
     glAttachShader(ID, fragment);
     glLinkProgram(ID);
     checkCompileErrors(ID, "PROGRAM");
+    bindUniformBlocks(ID);
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);

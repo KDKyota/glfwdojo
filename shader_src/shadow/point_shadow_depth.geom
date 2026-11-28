@@ -7,6 +7,8 @@ in vec2 vTexCoords[];
 
 // 光源を中心とした6方向（cubemap の各面）の view*projection 行列
 uniform mat4 shadowMatrices[6];
+// キューブマップ配列の何番目のキューブへ書くか
+uniform int lightIndex;
 
 // 透視除算前のワールド座標 frag 側が光源からの実距離を求めるのに使う
 out vec4 FragPos;
@@ -16,8 +18,8 @@ void main()
 {
     for (int face = 0; face < 6; ++face)
     {
-        // gl_Layer: 書き込み先を depthCubemap_ の6面のうちどれにするか選択する
-        gl_Layer = face;
+        // キューブマップ配列では layer-face = キューブ番号 * 6 + 面
+        gl_Layer = lightIndex * 6 + face;
         for (int i = 0; i < 3; ++i)
         {
             // 頂点シェーダーから来たワールド座標をそのままフラグメントシェーダーへ中継

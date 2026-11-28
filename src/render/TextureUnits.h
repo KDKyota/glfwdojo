@@ -7,14 +7,14 @@
  *   0      gPosition
  *   1      gNormal
  *   2      gAlbedoRoughness
- *   3..6   shadowMap[4]（キューブマップ）
+ *   3      shadowMap（キューブマップ配列 全光源ぶん）
  *   7      ssao
- *   8..11  shadowColor[4]（キューブマップ）
+ *   8      shadowColor（キューブマップ配列 全光源ぶん）
  *   12     irradianceMap（キューブマップ）
  *   13     prefilterMap（キューブマップ）
  *   14     brdfLUT
  *   15     sdfOcclusion
- *   16..19 modelDistanceFields[4]（3D）現状は 16 だけが使われ 17..19 は空き
+ *   16..17 modelDistanceFields[2]（3D）現状は 16 だけが使われ 17 は空き
  *   20     reflectionColor
  *   21     reflectionGPosition
  *   22     reflectionGNormal
@@ -38,24 +38,22 @@
 namespace gl::texunit {
 
 /* ---- Deferred Lighting と 透過ガラスが共有する割り当て ---- */
+// 注意: Deferred Lighting が同時に使う sampler の数は macOS の上限 16 個以内に収める
 inline constexpr int kGPosition = 0;
 inline constexpr int kGNormal = 1;
 inline constexpr int kGAlbedoRoughness = 2;
-// 4灯ぶんの連番の先頭
 inline constexpr int kShadowMap = 3;
-// 既存の割り当て（0〜2=G-Buffer, 3〜6=shadowMap）を壊さないよう 7 を使う
 inline constexpr int kSsao = 7;
-// 4灯ぶんの連番の先頭
 inline constexpr int kShadowColor = 8;
 inline constexpr int kIrradianceMap = 12;
 inline constexpr int kPrefilterMap = 13;
 inline constexpr int kBrdfLut = 14;
 inline constexpr int kSdfOcclusion = 15;
 // sdf_common.glsl の SDF_MAX_MODELS と一致させること
-inline constexpr int kSdfMaxModels = 4;
+inline constexpr int kSdfMaxModels = 2;
 // 静的メッシュ距離場が使う連番（kSdfModelBase 〜 kSdfModelBase + kSdfMaxModels - 1）の先頭
 inline constexpr int kSdfModelBase = 16;
-// 床の平面反射 kSdfModelBase + kSdfMaxModels の直後
+// 床の平面反射 SDF の枠を 4 まで戻しても重ならない番号に置く
 inline constexpr int kReflectionColor = 20;
 inline constexpr int kReflectionGPosition = 21;
 inline constexpr int kReflectionGNormal = 22;

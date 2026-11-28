@@ -53,12 +53,12 @@ void main() {
         vec3 reflected = vec3(0.0);
         for (int i = 0; i < NR_LIGHTS; i++) {
             vec3 lightDir = normalize(pointLights[i].position - FragPos);
-            float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, shadowMap[i]);
+            float shadow = ShadowCalculation(FragPos, normal, lightDir, pointLights[i].position, i);
             float sdfShadow =
                 1.0 - sdfLightVisibility(FragPos, normal, pointLights[i].position, pointLights[i].sourceRadius);
             shadow = max(shadow, sdfShadow * sdfShadowStrength);
             // 自分自身の透過色も乗るのでスペキュラがガラスの色に少し染まる
-            vec3 transmit = texture(shadowColor[i], FragPos - pointLights[i].position).rgb;
+            vec3 transmit = texture(shadowColor, vec4(FragPos - pointLights[i].position, float(i))).rgb;
             // ガラスは拡散反射を持たせないので albedo は 0
             reflected += transmit * CalcPointLight(pointLights[i], normal, FragPos, viewDir,
                                                    vec3(0.0), roughness, metallic, F0, shadow);
